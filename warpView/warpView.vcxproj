@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{6307D429-AD18-4565-85BB-DCAF20F1670A}</ProjectGuid>
+    <ProjectGuid>{4EF4A46B-3F2C-4111-8A3A-2A680EB0B85A}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>disparityRefinement</RootNamespace>
+    <RootNamespace>warpView</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -143,7 +143,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="disparityRefinement.cpp" />
+    <ClInclude Include="..\include\gen_types.hh" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="warpView.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

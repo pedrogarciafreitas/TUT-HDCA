@@ -15,7 +15,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="disparityRefinement.cpp">
+    <ClInclude Include="..\include\gen_types.hh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="warpView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
