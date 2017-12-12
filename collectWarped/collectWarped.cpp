@@ -13,52 +13,44 @@ int main(const int argc, const char** argv) {
 
 	aux_read_header_file(&nr, &nc, &ncomponents, &nvc, argv[1]);
 
-	int n_views = (argc - 1) / 2;
+	int n_views = (argc - 2) / 2;
 
-	std::vector< unsigned char* > warped_views;
-	std::vector< float* > DispTargs;
-	
-	for (int ik = 0; ik < n_views; ik+=2){
+	unsigned char *AA1 = new unsigned char[nr*nc*ncomponents];
+	aux_read_file_uint8(nr, nc, ncomponents, argv[1], AA1);
 
-		unsigned char *AA1 = new unsigned char[nr*nc*ncomponents];
-		aux_read_file_uint8(nr, nc, ncomponents, argv[ik], AA1);
+	float *DispTarg1 = new float[nr*nc];
+	aux_read_file_float(nr, nc, ncomponents, argv[2], DispTarg1);
 
-		float *DispTarg = new float[nr*nc];
-		aux_read_file_float(nr, nc, ncomponents, argv[ik+1], DispTarg);
 
-		warped_views.push_back(AA1);
-		DispTargs.push_back(DispTarg);
+	if (n_views > 1){
+		for (int ik = 3; ik < n_views; ik += 2){
+			unsigned char *AA2 = new unsigned char[nr*nc*ncomponents];
+			aux_read_file_uint8(nr, nc, ncomponents, argv[ik], AA1);
 
-	}
+			float *DispTarg2 = new float[nr*nc];
+			aux_read_file_float(nr, nc, ncomponents, argv[ik + 1], DispTarg1);
 
-	unsigned char *AA1 = warped_views.at(0);
+			for (int ij = 0; ij < nr*nc; ij++){
 
-	float *DispTarg1 = DispTargs.at(0);
 
-	for (int ik = 2; ik < n_views; ik += 2){
-		for (int ij = 0; ij < nr*nc; ij++){
+				if (DispTarg1[ij] < 0 & DispTarg2[ij] >= 0){
+					DispTarg1[ij] = 1;
+					AA1[ij] = AA2[ij];
+					AA1[ij + nr*nc] = AA2[ij + nr*nc];
+					AA1[ij + nr*nc * 2] = AA2[ij + nr*nc * 2];
+				}
 
-			unsigned char *AA2 = warped_views.at(ik);
-			float *DispTarg2 = DispTargs.at( ik+1 );
-
-			if (DispTarg1[ij] < 0 & DispTarg2[ij]>=0){
-				DispTarg1[ij] = 1;
-				AA1[ij] = AA2[ij];
-				AA1[ij + nr*nc] = AA2[ij +nr*nc];
-				AA1[ij + nr*nc*2] = AA2[ij +nr*nc*2];
 			}
-
 		}
 	}
 
-	aux_write_header_file(nr, nc, 3, 1, argv[9]);
+	aux_write_header_file(nr, nc, 3, 1, argv[argc - 1]);
 
-	FILE *f_file = fopen(argv[9], "a+b");
+	FILE *f_file = fopen(argv[argc - 1], "a+b");
 
 	fwrite(AA1, sizeof(unsigned char), nr*nc * 3, f_file);
 
 	fclose(f_file);
-
 
 	return 0;
 
