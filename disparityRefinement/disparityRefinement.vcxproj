@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{E82731B1-7CFA-46E7-AFAA-04AD1E11384A}</ProjectGuid>
+    <ProjectGuid>{6307D429-AD18-4565-85BB-DCAF20F1670A}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>meanshift</RootNamespace>
+    <RootNamespace>disparityRefinement</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -143,20 +143,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="meanshift.cpp" />
-    <ClCompile Include="ms.cpp" />
-    <ClCompile Include="msImageProcessor.cpp" />
-    <ClCompile Include="msSys.cpp" />
-    <ClCompile Include="RAList.cpp" />
-    <ClCompile Include="rlist.cpp" />
+    <ClCompile Include="disparityRefinement.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ms.h" />
-    <ClInclude Include="msImageProcessor.h" />
-    <ClInclude Include="msSys.h" />
-    <ClInclude Include="RAList.h" />
-    <ClInclude Include="rlist.h" />
-    <ClInclude Include="tdef.h" />
+    <ClInclude Include="..\include\gen_types.hh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

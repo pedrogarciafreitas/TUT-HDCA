@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "meanshift", "meanshift\mean
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "quantizeDisparity", "quantizeDisparity\quantizeDisparity.vcxproj", "{1130F4DD-0758-49A4-A9DD-7F5ED5F4753C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "disparityRefinement", "disparityRefinement\disparityRefinement.vcxproj", "{6307D429-AD18-4565-85BB-DCAF20F1670A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -39,6 +41,16 @@ Global
 		{1130F4DD-0758-49A4-A9DD-7F5ED5F4753C}.Release|Win32.ActiveCfg = Release|Win32
 		{1130F4DD-0758-49A4-A9DD-7F5ED5F4753C}.Release|Win32.Build.0 = Release|Win32
 		{1130F4DD-0758-49A4-A9DD-7F5ED5F4753C}.Release|x64.ActiveCfg = Release|x64
+		{6307D429-AD18-4565-85BB-DCAF20F1670A}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{6307D429-AD18-4565-85BB-DCAF20F1670A}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{6307D429-AD18-4565-85BB-DCAF20F1670A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{6307D429-AD18-4565-85BB-DCAF20F1670A}.Debug|Win32.Build.0 = Debug|Win32
+		{6307D429-AD18-4565-85BB-DCAF20F1670A}.Debug|x64.ActiveCfg = Debug|Win32
+		{6307D429-AD18-4565-85BB-DCAF20F1670A}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{6307D429-AD18-4565-85BB-DCAF20F1670A}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{6307D429-AD18-4565-85BB-DCAF20F1670A}.Release|Win32.ActiveCfg = Release|Win32
+		{6307D429-AD18-4565-85BB-DCAF20F1670A}.Release|Win32.Build.0 = Release|Win32
+		{6307D429-AD18-4565-85BB-DCAF20F1670A}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

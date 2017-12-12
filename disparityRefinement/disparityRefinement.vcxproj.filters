@@ -15,42 +15,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="meanshift.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="msSys.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RAList.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="rlist.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ms.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="msImageProcessor.cpp">
+    <ClCompile Include="disparityRefinement.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="msImageProcessor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="msSys.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RAList.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="rlist.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="tdef.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ms.h">
+    <ClInclude Include="..\include\gen_types.hh">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

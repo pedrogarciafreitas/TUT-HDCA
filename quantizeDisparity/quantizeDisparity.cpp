@@ -143,7 +143,7 @@ int main(const int argc, const char** argv) {
 
 	/* MEDIAN FILTER DISPARITY USING REGIONS */
 
-	printf("median filter ...\n");
+	printf("median filter, nreg = %d ...\n", region_values.size());
 
 	std::vector< float > dsp_medians(region_values.size());
 

@@ -53,13 +53,37 @@ inline void aux_read_header_file(int* nr, int* nc, int* nvr, int* nvc, const cha
 	fclose(f_main_header);
 }
 
-inline void aux_read_file(const int nr, const int nc, const int ncomponents, const char* filename, float *data) {
+inline void aux_read_file_float(const int nr, const int nc, const int ncomponents, const char* filename, float *data) {
 
 	FILE* f_file = fopen(filename, "rb");
 
 	fseek(f_file, 4*sizeof(int), SEEK_SET); // skip header
 
-	fread(data, sizeof(double), nr*nc*ncomponents, f_file);
+	fread(data, sizeof(float), nr*nc*ncomponents, f_file);
+
+	fclose(f_file);
+
+}
+
+inline void aux_read_file_uint32(const int nr, const int nc, const int ncomponents, const char* filename, unsigned int *data) {
+
+	FILE* f_file = fopen(filename, "rb");
+
+	fseek(f_file, 4 * sizeof(int), SEEK_SET); // skip header
+
+	fread(data, sizeof(unsigned int), nr*nc*ncomponents, f_file);
+
+	fclose(f_file);
+
+}
+
+inline void aux_read_file_int32(const int nr, const int nc, const int ncomponents, const char* filename, int *data) {
+
+	FILE* f_file = fopen(filename, "rb");
+
+	fseek(f_file, 4 * sizeof(int), SEEK_SET); // skip header
+
+	fread(data, sizeof(int), nr*nc*ncomponents, f_file);
 
 	fclose(f_file);
 
