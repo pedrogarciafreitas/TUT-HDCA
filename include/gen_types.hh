@@ -77,6 +77,30 @@ inline void aux_read_file_uint8(const int nr, const int nc, const int ncomponent
 
 }
 
+inline void aux_read_file_uint16(const int nr, const int nc, const int ncomponents, const char* filename, unsigned short *data) {
+
+	FILE* f_file = fopen(filename, "rb");
+
+	fseek(f_file, 4 * sizeof(int), SEEK_SET); // skip header
+
+	fread(data, sizeof(unsigned short), nr*nc*ncomponents, f_file);
+
+	fclose(f_file);
+
+}
+
+inline void aux_readDSP_uint16(const int nr, const int nc, const int ncomponents, const char* filename, unsigned short *data) {
+
+	FILE* f_file = fopen(filename, "rb");
+
+	//fseek(f_file, 4 * sizeof(int), SEEK_SET); // skip header
+
+	fread(data, sizeof(unsigned short), nr*nc*ncomponents, f_file);
+
+	fclose(f_file);
+
+}
+
 // write a metadata file about sizes of images
 inline void aux_write_header(int nr, int nc, int nvr, int nvc) {
     FILE* f_main_header = fopen("HDR", "wb");
