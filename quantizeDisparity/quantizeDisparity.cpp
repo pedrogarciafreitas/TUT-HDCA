@@ -95,7 +95,7 @@ int main(const int argc, const char** argv) {
 	for (int row = 0; row < nr; row++){
 		for (int col = 0; col < nr*nc; col += nr){
 			//*B++ = rgb_data_uint8[row + col];
-			*B++ = (unsigned char)( ref_dsp[row*nc + col / nr]*25 + 0.5); //  +0.5 because of truncation by casting
+			*B++ = (unsigned char)(ref_dsp[row*nc + col / nr] * 25 + 0.5); //  +0.5 because of truncation by casting
 			*B++ = rgb_data_uint8[row + col + nr*nc];
 			*B++ = rgb_data_uint8[row + col + 2 * nr*nc];
 		}
@@ -150,7 +150,7 @@ int main(const int argc, const char** argv) {
 	for (int row = 0; row < nr; row++){
 		for (int col = 0; col < nr*nc; col += nr){
 			labelIm[row + col] = (uint32_t)(*labels++) + 1;
-			
+
 			if (labelIm[row + col] > region_values.size()){
 
 				std::vector<float> tmp;
@@ -160,7 +160,7 @@ int main(const int argc, const char** argv) {
 			else{
 				region_values.at(labelIm[row + col] - 1).push_back(ref_dsp[row*nc + col / nr]);
 			}
-			
+
 		}
 	}
 
@@ -189,14 +189,14 @@ int main(const int argc, const char** argv) {
 
 	float *DMS1t = new float[nr*nc];
 	for (int ij = 0; ij < nr*nc; ij++){
-		DMS1t[ij] = dsp_medians.at(labelIm[ij]-1);
+		DMS1t[ij] = dsp_medians.at(labelIm[ij] - 1);
 	}
 
 	/* QUANTIZE DISPARITY */
 
 	printf("quantize disparity ...\n");
 
-	float minDM = *std::min_element(dsp_medians.begin(),dsp_medians.end());
+	float minDM = *std::min_element(dsp_medians.begin(), dsp_medians.end());
 	float maxDM = *std::max_element(dsp_medians.begin(), dsp_medians.end());
 
 	float Delta1 = (maxDM - minDM) / 510;
@@ -205,9 +205,9 @@ int main(const int argc, const char** argv) {
 
 	float *vals0 = new float[511];
 	vals0[0] = minDM;
-	//for (int ij = 1; ij < 511; ij++)
+
 	int ijj = 1;
-	while (vals0[ijj-1]<maxDM)
+	while (vals0[ijj - 1] < maxDM)
 	{
 		vals0[ijj] = vals0[ijj - 1] + Delta1;
 		ijj++;
@@ -226,49 +226,17 @@ int main(const int argc, const char** argv) {
 	}
 
 	for (int ij = 0; ij < nr*nc; ij++){
-		//int min_ind = 0;
-		//int min_eucl = 10000000000;
 		for (int ik = 0; ik < 511; ik++){
 			float distance = (DMS1t[ij] - vals0[ik])*(DMS1t[ij] - vals0[ik]);
-			//for (int ijj = 0; ijj < nr*nc; ij++){
-				if (D[ij]>distance){
-					D[ij] = distance;
-					Labels[ij] = ik+1;
-					quantDM[ij] = vals0[ik];
-				}
-			//}
-			//if (distance < min_eucl){
-			//	min_eucl = distance;
-			//	min_ind = ik;
-			//}
+			if (D[ij]>distance){
+				D[ij] = distance;
+				Labels[ij] = ik + 1;
+				quantDM[ij] = vals0[ik];
+			}
 		}
-		//quantDM[ij] = vals0[min_ind];
-		//Labels[ij] = min_ind + 1;
+
 	}
 
-	/* MAKE COLUMN WISE (transpose) AND WRITE TO DISK */
-
-	//printf("transpose for matlab ...\n");
-
-	//float *quantDM_todisk = new float[nr*nc];
-	//int *Labels_todisk = new int[nr*nc];
-
-	////for (int row = 0; row < nr; row++){
-	////	for (int col = 0; col < nc; col++){
-	////		quantDM_todisk[row + col*nr] = quantDM[col + row*nc];
-	////		Labels_todisk[row + col*nr] = Labels[col + row*nc];
-	////	}
-	////}
-
-	//int *AA = Labels;
-	//float *AAA = quantDM;
-
-	//for (int row = 0; row < nr; row++){
-	//	for (int col = 0; col < nr*nc; col += nr){
-	//		quantDM_todisk[row + col] = (*AAA++);
-	//		Labels_todisk[row + col] = (*AA++);
-	//	}
-	//}
 
 	/* WRITE QUANTIZED DISPARITY AND LABELS TO DISK */
 	aux_write_header_file(nr, nc, 1, 1, argv[7]);

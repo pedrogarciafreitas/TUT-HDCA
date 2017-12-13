@@ -16,14 +16,14 @@ int main(const int argc, const char** argv) {
 	aux_read_header_file(&nr, &nc, &ncomponents, &nvc, argv[1]);
 
 	/* reference */
-	unsigned char *AA1 = new unsigned char[nr*nc*ncomponents];
+	unsigned short *AA1 = new unsigned short[nr*nc*ncomponents];
 
-	aux_read_file_uint8(nr, nc, ncomponents, argv[1], AA1);
+	aux_read_file_uint16(nr, nc, ncomponents, argv[1], AA1);
 
 	/* side view */
-	unsigned char *AA3 = new unsigned char[nr*nc*ncomponents];
+	unsigned short *AA3 = new unsigned short[nr*nc*ncomponents];
 
-	aux_read_file_uint8(nr, nc, ncomponents, argv[2], AA3);
+	aux_read_file_uint16(nr, nc, ncomponents, argv[2], AA3);
 
 	/* quantized labels */
 	int *St1 = new int[nr*nc];

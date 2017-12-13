@@ -17,8 +17,8 @@ int main(const int argc, const char** argv) {
 
 
 	/* reference */
-	unsigned char *AA1 = new unsigned char[nr*nc*ncomponents];
-	aux_read_file_uint8(nr, nc, ncomponents, argv[1], AA1);
+	unsigned short *AA1 = new unsigned short[nr*nc*ncomponents];
+	aux_read_file_uint16(nr, nc, ncomponents, argv[1], AA1);
 
 	/* quantized disparity */
 	float *quantDM = new float[nr*nc];
@@ -34,7 +34,7 @@ int main(const int argc, const char** argv) {
 
 	float *DispTarg = new float[nr*nc];
 
-	unsigned char *Warped = new unsigned char[nr*nc * 3];
+	unsigned short *Warped = new unsigned short[nr*nc * 3];
 
 	for (int ij = 0; ij < nr*nc; ij++)
 		DispTarg[ij] = -1;
@@ -66,7 +66,7 @@ int main(const int argc, const char** argv) {
 
 	FILE *f_file = fopen(argv[9], "a+b");
 
-	fwrite(Warped, sizeof(unsigned char), nr*nc*3, f_file);
+	fwrite(Warped, sizeof(unsigned short), nr*nc*3, f_file);
 
 	fclose(f_file);
 

@@ -15,8 +15,8 @@ int main(const int argc, const char** argv) {
 
 	int n_views = (argc - 2) / 2;
 
-	unsigned char *AA1 = new unsigned char[nr*nc*ncomponents];
-	aux_read_file_uint8(nr, nc, ncomponents, argv[1], AA1);
+	unsigned short *AA1 = new unsigned short[nr*nc*ncomponents];
+	aux_read_file_uint16(nr, nc, ncomponents, argv[1], AA1);
 
 	float *DispTarg1 = new float[nr*nc];
 	aux_read_file_float(nr, nc, ncomponents, argv[2], DispTarg1);
@@ -24,8 +24,8 @@ int main(const int argc, const char** argv) {
 
 	if (n_views > 1){
 		for (int ik = 3; ik < n_views; ik += 2){
-			unsigned char *AA2 = new unsigned char[nr*nc*ncomponents];
-			aux_read_file_uint8(nr, nc, ncomponents, argv[ik], AA1);
+			unsigned short *AA2 = new unsigned short[nr*nc*ncomponents];
+			aux_read_file_uint16(nr, nc, ncomponents, argv[ik], AA1);
 
 			float *DispTarg2 = new float[nr*nc];
 			aux_read_file_float(nr, nc, ncomponents, argv[ik + 1], DispTarg1);
@@ -48,7 +48,7 @@ int main(const int argc, const char** argv) {
 
 	FILE *f_file = fopen(argv[argc - 1], "a+b");
 
-	fwrite(AA1, sizeof(unsigned char), nr*nc * 3, f_file);
+	fwrite(AA1, sizeof(unsigned short), nr*nc * 3, f_file);
 
 	fclose(f_file);
 
