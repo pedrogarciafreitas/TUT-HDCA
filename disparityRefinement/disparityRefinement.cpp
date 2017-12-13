@@ -35,8 +35,8 @@ int main(const int argc, const char** argv) {
 
 	aux_read_file_float(nr, nc, 1, argv[4], quantDM);
 
-	int rowsreg[511];
-	int colsreg[511];
+	int rowsreg[512];
+	int colsreg[512];
 
 	printf("%d %d %d \n", nr, nc, ncomponents);
 
@@ -65,12 +65,12 @@ int main(const int argc, const char** argv) {
 			int iy = ( indi.at(ij) - ix )/nr; //col
 
 			int iynew = iy + (int)((float)(ii1 - ii0)*quantDM[indi.at(ij)]);
-			int ixnew = ix + (int)((float)(jj1 - jj0)*quantDM[indi.at(ij)]*60.0/40.0);
+			int ixnew = ix + (int)((float)(jj1 - jj0)*quantDM[indi.at(ij)]*(60.0/40.0));
 
 			//int iynew = (int)iynewf;
 			//int ixnew = (int)ixnewf;
 
-			if (iynew>=0 & iynew<nc & ixnew>=0 & ixnew < nr){
+			if (iynew>=0 && iynew<nc && ixnew>=0 && ixnew < nr){
 				new_indi.push_back(indi.at(ij));
 				iynews.push_back(iynew);
 				ixnews.push_back(ixnew);
@@ -89,7 +89,7 @@ int main(const int argc, const char** argv) {
 					int ixn = ixnews.at(ij) + irow;
 					int iyn = iynews.at(ij) + icol;
 
-					if (ixn>=0 & ixn<nr & iyn>=0 & iyn < nc){
+					if (ixn>=0 && ixn<nr && iyn>=0 && iyn < nc){
 
 						tmp_MAE = tmp_MAE +
 							abs((float)AA1[new_indi.at(ij)] - (float)AA3[ixn + nr*iyn])
@@ -98,7 +98,7 @@ int main(const int argc, const char** argv) {
 					}
 					//printf("%f\n", tmp_MAE);
 				}
-				if ( (tmp_MAE < best_MAE) & tmp_MAE>0 ){
+				if ( (tmp_MAE < best_MAE) && tmp_MAE>0 ){
 					best_MAE = tmp_MAE;
 					best_irow = irow;
 					best_icol = icol;

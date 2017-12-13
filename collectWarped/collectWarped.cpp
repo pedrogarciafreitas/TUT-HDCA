@@ -21,21 +21,19 @@ int main(const int argc, const char** argv) {
 	aux_read_file_uint16(nr, nc, ncomponents, argv[1], AA1);
 
 	float *DispTarg1 = new float[nr*nc];
-	aux_read_file_float(nr, nc, ncomponents, argv[2], DispTarg1);
+	aux_read_file_float(nr, nc, 1, argv[2], DispTarg1);
 
 
 	if (n_views > 1){
-		for (int ik = 3; ik < n_views; ik += 2){
+		for (int ik = 3; ik < n_views*2; ik += 2){
 			unsigned short *AA2 = new unsigned short[nr*nc*ncomponents];
 			aux_read_file_uint16(nr, nc, ncomponents, argv[ik], AA2);
 
 			float *DispTarg2 = new float[nr*nc];
-			aux_read_file_float(nr, nc, ncomponents, argv[ik + 1], DispTarg2);
+			aux_read_file_float(nr, nc, 1, argv[ik + 1], DispTarg2);
 
 			for (int ij = 0; ij < nr*nc; ij++){
-
-
-				if (DispTarg1[ij] < 0 & DispTarg2[ij] >= 0){
+				if (DispTarg1[ij] < 0 && DispTarg2[ij]>0){
 					DispTarg1[ij] = DispTarg2[ij];
 					AA1[ij] = AA2[ij];
 					AA1[ij + nr*nc] = AA2[ij + nr*nc];
@@ -43,6 +41,7 @@ int main(const int argc, const char** argv) {
 				}
 
 			}
+			printf("ik:\t%d\n", ik);
 		}
 	}
 

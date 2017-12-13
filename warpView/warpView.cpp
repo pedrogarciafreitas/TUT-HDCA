@@ -48,9 +48,9 @@ int main(const int argc, const char** argv) {
 		int iy = (ij - ix) / nr; //col
 
 		int iynew = iy + (int)((float)(ii1 - ii0)*quantDM[ij] + (float)COLS[ij]);
-		int ixnew = ix + (int)((float)(jj1 - jj0)*quantDM[ij] * 60.0 / 40.0 + (float)ROWS[ij]);
+		int ixnew = ix + (int)((float)(jj1 - jj0)*quantDM[ij] * (60.0 / 40.0) + (float)ROWS[ij]);
 
-		if (iynew >= 0 & iynew<nc & ixnew >= 0 & ixnew < nr){
+		if (iynew >= 0 && iynew<nc && ixnew >= 0 && ixnew < nr){
 			if (DispTarg[ij] < disp0){
 				int indnew = ixnew + iynew*nr;
 				DispTarg[indnew] = disp0 + (float)COLS[ij];
@@ -74,7 +74,7 @@ int main(const int argc, const char** argv) {
 
 	f_file = fopen(argv[10], "a+b");
 
-	fwrite(DispTarg, sizeof(float), nr*nc * 3, f_file);
+	fwrite(DispTarg, sizeof(float), nr*nc, f_file);
 
 	fclose(f_file);
 	
