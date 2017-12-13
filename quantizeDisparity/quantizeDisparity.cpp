@@ -73,8 +73,8 @@ int main(const int argc, const char** argv) {
 
 	/* DISPARITY INTO FLOATING POINT */
 
-	float *ref_dps = new float[nr*nc];
-	float *BB = ref_dps;
+	float *ref_dsp = new float[nr*nc];
+	float *BB = ref_dsp;
 	for (int row = 0; row < nr; row++){
 		for (int col = 0; col < nc; col++){
 			*BB++ = -dsp_to_float((float)disparity_data_uint16[col + row*nc]);
@@ -82,7 +82,7 @@ int main(const int argc, const char** argv) {
 	}
 
 	//printf("debug at 5678 \t %d\n", rgb_data_uint8[5678 - 1]);
-	//printf("debug at 5678 \t %f\n", ref_dps[5678 - 1]);
+	//printf("debug at 5678 \t %f\n", ref_dsp[5678 - 1]);
 
 	//return 0;
 
@@ -94,15 +94,49 @@ int main(const int argc, const char** argv) {
 
 	for (int row = 0; row < nr; row++){
 		for (int col = 0; col < nr*nc; col += nr){
-			*B++ = rgb_data_uint8[row + col];
-			//*B++ = (unsigned char)( ref_dps[row*nc + col / nr]*25 );
+			//*B++ = rgb_data_uint8[row + col];
+			*B++ = (unsigned char)( ref_dsp[row*nc + col / nr]*25 + 0.5); //  +0.5 because of truncation by casting
 			*B++ = rgb_data_uint8[row + col + nr*nc];
 			*B++ = rgb_data_uint8[row + col + 2 * nr*nc];
 		}
 	}
 
+
+	///* debug dsp uint8 */
+	//unsigned char *debug_dsp = new unsigned char[nr*nc];
+	//for (int row = 0; row < nr; row++){
+	//	for (int col = 0; col < nr*nc; col += nr){
+	//		debug_dsp[row + col] = (unsigned char)(ref_dsp[row*nc + col / nr] * 25 + 0.5); //  +0.5 because of truncation by casting
+	//	}
+	//}
+	//aux_write_header_file(nr, nc, 1, 1, "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/HDCA-warping/debug_dsp.uint8");
+
+	//FILE* f_file = fopen("C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/HDCA-warping/debug_dsp.uint8", "a+b");
+
+	//fwrite(debug_dsp, sizeof(unsigned char), nr*nc, f_file);
+
+	//fclose(f_file);
+
+	//float *debug_dspf = new float[nr*nc];
+	//for (int row = 0; row < nr; row++){
+	//	for (int col = 0; col < nr*nc; col += nr){
+	//		debug_dspf[row + col] = ref_dsp[row*nc + col / nr];
+	//	}
+	//}
+	//aux_write_header_file(nr, nc, 1, 1, "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/HDCA-warping/debug_dsp.float");
+
+	//f_file = fopen("C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/HDCA-warping/debug_dsp.float", "a+b");
+
+	//fwrite(debug_dspf, sizeof(float), nr*nc, f_file);
+
+	//fclose(f_file);
+
+	//return 0;
+
 	/* RUN MEANSHIFT */
 	im_proc.DefineImage(rgb_image, COLOR, nr, nc);
+
+	delete[] rgb_image;
 
 	printf("meanshift ...\n");
 	im_proc.Segment(sigmaS, sigmaR, minRegion, HIGH_SPEEDUP);
@@ -124,7 +158,7 @@ int main(const int argc, const char** argv) {
 				region_values.push_back(tmp);
 			}
 			else{
-				region_values.at(labelIm[row + col] - 1).push_back(ref_dps[row*nc + col / nr]);
+				region_values.at(labelIm[row + col] - 1).push_back(ref_dsp[row*nc + col / nr]);
 			}
 			
 		}
@@ -171,9 +205,12 @@ int main(const int argc, const char** argv) {
 
 	float *vals0 = new float[511];
 	vals0[0] = minDM;
-	for (int ij = 1; ij < 511; ij++)
+	//for (int ij = 1; ij < 511; ij++)
+	int ijj = 1;
+	while (vals0[ijj-1]<maxDM)
 	{
-		vals0[ij] = vals0[ij - 1] + Delta1;
+		vals0[ijj] = vals0[ijj - 1] + Delta1;
+		ijj++;
 	}
 
 	float *D = new float[nr*nc];
@@ -189,17 +226,24 @@ int main(const int argc, const char** argv) {
 	}
 
 	for (int ij = 0; ij < nr*nc; ij++){
-		int min_ind = 0;
-		int min_eucl = 10000000000;
+		//int min_ind = 0;
+		//int min_eucl = 10000000000;
 		for (int ik = 0; ik < 511; ik++){
 			float distance = (DMS1t[ij] - vals0[ik])*(DMS1t[ij] - vals0[ik]);
-			if (distance < min_eucl){
-				min_eucl = distance;
-				min_ind = ik;
-			}
+			//for (int ijj = 0; ijj < nr*nc; ij++){
+				if (D[ij]>distance){
+					D[ij] = distance;
+					Labels[ij] = ik+1;
+					quantDM[ij] = vals0[ik];
+				}
+			//}
+			//if (distance < min_eucl){
+			//	min_eucl = distance;
+			//	min_ind = ik;
+			//}
 		}
-		quantDM[ij] = vals0[min_ind];
-		Labels[ij] = min_ind + 1;
+		//quantDM[ij] = vals0[min_ind];
+		//Labels[ij] = min_ind + 1;
 	}
 
 	/* MAKE COLUMN WISE (transpose) AND WRITE TO DISK */
