@@ -47,8 +47,8 @@ int main(const int argc, const char** argv) {
 		int ix = ij % nr; //row
 		int iy = (ij - ix) / nr; //col
 
-		int iynew = iy + (int)((float)(ii1 - ii0)*quantDM[ij] + (float)COLS[ij]);
-		int ixnew = ix + (int)((float)(jj1 - jj0)*quantDM[ij] * (60.0 / 40.0) + (float)ROWS[ij]);
+		int iynew = iy + (int)round((float)(ii1 - ii0)*quantDM[ij] + (float)COLS[ij]);
+		int ixnew = ix + (int)round((float)(jj1 - jj0)*quantDM[ij] * (60.0 / 40.0) + (float)ROWS[ij]);
 
 		if (iynew >= 0 && iynew<nc && ixnew >= 0 && ixnew < nr){
 			if (DispTarg[ij] < disp0){

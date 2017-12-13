@@ -33,7 +33,7 @@ int main(const int argc, const char** argv) {
 			aux_read_file_float(nr, nc, 1, argv[ik + 1], DispTarg2);
 
 			for (int ij = 0; ij < nr*nc; ij++){
-				if (DispTarg1[ij] < 0 && DispTarg2[ij]>0){
+				if (DispTarg1[ij] < 0 && DispTarg2[ij]>=0){
 					DispTarg1[ij] = DispTarg2[ij];
 					AA1[ij] = AA2[ij];
 					AA1[ij + nr*nc] = AA2[ij + nr*nc];
