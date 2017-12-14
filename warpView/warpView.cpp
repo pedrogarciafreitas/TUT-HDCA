@@ -34,10 +34,16 @@ int main(const int argc, const char** argv) {
 
 	float *DispTarg = new float[nr*nc];
 
+	float *DispTarg_col = new float[nr*nc];
+	float *DispTarg_row = new float[nr*nc];
+
 	unsigned short *Warped = new unsigned short[nr*nc * 3];
 
-	for (int ij = 0; ij < nr*nc; ij++)
+	for (int ij = 0; ij < nr*nc; ij++){
 		DispTarg[ij] = -1;
+		DispTarg_col[ij] = 99999;
+		DispTarg_row[ij] = 99999;
+	}
 
 	
 	for (int ij = 0; ij < nr*nc; ij++)
@@ -54,6 +60,8 @@ int main(const int argc, const char** argv) {
 			int indnew = ixnew + iynew*nr;
 			if (DispTarg[indnew] < (disp0 + (float)COLS[ij])){
 				DispTarg[indnew] = disp0 + (float)COLS[ij];
+				DispTarg_col[indnew] = iynew - iy;
+				DispTarg_row[indnew] = ixnew - ix;
 				Warped[indnew] = AA1[ij];
 				Warped[indnew + nr*nc] = AA1[ij+nr*nc];
 				Warped[indnew + 2*nr*nc] = AA1[ij+2*nr*nc];
@@ -74,7 +82,15 @@ int main(const int argc, const char** argv) {
 
 	f_file = fopen(argv[10], "a+b");
 
-	fwrite(DispTarg, sizeof(float), nr*nc, f_file);
+	fwrite(DispTarg_col, sizeof(float), nr*nc, f_file);
+
+	fclose(f_file);
+
+	aux_write_header_file(nr, nc, 1, 1, argv[11]);
+
+	f_file = fopen(argv[11], "a+b");
+
+	fwrite(DispTarg_row, sizeof(float), nr*nc, f_file);
 
 	fclose(f_file);
 	
