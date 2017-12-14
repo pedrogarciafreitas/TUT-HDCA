@@ -17,14 +17,14 @@ int main(const int argc, const char** argv) {
 
 
 	/* reference */
-	unsigned short *AA1 = new unsigned short[nr*nc*ncomponents];
-	aux_read_file_uint16(nr, nc, ncomponents, argv[1], AA1);
+	unsigned int *St = new unsigned int[nr*nc*1];
+	aux_read_file_uint32(nr, nc, 1, argv[1], St);
 
 	/* quantized disparity */
 	float *quantDM = new float[nr*nc];
 	aux_read_file_float(nr, nc, 1, argv[2], quantDM);
-	
-	
+
+
 	int *ROWS = new int[nr*nc];
 	int *COLS = new int[nr*nc];
 
@@ -34,12 +34,12 @@ int main(const int argc, const char** argv) {
 
 	float *DispTarg = new float[nr*nc];
 
-	unsigned short *Warped = new unsigned short[nr*nc * 3];
+	unsigned int *WarpedSt = new unsigned int[nr*nc];
 
 	for (int ij = 0; ij < nr*nc; ij++)
 		DispTarg[ij] = -1;
 
-	
+
 	for (int ij = 0; ij < nr*nc; ij++)
 	{
 		float disp0 = quantDM[ij];
@@ -47,29 +47,28 @@ int main(const int argc, const char** argv) {
 		int ix = ij % nr; //row
 		int iy = (ij - ix) / nr; //col
 
-		int iynew = iy + (int)round(((float)(ii1 - ii0))*quantDM[ij] + (float)COLS[ij]);
-		int ixnew = ix + (int)round(((float)(jj1 - jj0))*quantDM[ij] * (60.0 / 40.0) + (float)ROWS[ij]);
+		int iynew = iy + (int)round((float)(ii1 - ii0)*quantDM[ij] + (float)COLS[ij]);
+		int ixnew = ix + (int)round((float)(jj1 - jj0)*quantDM[ij] * (60.0 / 40.0) + (float)ROWS[ij]);
 
 		if (iynew >= 0 && iynew<nc && ixnew >= 0 && ixnew < nr){
 			int indnew = ixnew + iynew*nr;
-			if (DispTarg[indnew] < (disp0 + (float)COLS[ij])){
+			if (DispTarg[indnew] < disp0 + (float)COLS[ij]){
 				DispTarg[indnew] = disp0 + (float)COLS[ij];
-				Warped[indnew] = AA1[ij];
-				Warped[indnew + nr*nc] = AA1[ij+nr*nc];
-				Warped[indnew + 2*nr*nc] = AA1[ij+2*nr*nc];
+				WarpedSt[indnew] = St[ij];
 			}
 		}
 
 	}
-	
-	aux_write_header_file(nr, nc, 3, 1, argv[9]);
+
+	aux_write_header_file(nr, nc, 1, 1, argv[9]);
 
 	FILE *f_file = fopen(argv[9], "a+b");
 
-	fwrite(Warped, sizeof(unsigned short), nr*nc*3, f_file);
+	fwrite(WarpedSt, sizeof(unsigned int), nr*nc, f_file);
 
 	fclose(f_file);
 
+	/*
 	aux_write_header_file(nr, nc, 1, 1, argv[10]);
 
 	f_file = fopen(argv[10], "a+b");
@@ -77,7 +76,7 @@ int main(const int argc, const char** argv) {
 	fwrite(DispTarg, sizeof(float), nr*nc, f_file);
 
 	fclose(f_file);
-	
+	*/
 
 	return 0;
 

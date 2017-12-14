@@ -95,8 +95,8 @@ int main(const int argc, const char** argv) {
 			int ix = indi.at(ij) % nr; //row
 			int iy = ( indi.at(ij) - ix )/nr; //col
 
-			int iynew = iy + (int)round((float)(ii1 - ii0)*quantDM[indi.at(ij)]);
-			int ixnew = ix + (int)round((float)(jj1 - jj0)*quantDM[indi.at(ij)]*(60.0/40.0));
+			int iynew = iy + (int)round(((float)(ii1 - ii0))*quantDM[indi.at(ij)]);
+			int ixnew = ix + (int)round(((float)(jj1 - jj0))*quantDM[indi.at(ij)]*(60.0/40.0));
 
 			//int iynew = (int)iynewf;
 			//int ixnew = (int)ixnewf;

@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "warpView", "warpView\warpVi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "collectWarped", "collectWarped\collectWarped.vcxproj", "{47E37C78-2840-443C-BF96-E26DCA9C8650}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "warpSegmentation", "warpSegmentation\warpSegmentation.vcxproj", "{7F083B41-0334-4F6B-AD60-B024FB82D0FD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -77,6 +79,17 @@ Global
 		{47E37C78-2840-443C-BF96-E26DCA9C8650}.Release|Win32.Build.0 = Release|Win32
 		{47E37C78-2840-443C-BF96-E26DCA9C8650}.Release|x64.ActiveCfg = Release|x64
 		{47E37C78-2840-443C-BF96-E26DCA9C8650}.Release|x64.Build.0 = Release|x64
+		{7F083B41-0334-4F6B-AD60-B024FB82D0FD}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{7F083B41-0334-4F6B-AD60-B024FB82D0FD}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{7F083B41-0334-4F6B-AD60-B024FB82D0FD}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7F083B41-0334-4F6B-AD60-B024FB82D0FD}.Debug|Win32.Build.0 = Debug|Win32
+		{7F083B41-0334-4F6B-AD60-B024FB82D0FD}.Debug|x64.ActiveCfg = Debug|Win32
+		{7F083B41-0334-4F6B-AD60-B024FB82D0FD}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{7F083B41-0334-4F6B-AD60-B024FB82D0FD}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{7F083B41-0334-4F6B-AD60-B024FB82D0FD}.Release|Win32.ActiveCfg = Release|Win32
+		{7F083B41-0334-4F6B-AD60-B024FB82D0FD}.Release|Win32.Build.0 = Release|Win32
+		{7F083B41-0334-4F6B-AD60-B024FB82D0FD}.Release|x64.ActiveCfg = Release|x64
+		{7F083B41-0334-4F6B-AD60-B024FB82D0FD}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
