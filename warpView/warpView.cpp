@@ -1,4 +1,4 @@
-/* Disparity refinement over 11x11 window. */
+/* View warping. */
 
 #include <iostream>
 #include <stdio.h>

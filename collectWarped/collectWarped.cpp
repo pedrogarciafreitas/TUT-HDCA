@@ -1,4 +1,4 @@
-/* Disparity refinement over 11x11 window. */
+/* Collect all warped color views. */
 
 #include <iostream>
 #include <stdio.h>
