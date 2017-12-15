@@ -8,36 +8,6 @@
 #include "gen_types.hh"
 
 
-inline unsigned short BLInterpolate(unsigned short *AA, float ix, float iy, int nr, int nc, int offset){
-
-
-	float x1 = floor(ix); //row
-	float x2 = ceil(ix);
-
-	float y1 = floor(iy); //col
-	float y2 = ceil(iy);
-
-	/* upper left */
-	int indice_Q11 = x1 + y1*nr;
-
-	/* lower left */
-	int indice_Q12 = x1 + y2*nr;
-
-	/* upper right */
-	int indice_Q21 = x2 + y1*nr;
-
-	/* lower right */
-	int indice_Q22 = x2 + y2*nr;
-
-	return (unsigned short)round(BilinearInterpolation(
-		(float)AA[indice_Q11 + offset],
-		(float)AA[indice_Q12 + offset],
-		(float)AA[indice_Q21 + offset],
-		(float)AA[indice_Q22 + offset],
-		x1, x2, y1, y2, ix, iy));
-
-}
-
 int main(const int argc, const char** argv) {
 
 	int nr, nc, ncomponents, nvc;
