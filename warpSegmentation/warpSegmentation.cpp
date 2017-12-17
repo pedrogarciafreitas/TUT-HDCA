@@ -52,8 +52,8 @@ int main(const int argc, const char** argv) {
 
 		if (iynew >= 0 && iynew<nc && ixnew >= 0 && ixnew < nr){
 			int indnew = ixnew + iynew*nr;
-			if (DispTarg[indnew] < disp0 + (float)COLS[ij]){
-				DispTarg[indnew] = disp0 + (float)COLS[ij];
+			if (DispTarg[indnew] < disp0){
+				DispTarg[indnew] = disp0;
 				WarpedSt[indnew] = St[ij];
 			}
 		}

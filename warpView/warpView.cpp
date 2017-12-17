@@ -58,8 +58,8 @@ int main(const int argc, const char** argv) {
 
 		if (iynew >= 0 && iynew<nc && ixnew >= 0 && ixnew < nr){
 			int indnew = ixnew + iynew*nr;
-			if (DispTarg[indnew] < (disp0 + (float)COLS[ij])){
-				DispTarg[indnew] = disp0 + (float)COLS[ij];
+			if (DispTarg[indnew] < disp0){
+				DispTarg[indnew] = disp0;
 				DispTarg_col[indnew] = iynew - iy;
 				DispTarg_row[indnew] = ixnew - ix;
 				Warped[indnew] = AA1[ij];
@@ -82,13 +82,21 @@ int main(const int argc, const char** argv) {
 
 	f_file = fopen(argv[10], "a+b");
 
-	fwrite(DispTarg_col, sizeof(float), nr*nc, f_file);
+	fwrite(DispTarg, sizeof(float), nr*nc, f_file);
 
 	fclose(f_file);
 
 	aux_write_header_file(nr, nc, 1, 1, argv[11]);
 
 	f_file = fopen(argv[11], "a+b");
+
+	fwrite(DispTarg_col, sizeof(float), nr*nc, f_file);
+
+	fclose(f_file);
+
+	aux_write_header_file(nr, nc, 1, 1, argv[12]);
+
+	f_file = fopen(argv[12], "a+b");
 
 	fwrite(DispTarg_row, sizeof(float), nr*nc, f_file);
 
