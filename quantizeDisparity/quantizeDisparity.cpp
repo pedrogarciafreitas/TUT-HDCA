@@ -81,11 +81,6 @@ int main(const int argc, const char** argv) {
 		}
 	}
 
-	//printf("debug at 5678 \t %d\n", rgb_data_uint8[5678 - 1]);
-	//printf("debug at 5678 \t %f\n", ref_dsp[5678 - 1]);
-
-	//return 0;
-
 	/* REPLACE R COMPONENT WITH DISPARITY */
 
 	unsigned char *rgb_image = new unsigned char[nr*nc*ncomponents];
@@ -100,38 +95,6 @@ int main(const int argc, const char** argv) {
 			*B++ = rgb_data_uint8[row + col + 2 * nr*nc];
 		}
 	}
-
-
-	///* debug dsp uint8 */
-	//unsigned char *debug_dsp = new unsigned char[nr*nc];
-	//for (int row = 0; row < nr; row++){
-	//	for (int col = 0; col < nr*nc; col += nr){
-	//		debug_dsp[row + col] = (unsigned char)(ref_dsp[row*nc + col / nr] * 25 + 0.5); //  +0.5 because of truncation by casting
-	//	}
-	//}
-	//aux_write_header_file(nr, nc, 1, 1, "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/HDCA-warping/debug_dsp.uint8");
-
-	//FILE* f_file = fopen("C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/HDCA-warping/debug_dsp.uint8", "a+b");
-
-	//fwrite(debug_dsp, sizeof(unsigned char), nr*nc, f_file);
-
-	//fclose(f_file);
-
-	//float *debug_dspf = new float[nr*nc];
-	//for (int row = 0; row < nr; row++){
-	//	for (int col = 0; col < nr*nc; col += nr){
-	//		debug_dspf[row + col] = ref_dsp[row*nc + col / nr];
-	//	}
-	//}
-	//aux_write_header_file(nr, nc, 1, 1, "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/HDCA-warping/debug_dsp.float");
-
-	//f_file = fopen("C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/HDCA-warping/debug_dsp.float", "a+b");
-
-	//fwrite(debug_dspf, sizeof(float), nr*nc, f_file);
-
-	//fclose(f_file);
-
-	//return 0;
 
 	/* RUN MEANSHIFT */
 	im_proc.DefineImage(rgb_image, COLOR, nr, nc);

@@ -11,7 +11,7 @@ int main(const int argc, const char** argv) {
 
 	int nr, nc, ncomponents, nvc;
 
-	int ii0 = atoi(argv[3]), jj0 = atoi(argv[4]), ii1 = atoi(argv[5]), jj1 = atoi(argv[6]);
+	int ii0 = atof(argv[3]), jj0 = atof(argv[4]), ii1 = atoi(argv[5]), jj1 = atoi(argv[6]);
 
 	aux_read_header_file(&nr, &nc, &ncomponents, &nvc, argv[1]);
 
@@ -28,8 +28,8 @@ int main(const int argc, const char** argv) {
 	int *ROWS = new int[nr*nc];
 	int *COLS = new int[nr*nc];
 
-	aux_read_file_int32(nr, nc, 1, argv[7], ROWS);
-	aux_read_file_int32(nr, nc, 1, argv[8], COLS);
+	//aux_read_file_int32(nr, nc, 1, argv[7], ROWS); //maybe we use these later ...
+	//aux_read_file_int32(nr, nc, 1, argv[8], COLS);
 
 
 	float *DispTarg = new float[nr*nc];
@@ -54,7 +54,7 @@ int main(const int argc, const char** argv) {
 		int iy = (ij - ix) / nr; //col
 
 		int iynew = iy + (int)round(((float)(ii1 - ii0))*quantDM[ij] + (float)COLS[ij]);
-		int ixnew = ix + (int)round(((float)(jj1 - jj0))*quantDM[ij] * (60.0 / 40.0) + (float)ROWS[ij]);
+		int ixnew = ix + (int)round(((float)(jj1 - jj0))*quantDM[ij] + (float)ROWS[ij]);
 
 		if (iynew >= 0 && iynew<nc && ixnew >= 0 && ixnew < nr){
 			int indnew = ixnew + iynew*nr;
