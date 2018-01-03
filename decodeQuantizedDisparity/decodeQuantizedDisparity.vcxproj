@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{1130F4DD-0758-49A4-A9DD-7F5ED5F4753C}</ProjectGuid>
+    <ProjectGuid>{54FD651D-FC6B-4B64-B0AA-5A1147194B4F}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>quantizeDisparity</RootNamespace>
+    <RootNamespace>decodeQuantizedDisparity</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -85,7 +85,6 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\include;..\meanshift</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -99,12 +98,9 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\include;..\meanshift</AdditionalIncludeDirectories>
-      <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
-      <OpenMPSupport>false</OpenMPSupport>
+      <AdditionalIncludeDirectories>..\include;..\meanshift</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -121,7 +117,6 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\include;..\meanshift</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,11 +134,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\include;..\meanshift</AdditionalIncludeDirectories>
-      <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
-      <OpenMPSupport>false</OpenMPSupport>
+      <AdditionalIncludeDirectories>..\include;..\meanshift</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -154,26 +146,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\meanshift\ms.cpp" />
-    <ClCompile Include="..\meanshift\msImageProcessor.cpp" />
-    <ClCompile Include="..\meanshift\msSys.cpp" />
-    <ClCompile Include="..\meanshift\RAList.cpp" />
-    <ClCompile Include="..\meanshift\rlist.cpp" />
-    <ClCompile Include="quantizeDisparity.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\include\gen_types.hh" />
-    <ClInclude Include="..\meanshift\ms.h" />
-    <ClInclude Include="..\meanshift\msImageProcessor.h" />
-    <ClInclude Include="..\meanshift\msSys.h" />
-    <ClInclude Include="..\meanshift\RAList.h" />
-    <ClInclude Include="..\meanshift\rlist.h" />
-    <ClInclude Include="..\meanshift\tdef.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\CERV\CERV.vcxproj">
       <Project>{a95d8b39-16bd-47e4-af8a-3076670dd5d8}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="decodeQuantizedDisparity.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\gen_types.hh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

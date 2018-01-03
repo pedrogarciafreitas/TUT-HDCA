@@ -8,6 +8,8 @@
 #include "gen_types.hh"
 #include "msImageProcessor.h"
 
+#include "../CERV/cerv.h"
+
 #ifdef _MSC_VER
 typedef __int8 int8_t;
 typedef __int32 int32_t;
@@ -94,8 +96,8 @@ int main(const int argc, const char** argv) {
 
 	for (int row = 0; row < nr; row++){
 		for (int col = 0; col < nr*nc; col += nr){
-			//*B++ = rgb_data_uint8[row + col];
-			*B++ = (unsigned char)(ref_dsp[row*nc + col / nr] * 25 + 0.5); //  +0.5 because of truncation by casting
+			*B++ = rgb_data_uint8[row + col];
+			//*B++ = (unsigned char)(ref_dsp[row*nc + col / nr] * 25 + 0.5); //  +0.5 because of truncation by casting
 			*B++ = rgb_data_uint8[row + col + nr*nc];
 			*B++ = rgb_data_uint8[row + col + 2 * nr*nc];
 		}
@@ -234,25 +236,90 @@ int main(const int argc, const char** argv) {
 				quantDM[ij] = vals0[ik];
 			}
 		}
-
 	}
 
+	//if (1){
+
+	/* encode quantized labels with cerv */
+	int** SEGM2D = (int**)malloc(nr*sizeof(int*));
+	for (int i = 0; i < nr; ++i) { SEGM2D[i] = (int*)malloc(nc*sizeof(int)); }
+	for (int i = 0; i < nr; ++i) {
+		for (int j = 0; j < nc; ++j) {
+			SEGM2D[i][j] = Labels[i + j*nr];
+		}
+	}
+	clock_t begin = clock();
+	cerv_encode(SEGM2D, nr, nc, argv[7]);
+	clock_t end = clock();
+
+	/* decode quantized labels with cerv */
+
+	int* SEGMFINAL = alocaVector((int)nr*nc);
+	//fread(SEGMFINAL,sizeof(int),(int)nr*nc,f_SEGMFINAL);
+	//int** SEGM2D = (int**)malloc(nr*sizeof(int*));
+	//for (int i = 0; i < nr; ++i) { SEGM2D[i] = (int*)malloc(nc*sizeof(int)); }
+	for (int i = 0; i < nr; ++i) {
+		for (int j = 0; j < nc; ++j) {
+			SEGM2D[i][j] = 0;
+		}
+	}
+
+	cerv_decode(SEGM2D, nr, nc, argv[7]);
+
+	int number_of_regions = 0;
+
+	for (int i = 0; i < nr; ++i) {
+		for (int j = 0; j < nc; ++j) {
+			SEGMFINAL[i + j*nr] = SEGM2D[i][j];
+			if (SEGMFINAL[i + j*nr] > number_of_regions)
+				number_of_regions++;
+		}
+	}
+
+	number_of_regions = number_of_regions + 1; //account for 0
+
+	printf("%d\n", number_of_regions);
+
+	/* these disparity values corresponding to different labels need to be transmitted also */
+	float *quantDisparities_labels = new float[number_of_regions];
+	/* reassign labels based on cerv labeling */
+	for (int ij = 0; ij < nr*nc; ij++)
+	{
+		quantDisparities_labels[SEGMFINAL[ij]] = quantDM[ij];
+	}
+	
+
+	/*	for (int ik = 0; ik < number_of_regions; ik++){
+			for (int ij = 0; ij < nr*nc; ij++){
+			if (Labels[ij] == ik){
+			quantDisparities_labels[SEGMFINAL[ij]] = quantDM[ij];
+			break;
+			}
+			}
+			}*/
+	//}
 
 	/* WRITE QUANTIZED DISPARITY AND LABELS TO DISK */
-	aux_write_header_file(nr, nc, 1, 1, argv[7]);
+	aux_write_header_file(nr, nc, 1, 1, argv[8]);
 
-	f_file = fopen(argv[7], "a+b");
+	f_file = fopen(argv[8], "a+b");
 
 	fwrite(Labels, sizeof(int), nr*nc, f_file);
 
 	fclose(f_file);
 
-	aux_write_header_file(nr, nc, 1, 1, argv[8]);
+	aux_write_header_file(nr, nc, 1, 1, argv[9]);
 
-	f_file = fopen(argv[8], "a+b");
+	f_file = fopen(argv[9], "a+b");
 
 	fwrite(quantDM, sizeof(float), nr*nc, f_file);
 
+	fclose(f_file);
+
+	/* write labels for CERV decoding */
+	aux_write_header_file(nr, nc, number_of_regions, 1, argv[10]);
+	f_file = fopen(argv[10], "a+b");
+	fwrite(quantDisparities_labels, sizeof(float), number_of_regions, f_file);
 	fclose(f_file);
 
 	return 0;
