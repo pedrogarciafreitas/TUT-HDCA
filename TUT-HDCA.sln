@@ -19,6 +19,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CERV", "CERV\CERV.vcxproj",
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "decodeQuantizedDisparity", "decodeQuantizedDisparity\decodeQuantizedDisparity.vcxproj", "{54FD651D-FC6B-4B64-B0AA-5A1147194B4F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CERV_executable", "CERV_executable\CERV_executable.vcxproj", "{9711FC9B-3A08-4478-BDB6-9315EA6772A3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -115,6 +117,17 @@ Global
 		{54FD651D-FC6B-4B64-B0AA-5A1147194B4F}.Release|Win32.Build.0 = Release|Win32
 		{54FD651D-FC6B-4B64-B0AA-5A1147194B4F}.Release|x64.ActiveCfg = Release|x64
 		{54FD651D-FC6B-4B64-B0AA-5A1147194B4F}.Release|x64.Build.0 = Release|x64
+		{9711FC9B-3A08-4478-BDB6-9315EA6772A3}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{9711FC9B-3A08-4478-BDB6-9315EA6772A3}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{9711FC9B-3A08-4478-BDB6-9315EA6772A3}.Debug|Win32.ActiveCfg = Debug|Win32
+		{9711FC9B-3A08-4478-BDB6-9315EA6772A3}.Debug|Win32.Build.0 = Debug|Win32
+		{9711FC9B-3A08-4478-BDB6-9315EA6772A3}.Debug|x64.ActiveCfg = Debug|Win32
+		{9711FC9B-3A08-4478-BDB6-9315EA6772A3}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{9711FC9B-3A08-4478-BDB6-9315EA6772A3}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{9711FC9B-3A08-4478-BDB6-9315EA6772A3}.Release|Win32.ActiveCfg = Release|Win32
+		{9711FC9B-3A08-4478-BDB6-9315EA6772A3}.Release|Win32.Build.0 = Release|Win32
+		{9711FC9B-3A08-4478-BDB6-9315EA6772A3}.Release|x64.ActiveCfg = Release|x64
+		{9711FC9B-3A08-4478-BDB6-9315EA6772A3}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
