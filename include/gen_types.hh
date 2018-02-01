@@ -18,6 +18,9 @@
 #include <cstring>
 #include <sys/stat.h>
 
+
+#define NBIT_GR 20
+
 const bool verbose = false;
 
 // Replacing the variables irMat01p_const, icMat01p_const and Neigh9_165p_const changes the processing order of the views.
@@ -32,6 +35,83 @@ const int hexag_even_R_const[] = { -9, -9, -9, -9, -8, -8, -8, -8, -8, -8, -8, -
 
 // number of pixels in the original lenslet image.
 const int num_pixels_in_lenslet = 41483904;
+
+
+int getMedian(std::vector<int> scores)
+{
+	int median;
+	size_t size = scores.size();
+
+	std::sort(scores.begin(), scores.end());
+
+	if (size % 2 == 0)
+	{
+		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
+	}
+	else
+	{
+		median = scores[size / 2];
+	}
+
+	return median;
+}
+
+float getMedian(std::vector<float> scores)
+{
+	float median;
+	size_t size = scores.size();
+
+	std::sort(scores.begin(), scores.end());
+
+	if (size % 2 == 0)
+	{
+		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
+	}
+	else
+	{
+		median = scores[size / 2];
+	}
+
+	return median;
+}
+
+void medfilt2D(int* input, int* output, int SZ, int nr, int nc)
+{
+	int dsz = floor(SZ / 2);
+	std::vector<int> scores;
+	for (int y = 0; y < nr; y++){
+		for (int x = 0; x < nc; x++){
+			scores.clear();
+			for (int dy = -dsz; dy < dsz; dy++){
+				for (int dx = -dsz; dx < dsz; dx++){
+					if ((y + dy) >= 0 && (y + dy) < nr
+						&& (x + dx) >= 0 && (x + dx) < nc)
+						scores.push_back(input[y + dy + (x + dx)*nr]);
+				}
+			}
+			output[y + x*nr] = getMedian(scores);
+		}
+	}
+}
+
+void medfilt2D(float* input, float* output, int SZ, int nr, int nc)
+{
+	int dsz = floor(SZ / 2);
+	std::vector<float> scores;
+	for (int y = 0; y < nr; y++){
+		for (int x = 0; x < nc; x++){
+			scores.clear();
+			for (int dy = -dsz; dy < dsz; dy++){
+				for (int dx = -dsz; dx < dsz; dx++){
+					if ((y + dy) >= 0 && (y + dy) < nr
+						&& (x + dx) >= 0 && (x + dx) < nc)
+						scores.push_back(input[y + dy + (x + dx)*nr]);
+				}
+			}
+			output[y + x*nr] = getMedian(scores);
+		}
+	}
+}
 
 // write a metadata file about sizes of images
 inline void aux_write_header_file(int nr, int nc, int nvr, int nvc, const char* filename) {
@@ -276,6 +356,67 @@ inline void aux_read16pgm_1080p(FILE *filept, int *img)
 	free(Image16bit);
 }
 
+inline void aux_read16ppm(FILE *filept, int width, int height, unsigned short *img)
+{
+	int  max, x, y;
+	int red, green, blue, pixelmax;
+	char dummy[100];
+
+	unsigned short int *Image16bit = NULL;
+
+	fscanf(filept, "%s", dummy);
+	fscanf(filept, "%d %d\n", &width, &height);
+	fscanf(filept, "%d", &max);
+	fgetc(filept);
+
+	if (strncmp(dummy, "P6", 2) != 0) {
+		fprintf(stderr, "Error: The input data is not binary PPM.\n");
+		exit(1);
+	}
+
+	Image16bit = (unsigned short int *)malloc(width*height * 3 * sizeof(unsigned short int));
+
+	/*--< Read 16bit ppm image from filept >--*/
+	fread(Image16bit, sizeof(unsigned short int), width*height * 3, filept);
+
+	int i = 0;
+	/*--< Find maximum value in the image >--*/
+	pixelmax = 0;
+	for (x = 0; x < width; x++){
+		for (y = 0; y < height; y++){
+			red = Image16bit[(x + y*width) * 3];
+			green = Image16bit[(x + y*width) * 3 + 1];
+			blue = Image16bit[(x + y*width) * 3 + 2];
+
+			// Exhange upper 8bit and lower 8bit for Intel x86
+			red = ((red & 0x00ff) << 8) | ((red & 0xff00) >> 8);
+			green = ((green & 0x00ff) << 8) | ((green & 0xff00) >> 8);
+			blue = ((blue & 0x00ff) << 8) | ((blue & 0xff00) >> 8);
+
+			if (pixelmax < red) pixelmax = red;
+			if (pixelmax < green) pixelmax = green;
+			if (pixelmax < blue) pixelmax = blue;
+
+
+			img[i] = red;
+			img[i + height*width] = green;
+			img[i + 2 * height*width] = blue;
+
+			if (0){ //debug stuff
+				fprintf(stderr, "sample %i\t%i\t%i\n", img[i], img[i + height*width], img[i + 2 * height*width]);
+				fprintf(stderr, "sample %i\t%i\t%i\n", img[i] >> 6, img[i + height*width] >> 6, img[i + 2 * height*width] >> 6);
+			}
+
+			i++;
+
+
+		}
+	}
+
+	free(Image16bit);
+
+}
+
 // read a 16 bit color ppm image
 inline void aux_read16ppm(FILE *filept, int width, int height, int *img)
 {
@@ -443,6 +584,34 @@ inline void aux_write16pgm(FILE *fp, int width, int height, int *img)
 
 	fprintf(fp, "P5\n%d %d\n65535\n", width, height);
 	fwrite(img16bit, sizeof(unsigned short int), width*height, fp);
+	free(img16bit);
+}
+
+inline void aux_write16ppm_16(FILE *fp, int width, int height, unsigned short int *img){
+	unsigned char *p;
+	int i, tmp, j;
+
+	//unsigned short int maxi = 0;
+
+	unsigned short* img16bit = (unsigned short*)malloc(height*width * 3 * sizeof(unsigned short));
+	int lin_ind = 0;
+	for (j = 0; j < height; j++) {
+		for (i = 0; i < width; i++) {
+			img16bit[lin_ind] = img[j + i*height];
+			img16bit[lin_ind + 1] = img[j + i*height + width*height];
+			img16bit[lin_ind + 2] = img[j + i*height + 2 * width*height];
+			lin_ind = lin_ind + 3;
+		}
+	}
+
+	p = (unsigned char *)img16bit;
+	for (i = 0; i < width*height; i++){
+		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
+		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
+		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
+	}
+	fprintf(fp, "P6\n%d %d\n65535\n", width, height);
+	fwrite(img16bit, sizeof(unsigned short int), width*height * 3, fp);
 	free(img16bit);
 }
 

@@ -8,44 +8,6 @@
 
 #include "gen_types.hh"
 
-int getMedian(std::vector<int> scores)
-{
-	int median;
-	size_t size = scores.size();
-
-	std::sort(scores.begin(), scores.end());
-
-	if (size % 2 == 0)
-	{
-		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
-	}
-	else
-	{
-		median = scores[size / 2];
-	}
-
-	return median;
-}
-
-void medfilt2D(int* input, int* output, int SZ, int nr, int nc)
-{
-	int dsz = floor(SZ / 2);
-	std::vector<int> scores;
-	for (int y = 0; y < nr; y++){
-		for (int x = 0; x < nc; x++){
-			scores.clear();
-			for (int dy = -dsz; dy < dsz; dy++){
-				for (int dx = -dsz; dx < dsz; dx++){
-					if ((y + dy) >= 0 && (y + dy) < nr
-						&& (x + dx) >= 0 && (x + dx) < nc)
-						scores.push_back(input[y + dy + (x + dx)*nr]);
-				}
-			}
-			output[y + x*nr] = getMedian(scores);
-		}
-	}
-}
-
 int main(int argc, char** argv) {
 
 	/* parameters for encoder: CB/5 path_to_original_views path_to_unsw path_to_camera_centers bitrate NrQLev output_directory */
@@ -65,11 +27,15 @@ int main(int argc, char** argv) {
 	const int nr = 1080;
 	const int nc = 1920;
 
-	int *inverse_depths[5]; //inverse depth
-	int *qDM[5]; //quantized inverse depth
-	int *LDM[5]; //labels
+	int *inverse_depths[5]; //inverse depths
+	float *inverse_depths_float[5];
+	int *qDM[5]; //quantized inverse depths
+	int *LDM[5]; //labelss
+	float *qDMF[5]; //quantized floating point
 
 	int *p, *pp; // dummy pointer
+
+	float *ppf;
 
 	/* for CERV */
 	int** SEGM2D = (int**)malloc(nr*sizeof(int*));
@@ -85,7 +51,6 @@ int main(int argc, char** argv) {
 	std::string filepath_pgm(path_UNSW);
 	FILE *filept;
 
-
 	for (int ij = 0; ij < 5; ij++)
 	{
 
@@ -98,10 +63,17 @@ int main(int argc, char** argv) {
 
 		inverse_depths[ij] = new int[nr * nc];
 
+		inverse_depths_float[ij] = new float[nr * nc];
 
 		filept = fopen(filepath_pgm.c_str(), "rb");
 		aux_read16pgm_1080p(filept, inverse_depths[ij]);
 		fclose(filept);
+
+		ppf = inverse_depths_float[ij];
+		p = inverse_depths[ij];
+
+		for (int ii = 0; ii < nr*nc; ii++)
+			*(ppf++) = ((float)*(p++)) / 16384;
 
 		/* verify */
 		/*
@@ -118,29 +90,40 @@ int main(int argc, char** argv) {
 		/* Quantize UNSW inverse depth */
 
 		/*for (int ij = 0; ij < 5; ij++){*/
-		int *medianfiltered = new int[nr*nc];
-		medfilt2D(inverse_depths[ij], medianfiltered, 3, nr, nc);
+		float *medianfiltered = new float[nr*nc];
+		medfilt2D(inverse_depths_float[ij], medianfiltered, 3, nr, nc);
 
-		int minDM = *std::min_element(medianfiltered, medianfiltered + nr*nc);
-		int maxDM = *std::max_element(medianfiltered, medianfiltered + nr*nc);
-		int Delta1 = (maxDM - minDM) / (NrQLev - 1);
+		delete(inverse_depths[ij]);
+		delete(inverse_depths_float[ij]);
 
-		if (1){
-			qDM[ij] = new int[nr*nc];
-			LDM[ij] = new int[nr*nc];
-			pp = qDM[ij];
-			p = LDM[ij];
-			for (int ii = 0; ii < nr*nc; ii++){
-				int Label1 = round((medianfiltered[ii] - minDM) / Delta1);
+		float minDM = *std::min_element(medianfiltered, medianfiltered + nr*nc);
+		float maxDM = *std::max_element(medianfiltered, medianfiltered + nr*nc);
+		float Delta1 = (maxDM - minDM) / ((float)NrQLev - 1);
 
-				*(pp + ii) = Label1*Delta1 + minDM;
-				*(p + ii) = Label1;
-			}
 
-			filept = fopen(buffer, "wb");
-			aux_write16pgm(filept, nc, nr, qDM[ij]);
+		/*QUANTIZE*/
+
+		qDMF[ij] = new float[nr*nc];
+		qDM[ij] = new int[nr*nc];
+		LDM[ij] = new int[nr*nc];
+
+		ppf = qDMF[ij];
+		p = LDM[ij];
+		pp = qDM[ij];
+
+		for (int ii = 0; ii < nr*nc; ii++){
+			int Label1 = round((medianfiltered[ii] - minDM) / Delta1);
+
+			*(ppf + ii) = ((float)Label1)*Delta1 + minDM;
+			*(p + ii) = Label1;
+			*(pp + ii) = (int)( *(ppf + ii) * 16384 );
 		}
 
+		filept = fopen(buffer, "wb");
+		aux_write16pgm(filept, nc, nr, qDM[ij]);
+
+
+		delete(medianfiltered);
 
 		/* Encode quantized UNSW inverse depth with CERV */
 		/* encode quantized labels with cerv */
@@ -179,24 +162,23 @@ int main(int argc, char** argv) {
 
 		number_of_regions = number_of_regions + 1; //account for 0
 
-		std::vector<int> labels_symbols;
+		printf("NRegions:\t%d\n", number_of_regions);
+
+		std::vector<int> labels_symbols(number_of_regions);
 
 		pp = qDM[ij];
-		int prevr = 0;
-		for (int i = 0; i < nr*nc; ++i) {
-			if (SEGMFINAL[i] == prevr+1){
-				prevr = prevr + 1;
-				labels_symbols.push_back(floor(*(pp + i) * 2 ^ 10));
-			}
-		}
+		for (int i = 0; i < nr*nc; ++i)
+			labels_symbols.at(SEGMFINAL[i]) = *(pp+i);
+
 
 		char cerv_labels_filename[12];
 		sprintf(cerv_labels_filename, "%03d_%03d.gr", ref_cols[ij], ref_rows[ij]);
 		GolombCoder golomb_coder(cerv_labels_filename, 0);
-		golomb_coder.encode_symbols(labels_symbols, 10);
+		golomb_coder.encode_symbols(labels_symbols, NBIT_GR);
 
-		//printf("%d\n", number_of_regions);
-
+		delete(qDM[ij]);
+		delete(LDM[ij]);
+		delete(qDMF[ij]);
 	}
 
 	/* Encode reference views with X265 */

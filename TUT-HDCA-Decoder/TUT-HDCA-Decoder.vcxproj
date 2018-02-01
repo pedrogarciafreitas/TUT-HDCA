@@ -145,6 +145,17 @@
   <ItemGroup>
     <ClCompile Include="tut-hdca-decoder.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CERV\CERV.vcxproj">
+      <Project>{dc0c65d9-ea0d-45cf-b74c-f43459f78df6}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\GolombCoder\GolombCoder.vcxproj">
+      <Project>{c585ba82-b0ef-4b71-8302-a9a6d2cb4efb}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\warpingFunctions.hh" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
