@@ -19,7 +19,7 @@
 #include <sys/stat.h>
 
 
-#define NBIT_GR 20
+#define NBIT_GR 32
 
 const bool verbose = false;
 

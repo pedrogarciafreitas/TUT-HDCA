@@ -3,26 +3,30 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <..\CERV\cerv.h>
-#include <..\GolombCoder\golomb_coder.hh>
+#include "..\CERV\cerv.h"
+#include "..\GolombCoder\golomb_coder.hh"
 
-#include "gen_types.hh"
+#include "..\include\gen_types.hh"
 
 int main(int argc, char** argv) {
 
 	/* parameters for encoder: CB/5 path_to_original_views path_to_unsw path_to_camera_centers bitrate NrQLev output_directory */
 
-	const char* path_original_views = argv[2];
-	const char* path_UNSW = argv[3];
-	const char* path_camera_centers = argv[4];
+	//const char* path_original_views = argv[2];
+	const char* path_UNSW = argv[1];
+	//const char* path_camera_centers = argv[4];
 
-	double bitrate = atof(argv[5]);
-	int NrQLev = atoi(argv[6]);
+	//double bitrate = atof(argv[5]);
+	int NrQLev = atoi(argv[2]);
+
+	int MED_FILT_SZ = atoi(argv[3]);
+
+	const std::string output_path = std::string( argv[4] ) + "/";
 
 	// if using hevc, locations for external binaries of x265 encoder and decoder need be defined as well as ffmpeg binary
-	const char x265_encoder_path[] = "C:/Local/astolap/Data/JPEG_PLENO/05_Software/x265/x265.exe";
+	/*const char x265_encoder_path[] = "C:/Local/astolap/Data/JPEG_PLENO/05_Software/x265/x265.exe";
 	const char x265_decoder_path[] = "C:/Local/astolap/Data/JPEG_PLENO/05_Software/x265/TAppDecoder.exe";
-	const char ffmpeg_path[] = "C:/Local/astolap/Data/JPEG_PLENO/05_Software/ffmpeg/bin/ffmpeg.exe";
+	const char ffmpeg_path[] = "C:/Local/astolap/Data/JPEG_PLENO/05_Software/ffmpeg/bin/ffmpeg.exe";*/
 
 	const int nr = 1080;
 	const int nc = 1920;
@@ -51,6 +55,8 @@ int main(int argc, char** argv) {
 	std::string filepath_pgm(path_UNSW);
 	FILE *filept;
 
+	std::string filename;
+	
 	for (int ij = 0; ij < 5; ij++)
 	{
 
@@ -64,7 +70,7 @@ int main(int argc, char** argv) {
 		inverse_depths[ij] = new int[nr * nc];
 
 		inverse_depths_float[ij] = new float[nr * nc];
-
+		
 		filept = fopen(filepath_pgm.c_str(), "rb");
 		aux_read16pgm_1080p(filept, inverse_depths[ij]);
 		fclose(filept);
@@ -91,7 +97,7 @@ int main(int argc, char** argv) {
 
 		/*for (int ij = 0; ij < 5; ij++){*/
 		float *medianfiltered = new float[nr*nc];
-		medfilt2D(inverse_depths_float[ij], medianfiltered, 3, nr, nc);
+		medfilt2D(inverse_depths_float[ij], medianfiltered, MED_FILT_SZ, nr, nc);
 
 		delete(inverse_depths[ij]);
 		delete(inverse_depths_float[ij]);
@@ -120,9 +126,12 @@ int main(int argc, char** argv) {
 			*(pp + ii) = (int)( *(ppf + ii) * 16384 ); // in integer (as in original .pgm, but quantized)
 		}
 
-		filept = fopen(buffer, "wb");
-		aux_write16pgm(filept, nc, nr, qDM[ij]);
+		/*
+		filename = output_path + std::string(buffer);
 
+		filept = fopen(filename.c_str(), "wb");
+		aux_write16pgm(filept, nc, nr, qDM[ij]);
+		*/
 
 		delete(medianfiltered);
 
@@ -137,8 +146,10 @@ int main(int argc, char** argv) {
 			}
 		}
 
-		char cerv_filename[12];
-		sprintf(cerv_filename, "%03d_%03d.cerv", ref_cols[ij], ref_rows[ij]);
+		char cerv_filename[128];
+		sprintf(cerv_filename, "%s%03d_%03d.cerv", output_path.c_str(), ref_cols[ij], ref_rows[ij]);
+
+		std::cout << cerv_filename << "\n";
 
 		cerv_encode(SEGM2D, nr, nc, cerv_filename);
 
@@ -165,15 +176,18 @@ int main(int argc, char** argv) {
 
 		printf("NRegions:\t%d\n", number_of_regions);
 
-		std::vector<int> labels_symbols(number_of_regions);
+		std::vector<int> labels_symbols(number_of_regions, 0);
 
 		pp = qDM[ij];
 		for (int i = 0; i < nr*nc; ++i)
 			labels_symbols.at(SEGMFINAL[i]) = *(pp+i);
 
 
-		char cerv_labels_filename[12];
-		sprintf(cerv_labels_filename, "%03d_%03d.gr", ref_cols[ij], ref_rows[ij]);
+		char cerv_labels_filename[128];
+		sprintf(cerv_labels_filename, "%s%03d_%03d.gr", output_path.c_str(), ref_cols[ij], ref_rows[ij]);
+
+		std::cout << cerv_labels_filename << "\n";
+
 		GolombCoder golomb_coder(cerv_labels_filename, 0);
 		golomb_coder.encode_symbols(labels_symbols, NBIT_GR);
 

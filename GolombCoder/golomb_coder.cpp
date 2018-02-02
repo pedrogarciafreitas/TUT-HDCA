@@ -33,7 +33,7 @@ void GolombCoder::decode_symbols(vector< int >& symbols, int N_bits)
   }
 
   unsigned int p = 0;
-  for(int i = 0; i < 4; ++i ) {
+  for (int i = 0; i < P_BITS; ++i) {
     unsigned int bit = bitinputter->input_bit();
     p += bit << i;
   }
@@ -65,7 +65,7 @@ void GolombCoder::encode_symbols(vector< int >& symbols, int N_bits)
   //bit_thetawv = [];
   vector<int> p_opts;
   vector<int> p_crit;
-  for( int p = 0; p < 15; ++p) {
+  for( int p = 0; p < 20; ++p) {
     p_opts.push_back(p);
     p_crit.push_back(0); 
   }
@@ -77,11 +77,11 @@ void GolombCoder::encode_symbols(vector< int >& symbols, int N_bits)
       unsigned int r = abs(theta)-(q << p);
       p_crit[pi] += q + p + 2;
     }
-    p_crit[pi] += N_bits + 4;
+	p_crit[pi] += N_bits + P_BITS;
   }
 
   unsigned int p = 0;
-  int crit_best = INT_MAX;
+  unsigned int crit_best = UINT_MAX;
   
   for( int pi = 0; pi < p_opts.size(); ++pi) {
     if( p_crit[pi] < crit_best ) {
@@ -97,7 +97,7 @@ void GolombCoder::encode_symbols(vector< int >& symbols, int N_bits)
     bitoutputter->output_bit((N >> i) & 1);
   }
 
-  for(int i = 0; i < 4; ++i ) {
+  for(int i = 0; i < P_BITS; ++i ) {
     bitoutputter->output_bit((p >> i) & 1);
   }
 

@@ -18,6 +18,8 @@
 #include "bit_output.hh"
 #include "bit_input.hh"
 
+#define P_BITS 5
+
 using namespace std;
 
 class GolombCoder {

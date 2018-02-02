@@ -3,11 +3,11 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <..\CERV\cerv.h>
-#include <..\GolombCoder\golomb_coder.hh>
+#include "..\CERV\cerv.h"
+#include "..\GolombCoder\golomb_coder.hh"
 
-#include "gen_types.hh"
-#include "warpingFunctions.hh"
+#include "..\include\gen_types.hh"
+#include "..\include\warpingFunctions.hh"
 
 int main(int argc, char** argv) {
 
@@ -16,7 +16,10 @@ int main(int argc, char** argv) {
 	const char* path_to_references = argv[1];
 	const char* path_camera_centers = argv[2];
 	const char* MODE = argv[3];
-	const char* path_out_dir = argv[4];
+
+	const char* input_dir = argv[4];
+
+	const char* path_out_dir = argv[5];
 
 	// if using hevc, locations for external binaries of x265 encoder and decoder need be defined as well as ffmpeg binary
 	const char x265_encoder_path[] = "C:/Local/astolap/Data/JPEG_PLENO/05_Software/x265/x265.exe";
@@ -67,7 +70,7 @@ int main(int argc, char** argv) {
 	{
 
 		char cerv_filename[12];
-		sprintf(cerv_filename, "%03d_%03d.cerv", ref_cols[ij], ref_rows[ij]);
+		sprintf(cerv_filename, "%s%c%03d_%03d.cerv", input_dir, '/', ref_cols[ij], ref_rows[ij]);
 
 		cerv_decode(SEGM2D, nr, nc, cerv_filename);
 
@@ -89,7 +92,7 @@ int main(int argc, char** argv) {
 		std::vector<int> labels_symbols;
 
 		char cerv_labels_filename[12];
-		sprintf(cerv_labels_filename, "%03d_%03d.gr", ref_cols[ij], ref_rows[ij]);
+		sprintf(cerv_labels_filename, "%s%c%03d_%03d.gr", input_dir, '/', ref_cols[ij], ref_rows[ij]);
 		GolombCoder golomb_coder(cerv_labels_filename, 1);
 		golomb_coder.decode_symbols(labels_symbols, NBIT_GR);
 
@@ -105,8 +108,8 @@ int main(int argc, char** argv) {
 			*(ppi + i) = labels_symbols.at(SEGMFINAL[i]);
 		}
 
-		char qDM_filename[12];
-		sprintf(qDM_filename, "%03d_%03d_Q.pgm", ref_cols[ij], ref_rows[ij]);
+		char qDM_filename[160];
+		sprintf(qDM_filename, "%s%c%03d_%03d_Q.pgm", path_out_dir, '/', ref_cols[ij], ref_rows[ij]);
 		filept = fopen(qDM_filename, "wb");
 		aux_write16pgm(filept, nc, nr, qDM[ij]);
 		fclose(filept);
