@@ -117,6 +117,10 @@ int main(int argc, char** argv) {
 
 	bool ref_array[11][33];
 
+	for (int r = 0; r < 11; r++)
+		for (int c = 0; c < 33; c++)
+			ref_array[r][c] = false;
+
 
 	if (strcmp(MODE, "CB") == 0)
 	{
@@ -255,9 +259,9 @@ int main(int argc, char** argv) {
 				else{
 					for (int ij = 0; ij < 5; ij++)
 					{
-						if (abs(ref_rows[ij] - rr) + abs(ref_cols[ij] - cc) < 1)
+						if ( (abs(ref_rows[ij] - r) + abs(ref_cols[ij] - c)) < 1)
 						{
-							printf("Decoding to %s\n ", path_out_ppm);
+							printf("Decoding to (this view is a reference) %s\n ", path_out_ppm);
 							filept = fopen(path_out_ppm, "wb");
 							aux_write16ppm_16(filept, nc, nr, colorViews[ij]);
 							break;
