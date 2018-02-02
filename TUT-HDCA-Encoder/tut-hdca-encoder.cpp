@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 		p = inverse_depths[ij];
 
 		for (int ii = 0; ii < nr*nc; ii++)
-			*(ppf++) = ((float)*(p++)) / 16384;
+			*(ppf++) = (static_cast< float >(*(p++))) / 16384;
 
 		/* verify */
 		/*
@@ -100,6 +100,7 @@ int main(int argc, char** argv) {
 		float maxDM = *std::max_element(medianfiltered, medianfiltered + nr*nc);
 		float Delta1 = (maxDM - minDM) / ((float)NrQLev - 1);
 
+		std::cout << "Delta1 =\t" << Delta1 << "\tmaxDM = " << maxDM << "\tminDM = " << minDM << "\n";
 
 		/*QUANTIZE*/
 
@@ -114,9 +115,9 @@ int main(int argc, char** argv) {
 		for (int ii = 0; ii < nr*nc; ii++){
 			int Label1 = round((medianfiltered[ii] - minDM) / Delta1);
 
-			*(ppf + ii) = ((float)Label1)*Delta1 + minDM;
-			*(p + ii) = Label1;
-			*(pp + ii) = (int)( *(ppf + ii) * 16384 );
+			*(ppf + ii) = ((float)Label1)*Delta1 + minDM; // in float
+			*(p + ii) = Label1; // labels
+			*(pp + ii) = (int)( *(ppf + ii) * 16384 ); // in integer (as in original .pgm, but quantized)
 		}
 
 		filept = fopen(buffer, "wb");

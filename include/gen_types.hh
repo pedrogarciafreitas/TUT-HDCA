@@ -56,6 +56,26 @@ int getMedian(std::vector<int> scores)
 	return median;
 }
 
+unsigned short getMedian(std::vector<unsigned short> scores)
+{
+	unsigned short median;
+	size_t size = scores.size();
+
+	std::sort(scores.begin(), scores.end());
+
+	if (size % 2 == 0)
+	{
+		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
+	}
+	else
+	{
+		median = scores[size / 2];
+	}
+
+	return median;
+}
+
+
 float getMedian(std::vector<float> scores)
 {
 	float median;
@@ -93,6 +113,26 @@ void medfilt2D(int* input, int* output, int SZ, int nr, int nc)
 		}
 	}
 }
+
+void medfilt2D(unsigned short* input, unsigned short* output, int SZ, int nr, int nc)
+{
+	int dsz = floor(SZ / 2);
+	std::vector<unsigned short> scores;
+	for (int y = 0; y < nr; y++){
+		for (int x = 0; x < nc; x++){
+			scores.clear();
+			for (int dy = -dsz; dy < dsz; dy++){
+				for (int dx = -dsz; dx < dsz; dx++){
+					if ((y + dy) >= 0 && (y + dy) < nr
+						&& (x + dx) >= 0 && (x + dx) < nc)
+						scores.push_back(input[y + dy + (x + dx)*nr]);
+				}
+			}
+			output[y + x*nr] = getMedian(scores);
+		}
+	}
+}
+
 
 void medfilt2D(float* input, float* output, int SZ, int nr, int nc)
 {
@@ -314,8 +354,9 @@ inline void aux_read16pgm_1080p(FILE *filept, int *img)
 	int i = 0;
 	/*--< Find maximum value in the image >--*/
 	pixelmax = 0;
-	for (x = 85 + 960; x < 85 + 960 + 1920; x++){
-		for (y = 209 + 540; y < 209 + 540 + 1080; y++){
+	/* UNSW inverse depth already in 4K resolution, just crop to 1080p */
+	for (x = 960; x < 960 + 1920; x++){
+		for (y = 540; y < 540 + 1080; y++){
 			//if (y>209 + 540 && x > 85 + 960 && y < 209 + 540 + 1080 && x < 85 + 960 + 1920)
 				{
 					red = Image16bit[(x + y*width)];

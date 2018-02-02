@@ -114,6 +114,7 @@ int main(int argc, char** argv) {
 
 	bool ref_array[11][33];
 
+
 	if (strcmp(MODE, "CB") == 0)
 	{
 		for (int r = 0; r < 11; r = r + 2)
@@ -126,6 +127,9 @@ int main(int argc, char** argv) {
 	}
 	if (strcmp(MODE, "5Ref") == 0)
 	{
+
+		unsigned short *ccomp = new unsigned short[nr*nc];
+		unsigned short *medccomp = new unsigned short[nr*nc];
 
 		ref_array[0][0] = true;
 		ref_array[10][0] = true;
@@ -158,16 +162,12 @@ int main(int argc, char** argv) {
 
 		for (int cc = 0; cc < 33; cc++){
 			for (int rr = 0; rr < 11; rr++){
+
 				int r, c;
 				r = rr * 2;
 				c = cc * 3 + 2;
 				char path_out_ppm[160];
 				sprintf(path_out_ppm, "%s%c%03d_%03d%s", path_out_dir, '/', c, r, ".ppm");
-				
-
-				
-
-				
 
 
 				if (!ref_array[rr][cc]){
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
 						ddy[ij] = d_cen[ref_rows[ij]][ref_cols[ij]][1] - d_cen[r][c][1];
 						ddx[ij] = d_cen[ref_rows[ij]][ref_cols[ij]][0] - d_cen[r][c][0];
 
-						view_distances[ij] = ddy[ij]*ddy[ij] + ddx[ij]*ddx[ij];
+						view_distances[ij] = ddy[ij] * ddy[ij] + ddx[ij] * ddx[ij];
 
 					}
 
@@ -205,12 +205,12 @@ int main(int argc, char** argv) {
 						pp = RowDisps[ij];
 						ppp = ColDisps[ij];
 						for (int ii = 0; ii < nr*nc; ii++){
-							pp[ii] = -p[ii]*ddy[ij];
-							ppp[ii] = p[ii]*ddx[ij];
+							pp[ii] = -p[ii] * ddy[ij];
+							ppp[ii] = p[ii] * ddx[ij];
 						}
 
 						/* to zero for consistency */
-						memset(warpedColorViews[ij], 0x00, sizeof(unsigned short)*nr*nc*3);
+						memset(warpedColorViews[ij], 0x00, sizeof(unsigned short)*nr*nc * 3);
 						memset(DispTargs[ij], 0x00, sizeof(float)*nr*nc);
 
 						warpColorView(colorViews[ij], RowDisps[ij], ColDisps[ij], nr, nc, warpedColorViews[ij], DispTargs[ij]);
@@ -220,12 +220,39 @@ int main(int argc, char** argv) {
 					/* results are collected to warpedColorViews[0] and DispTargs[0] */
 					collectWarped(warpedColorViews, DispTargs, nr, nc, 3, 5);
 
+					unsigned short *pshort = warpedColorViews[0];
+
+					std::vector<unsigned short> neighbours;
+					int dsz = 1;
+
+					for (int ii = 0; ii < nr*nc; ii++){
+						int y, x;
+						y = ii%nr;
+						x = floor(ii / nr);
+						if (pshort[ii] + pshort[ii + nr*nc] + pshort[ii + 2 * nr*nc] < 1){
+							for (int icomp = 0; icomp < 3; icomp++){
+								neighbours.clear();
+								for (int dy = -dsz; dy < dsz; dy++){
+									for (int dx = -dsz; dx < dsz; dx++){
+										if ((y + dy) >= 0 && (y + dy) < nr
+											&& (x + dx) >= 0 && (x + dx) < nc){
+											if (pshort[y + dy + (x + dx)*nr + icomp*nr*nc]>0)
+												neighbours.push_back(pshort[y + dy + (x + dx)*nr + icomp*nr*nc]);
+										}
+									}
+								}
+								if (neighbours.size()>0)
+									pshort[ii + icomp*nr*nc] = getMedian(neighbours);
+							}
+						}
+					}
+
 					aux_write16ppm_16(filept, nc, nr, warpedColorViews[0]);
 				}
 				else{
 					for (int ij = 0; ij < 5; ij++)
 					{
-						if ( abs(ref_rows[ij]-rr)+abs(ref_cols[ij]-cc)<1 )
+						if (abs(ref_rows[ij] - rr) + abs(ref_cols[ij] - cc) < 1)
 						{
 							printf("Decoding to %s\n ", path_out_ppm);
 							filept = fopen(path_out_ppm, "wb");
@@ -237,7 +264,26 @@ int main(int argc, char** argv) {
 				fclose(filept);
 			}
 		}
+
+		/* clean up ... */
+		for (int ij = 0; ij < 5; ij++){
+			delete(ColDisps[ij]);// = new float[nr*nc];
+			delete(RowDisps[ij]);// = new float[nr*nc];
+			delete(colorViews[ij]);// = new unsigned short[nr*nc * 3];
+			delete(warpedColorViews[ij]);// = new unsigned short[nr*nc * 3];
+			delete(DispTargs[ij]);// = new float[nr*nc];
+		}
+		delete(ccomp);
+		delete(medccomp);
 	}
+
+	/* clean up ... */
+	for (int ij = 0; ij < 5; ij++){
+		delete(qDMF[ij]);// = new float[nr*nc];
+		delete(qDM[ij]);// = new int[nr*nc];
+	}
+
+
 
 	exit(0);
 }
