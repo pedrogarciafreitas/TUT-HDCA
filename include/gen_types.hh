@@ -36,122 +36,102 @@ const int hexag_even_R_const[] = { -9, -9, -9, -9, -8, -8, -8, -8, -8, -8, -8, -
 // number of pixels in the original lenslet image.
 const int num_pixels_in_lenslet = 41483904;
 
+//unsigned short getMedian(std::vector<unsigned short> scores)
+//{
+//	unsigned short median;
+//	size_t size = scores.size();
+//
+//	std::sort(scores.begin(), scores.end());
+//
+//	if (size % 2 == 0)
+//	{
+//		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
+//	}
+//	else
+//	{
+//		median = scores[size / 2];
+//	}
+//
+//	return median;
+//}
+//
+//
+//float getMedian(std::vector<float> scores)
+//{
+//	float median;
+//	size_t size = scores.size();
+//
+//	std::sort(scores.begin(), scores.end());
+//
+//	if (size % 2 == 0)
+//	{
+//		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
+//	}
+//	else
+//	{
+//		median = scores[size / 2];
+//	}
+//
+//	return median;
+//}
 
-int getMedian(std::vector<int> scores)
-{
-	int median;
-	size_t size = scores.size();
-
-	std::sort(scores.begin(), scores.end());
-
-	if (size % 2 == 0)
-	{
-		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
-	}
-	else
-	{
-		median = scores[size / 2];
-	}
-
-	return median;
-}
-
-unsigned short getMedian(std::vector<unsigned short> scores)
-{
-	unsigned short median;
-	size_t size = scores.size();
-
-	std::sort(scores.begin(), scores.end());
-
-	if (size % 2 == 0)
-	{
-		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
-	}
-	else
-	{
-		median = scores[size / 2];
-	}
-
-	return median;
-}
-
-
-float getMedian(std::vector<float> scores)
-{
-	float median;
-	size_t size = scores.size();
-
-	std::sort(scores.begin(), scores.end());
-
-	if (size % 2 == 0)
-	{
-		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
-	}
-	else
-	{
-		median = scores[size / 2];
-	}
-
-	return median;
-}
-
-void medfilt2D(int* input, int* output, int SZ, int nr, int nc)
-{
-	int dsz = floor(SZ / 2);
-	std::vector<int> scores;
-	for (int y = 0; y < nr; y++){
-		for (int x = 0; x < nc; x++){
-			scores.clear();
-			for (int dy = -dsz; dy < dsz; dy++){
-				for (int dx = -dsz; dx < dsz; dx++){
-					if ((y + dy) >= 0 && (y + dy) < nr
-						&& (x + dx) >= 0 && (x + dx) < nc)
-						scores.push_back(input[y + dy + (x + dx)*nr]);
-				}
-			}
-			output[y + x*nr] = getMedian(scores);
-		}
-	}
-}
-
-void medfilt2D(unsigned short* input, unsigned short* output, int SZ, int nr, int nc)
-{
-	int dsz = floor(SZ / 2);
-	std::vector<unsigned short> scores;
-	for (int y = 0; y < nr; y++){
-		for (int x = 0; x < nc; x++){
-			scores.clear();
-			for (int dy = -dsz; dy < dsz; dy++){
-				for (int dx = -dsz; dx < dsz; dx++){
-					if ((y + dy) >= 0 && (y + dy) < nr
-						&& (x + dx) >= 0 && (x + dx) < nc)
-						scores.push_back(input[y + dy + (x + dx)*nr]);
-				}
-			}
-			output[y + x*nr] = getMedian(scores);
-		}
-	}
-}
-
-
-void medfilt2D(float* input, float* output, int SZ, int nr, int nc)
-{
-	int dsz = floor(SZ / 2);
-	std::vector<float> scores;
-	for (int y = 0; y < nr; y++){
-		for (int x = 0; x < nc; x++){
-			scores.clear();
-			for (int dy = -dsz; dy < dsz; dy++){
-				for (int dx = -dsz; dx < dsz; dx++){
-					if ((y + dy) >= 0 && (y + dy) < nr
-						&& (x + dx) >= 0 && (x + dx) < nc)
-						scores.push_back(input[y + dy + (x + dx)*nr]);
-				}
-			}
-			output[y + x*nr] = getMedian(scores);
-		}
-	}
-}
+//void medfilt2D(int* input, int* output, int SZ, int nr, int nc)
+//{
+//	int dsz = floor(SZ / 2);
+//	std::vector<int> scores;
+//	for (int y = 0; y < nr; y++){
+//		for (int x = 0; x < nc; x++){
+//			scores.clear();
+//			for (int dy = -dsz; dy < dsz; dy++){
+//				for (int dx = -dsz; dx < dsz; dx++){
+//					if ((y + dy) >= 0 && (y + dy) < nr
+//						&& (x + dx) >= 0 && (x + dx) < nc)
+//						scores.push_back(input[y + dy + (x + dx)*nr]);
+//				}
+//			}
+//			output[y + x*nr] = getMedian(scores);
+//		}
+//	}
+//}
+//
+//void medfilt2D(unsigned short* input, unsigned short* output, int SZ, int nr, int nc)
+//{
+//	int dsz = floor(SZ / 2);
+//	std::vector<unsigned short> scores;
+//	for (int y = 0; y < nr; y++){
+//		for (int x = 0; x < nc; x++){
+//			scores.clear();
+//			for (int dy = -dsz; dy < dsz; dy++){
+//				for (int dx = -dsz; dx < dsz; dx++){
+//					if ((y + dy) >= 0 && (y + dy) < nr
+//						&& (x + dx) >= 0 && (x + dx) < nc)
+//						scores.push_back(input[y + dy + (x + dx)*nr]);
+//				}
+//			}
+//			output[y + x*nr] = getMedian(scores);
+//		}
+//	}
+//}
+//
+//
+//void medfilt2D(float* input, float* output, int SZ, int nr, int nc)
+//{
+//	int dsz = floor(SZ / 2);
+//	std::vector<float> scores;
+//	for (int y = 0; y < nr; y++){
+//		for (int x = 0; x < nc; x++){
+//			scores.clear();
+//			for (int dy = -dsz; dy < dsz; dy++){
+//				for (int dx = -dsz; dx < dsz; dx++){
+//					if ((y + dy) >= 0 && (y + dy) < nr
+//						&& (x + dx) >= 0 && (x + dx) < nc)
+//						scores.push_back(input[y + dy + (x + dx)*nr]);
+//				}
+//			}
+//			output[y + x*nr] = getMedian(scores);
+//		}
+//	}
+//}
 
 // write a metadata file about sizes of images
 inline void aux_write_header_file(int nr, int nc, int nvr, int nvc, const char* filename) {
@@ -602,7 +582,8 @@ inline void aux_read16ppm(FILE *filept, int width, int height, int *img)
 //    
 //}
 
-inline void aux_write16pgm(FILE *fp, int width, int height, int *img)
+template <class T>
+void aux_write16pgm(FILE *fp, int width, int height, T *img)
 {
 	unsigned char *p;
 	int i, tmp, j;
@@ -619,8 +600,6 @@ inline void aux_write16pgm(FILE *fp, int width, int height, int *img)
 	p = (unsigned char *)img16bit;
 	for (i = 0; i < width*height; i++){
 		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
-		//tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
-		//tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
 	}
 
 	fprintf(fp, "P5\n%d %d\n65535\n", width, height);
