@@ -306,8 +306,8 @@ int main(int argc, char** argv) {
 			fclose(filept);
 		}
 
-		for (int cc = 0; cc < 33; cc++){
-			for (int rr = 0; rr < 11; rr++){
+		for (int cc = 9; cc < 9+1; cc++){
+			for (int rr = 9; rr < 9+1; rr++){
 
 				int r, c;
 				r = rr * 2;
@@ -336,16 +336,18 @@ int main(int argc, char** argv) {
 
 					/* try depth based filtering for cleaning mislabeled depth color artefacts */
 
-					std::vector< float > disptarg0(nr*nc);
+					/* try depth based filtering for cleaning mislabeled depth color artefacts */
 
-					for (int ijj = 0; ijj < nr*nc; ijj++)
-						disptarg0.at(ijj) = *(DispTargs[0] + ijj);
+					/*
+					std::vector< float > disptarg0( DispTargs[0], DispTargs[0] + sizeof(float)*nr*nc );
 
-					std::set<float> s(disptarg0.begin(), disptarg0.end());
+					std::set<float> s( disptarg0.begin(), disptarg0.end() );
 
-					disptarg0.assign(s.begin(), s.end());
+					disptarg0.assign( s.begin(), s.end() );
+					*/
+					float dd = 1.075; //disptarg0.at(2)-disptarg0.at(1);
 
-					float dd = disptarg0.at(1) - disptarg0.at(0);
+					//printf("dd=%f\n",dd);
 
 					float *mmdt0 = new float[nr*nc];
 
@@ -355,31 +357,34 @@ int main(int argc, char** argv) {
 
 					int *mmask = new int[nr*nc]();
 
+					int mcount = 0;
+
 					for (int ijj = 0; ijj<nr*nc; ijj++){
-						if (abs(*(DispTargs[0] + ijj) - *(mmdt0 + ijj)) >= dd){
+						if (max(*(DispTargs[0] + ijj), *(mmdt0 + ijj)) / min(*(DispTargs[0] + ijj), *(mmdt0 + ijj)) >= dd){
+							//if( abs( *(DispTargs[0]+ijj) - *(mmdt0+ijj) )>=dd ){
 							*(mmask + ijj) = 1;
+							mcount++;
 						}
 						else{
 							*(mmask + ijj) = 0;
 						}
 					}
 
-					unsigned short *medfcolor = new unsigned short[nr*nc * 3]();
-
-					for (int icomp = 0; icomp<3; icomp++)
-						medfilt2D(warpedColorViews[0] + icomp*nr*nc, medfcolor + icomp*nr*nc, msz, nr, nc);
+					printf("mcount=%d\n", mcount);
 
 					for (int ijj = 0; ijj<nr*nc; ijj++){
 						if (*(mmask + ijj)>0){
 							for (int icomp = 0; icomp<3; icomp++){
-								*(warpedColorViews[0] + ijj + icomp*nr*nc) = *(medfcolor + ijj + icomp*nr*nc);
+								*(warpedColorViews[0] + ijj + icomp*nr*nc) = 0;
 							}
 						}
 					}
 
+					fillHoles_T<unsigned short>(warpedColorViews[0], nr, nc, 3, 5);
+
 					delete[](mmask);
 					delete[](mmdt0);
-					delete[](medfcolor);
+					//delete[](medfcolor);
 
 					/*collectWarped<float>(DispTargs, DispTargs, nr, nc, 1, 5);
 
