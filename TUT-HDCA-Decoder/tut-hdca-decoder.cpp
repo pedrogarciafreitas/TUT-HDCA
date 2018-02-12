@@ -336,7 +336,10 @@ int main(int argc, char** argv) {
 
 					/* try depth based filtering for cleaning mislabeled depth color artefacts */
 
-					std::vector< float > disptarg0(DispTargs[0], DispTargs[0] + sizeof(float)*nr*nc);
+					std::vector< float > disptarg0(nr*nc);
+
+					for (int ijj = 0; ijj < nr*nc; ijj++)
+						disptarg0.at(ijj) = *(DispTargs[0] + ijj);
 
 					std::set<float> s(disptarg0.begin(), disptarg0.end());
 
