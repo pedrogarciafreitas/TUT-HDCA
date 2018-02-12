@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
 	for (int ij = 0; ij < 5; ij++)
 	{
 
-		char cerv_filename[12];
+		char cerv_filename[160];
 		sprintf(cerv_filename, "%s%c%03d_%03d.cerv", input_dir, '/', ref_cols[ij], ref_rows[ij]);
 
 		cerv_decode(SEGM2D, nr, nc, cerv_filename);
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
 
 		std::vector<int> labels_symbols;
 
-		char cerv_labels_filename[12];
+		char cerv_labels_filename[160];
 		sprintf(cerv_labels_filename, "%s%c%03d_%03d.gr", input_dir, '/', ref_cols[ij], ref_rows[ij]);
 		GolombCoder golomb_coder(cerv_labels_filename, 1);
 		golomb_coder.decode_symbols(labels_symbols, NBIT_GR);
