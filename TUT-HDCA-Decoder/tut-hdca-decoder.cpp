@@ -306,8 +306,8 @@ int main(int argc, char** argv) {
 			fclose(filept);
 		}
 
-		for (int cc = 9; cc < 9+1; cc++){
-			for (int rr = 9; rr < 9+1; rr++){
+		for (int cc = 0; cc < 33; cc++){
+			for (int rr = 0; rr < 11; rr++){
 
 				int r, c;
 				r = rr * 2;
