@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <sys/stat.h>
+#include <math.h>
 
 
 #define NBIT_GR 32

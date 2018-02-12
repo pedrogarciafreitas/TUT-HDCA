@@ -4,10 +4,10 @@
 #include <string>
 #include <algorithm>
 
-#include "..\CERV\cerv.h"
-#include "..\GolombCoder\golomb_coder.hh"
-#include "..\include\gen_types.hh"
-#include "..\include\warpingFunctions.hh"
+#include "../CERV/cerv.h"
+#include "../GolombCoder/golomb_coder.hh"
+#include "../include/gen_types.hh"
+#include "../include/warpingFunctions.hh"
 
 int main(int argc, char** argv) {
 
@@ -108,8 +108,8 @@ int main(int argc, char** argv) {
 		float *medianfiltered = new float[nr*nc];
 		medfilt2D<float>(inverse_depths_float[ij], medianfiltered, MED_FILT_SZ, nr, nc);
 
-		delete(inverse_depths[ij]);
-		delete(inverse_depths_float[ij]);
+		delete[](inverse_depths[ij]);
+		delete[](inverse_depths_float[ij]);
 
 		float minDM = *std::min_element(medianfiltered, medianfiltered + nr*nc);
 		float maxDM = *std::max_element(medianfiltered, medianfiltered + nr*nc);
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
 		aux_write16pgm(filept, nc, nr, qDM[ij]);
 
 
-		delete(medianfiltered);
+		delete[](medianfiltered);
 
 		/* Encode quantized UNSW inverse depth with CERV */
 		/* encode quantized labels with cerv */
@@ -329,6 +329,7 @@ int main(int argc, char** argv) {
 
 					unsigned short *ps;
 
+					/* compute mse for each warped view */
 					for (int ij = 0; ij < refscb_col.size(); ij++){
 						memset(SE_i, 0x00, sizeof(float));
 						ps = warpedColorViews[ij];
@@ -347,9 +348,10 @@ int main(int argc, char** argv) {
 						mses.at(ij).second = ij;
 					}
 
-					delete(SE_i);
-					delete(AA3);
+					delete[](SE_i);
+					delete[](AA3);
 
+					/* sort ascending by mse */
 					sort(mses.begin(), mses.end());
 
 					char path_to_vorder[160];
@@ -384,15 +386,15 @@ int main(int argc, char** argv) {
 
 		
 
-		delete(d_cen0);
+		delete[](d_cen0);
 
 		for (int ij = 0; ij < 5; ij++){
-			delete(ColDisps[ij]);// = new float[nr*nc];
-			delete(RowDisps[ij]);// = new float[nr*nc];
-			delete(colorViews[ij]);// = new unsigned short[nr*nc * 3];
-			delete(warpedColorViews[ij]);// = new unsigned short[nr*nc * 3];
-			delete(DispTargs[ij]);// = new float[nr*nc];
-			delete(warpedInverseDepths[ij]);
+			delete[](ColDisps[ij]);// = new float[nr*nc];
+			delete[](RowDisps[ij]);// = new float[nr*nc];
+			delete[](colorViews[ij]);// = new unsigned short[nr*nc * 3];
+			delete[](warpedColorViews[ij]);// = new unsigned short[nr*nc * 3];
+			delete[](DispTargs[ij]);// = new float[nr*nc];
+			delete[](warpedInverseDepths[ij]);
 		}
 
 	}
@@ -402,9 +404,9 @@ int main(int argc, char** argv) {
 	/* All done. */
 
 	for (int ij = 0; ij < 5; ij++){
-		delete(qDM[ij]);
-		delete(LDM[ij]);
-		delete(qDMF[ij]);
+		delete[](qDM[ij]);
+		delete[](LDM[ij]);
+		delete[](qDMF[ij]);
 	}
 
 	exit(0);

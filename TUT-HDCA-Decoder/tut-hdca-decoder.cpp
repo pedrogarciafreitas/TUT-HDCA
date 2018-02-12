@@ -4,10 +4,10 @@
 #include <string>
 #include <algorithm>
 
-#include "..\CERV\cerv.h"
-#include "..\GolombCoder\golomb_coder.hh"
-#include "..\include\gen_types.hh"
-#include "..\include\warpingFunctions.hh"
+#include "../CERV/cerv.h"
+#include "../GolombCoder/golomb_coder.hh"
+#include "../include/gen_types.hh"
+#include "../include/warpingFunctions.hh"
 
 int main(int argc, char** argv) {
 
@@ -259,15 +259,15 @@ int main(int argc, char** argv) {
 
 		}
 
-		delete(d_cen0);
+		delete[](d_cen0);
 
 		for (int ij = 0; ij < 5; ij++){
-			delete(ColDisps[ij]);// = new float[nr*nc];
-			delete(RowDisps[ij]);// = new float[nr*nc];
-			delete(colorViews[ij]);// = new unsigned short[nr*nc * 3];
-			delete(warpedColorViews[ij]);// = new unsigned short[nr*nc * 3];
-			delete(DispTargs[ij]);// = new float[nr*nc];
-			delete(warpedInverseDepths[ij]);
+			delete[](ColDisps[ij]);// = new float[nr*nc];
+			delete[](RowDisps[ij]);// = new float[nr*nc];
+			delete[](colorViews[ij]);// = new unsigned short[nr*nc * 3];
+			delete[](warpedColorViews[ij]);// = new unsigned short[nr*nc * 3];
+			delete[](DispTargs[ij]);// = new float[nr*nc];
+			delete[](warpedInverseDepths[ij]);
 		}
 	}
 	if (strcmp(MODE, "5Ref") == 0)
@@ -348,7 +348,7 @@ int main(int argc, char** argv) {
 					//medfilt2D(warpedColorViews[0], warpedColorViews[0],
 					//	nr, nc, 3);
 
-					fillHoles_T<unsigned short>(warpedColorViews[0], nr, nc, 3, 3);
+					fillHoles_T<unsigned short>(warpedColorViews[0], nr, nc, 3, 1);
 
 					aux_write16ppm_16(filept, nc, nr, warpedColorViews[0]);
 
@@ -370,20 +370,20 @@ int main(int argc, char** argv) {
 
 		/* clean up ... */
 		for (int ij = 0; ij < 5; ij++){
-			delete(ColDisps[ij]);// = new float[nr*nc];
-			delete(RowDisps[ij]);// = new float[nr*nc];
-			delete(colorViews[ij]);// = new unsigned short[nr*nc * 3];
-			delete(warpedColorViews[ij]);// = new unsigned short[nr*nc * 3];
-			delete(DispTargs[ij]);// = new float[nr*nc];
+			delete[](ColDisps[ij]);// = new float[nr*nc];
+			delete[](RowDisps[ij]);// = new float[nr*nc];
+			delete[](colorViews[ij]);// = new unsigned short[nr*nc * 3];
+			delete[](warpedColorViews[ij]);// = new unsigned short[nr*nc * 3];
+			delete[](DispTargs[ij]);// = new float[nr*nc];
 		}
-		delete(ccomp);
-		delete(medccomp);
+		delete[](ccomp);
+		delete[](medccomp);
 	}
 
 	/* clean up ... */
 	for (int ij = 0; ij < 5; ij++){
-		delete(qDMF[ij]);// = new float[nr*nc];
-		delete(qDM[ij]);// = new int[nr*nc];
+		delete[](qDMF[ij]);// = new float[nr*nc];
+		delete[](qDM[ij]);// = new int[nr*nc];
 	}
 
 
