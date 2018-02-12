@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <set>
 
 #include "../CERV/cerv.h"
 #include "../GolombCoder/golomb_coder.hh"
@@ -329,6 +330,54 @@ int main(int argc, char** argv) {
 
 					collectWarped<unsigned short>(warpedColorViews, DispTargs, nr, nc, 3, 5);
 
+					fillHoles_T<unsigned short>(warpedColorViews[0], nr, nc, 3, 1);
+
+					/*Note 12.2.2018, 17:46, We might want to median filter the final DispTarg and obtain those pixels which differ heavily from the unfiltered original. This way, we can obtain the pixels which belong to wrong depth layer. Applying median filter of e.g., [5 5] over the original color warped result and replacing at those pixels only, could improve the PSNR heavily.*/
+
+					/* try depth based filtering for cleaning mislabeled depth color artefacts */
+
+					std::vector< float > disptarg0(DispTargs[0], DispTargs[0] + sizeof(float)*nr*nc);
+
+					std::set<float> s(disptarg0.begin(), disptarg0.end());
+
+					disptarg0.assign(s.begin(), s.end());
+
+					float dd = disptarg0.at(1) - disptarg0.at(0);
+
+					float *mmdt0 = new float[nr*nc];
+
+					int msz = 7;
+
+					medfilt2D(DispTargs[0], mmdt0, msz, nr, nc);
+
+					int *mmask = new int[nr*nc]();
+
+					for (int ijj = 0; ijj<nr*nc; ijj++){
+						if (abs(*(DispTargs[0] + ijj) - *(mmdt0 + ijj)) >= dd){
+							*(mmask + ijj) = 1;
+						}
+						else{
+							*(mmask + ijj) = 0;
+						}
+					}
+
+					unsigned short *medfcolor = new unsigned short[nr*nc * 3]();
+
+					for (int icomp = 0; icomp<3; icomp++)
+						medfilt2D(warpedColorViews[0] + icomp*nr*nc, medfcolor + icomp*nr*nc, msz, nr, nc);
+
+					for (int ijj = 0; ijj<nr*nc; ijj++){
+						if (*(mmask + ijj)>0){
+							for (int icomp = 0; icomp<3; icomp++){
+								*(warpedColorViews[0] + ijj + icomp*nr*nc) = *(medfcolor + ijj + icomp*nr*nc);
+							}
+						}
+					}
+
+					delete[](mmask);
+					delete[](mmdt0);
+					delete[](medfcolor);
+
 					/*collectWarped<float>(DispTargs, DispTargs, nr, nc, 1, 5);
 
 					unsigned short *tmp_dt = new unsigned short[nr*nc];
@@ -348,7 +397,7 @@ int main(int argc, char** argv) {
 					//medfilt2D(warpedColorViews[0], warpedColorViews[0],
 					//	nr, nc, 3);
 
-					fillHoles_T<unsigned short>(warpedColorViews[0], nr, nc, 3, 1);
+					//fillHoles_T<unsigned short>(warpedColorViews[0], nr, nc, 3, 1);
 
 					aux_write16ppm_16(filept, nc, nr, warpedColorViews[0]);
 
