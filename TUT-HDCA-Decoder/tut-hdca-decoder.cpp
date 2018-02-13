@@ -12,7 +12,10 @@
 
 int main(int argc, char** argv) {
 
-	/* parameters for encoder: CB/5 path_to_original_views path_to_unsw path_to_camera_centers bitrate NrQLev output_directory */
+	if (argc == 1){
+		printf("TUT-HDCA-DECODER\nRUNS FOR 1080x1920 33x11 case ONLY!\n\nUsage: TUT-HDCA-DECODER path_to_references path_to_camera_centers mode input_dir output_dir\npath_to_references:\tcompressed reference views\npath_to_camera_centers:\tUNSW camera centers file\nmode:\t CB or 5Ref\ninput_dir:\tpath to .cerv and .gr files\noutput_dir:\tpath to output directory for decoded .ppm\n");
+		exit(0);
+	}
 
 	const char* path_to_references = argv[1];
 	const char* path_camera_centers = argv[2];

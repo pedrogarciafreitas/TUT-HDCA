@@ -11,6 +11,12 @@
 
 int main(int argc, char** argv) {
 
+	if (argc == 1){
+		printf("TUT-HDCA-ENCODER\nRUNS FOR 1080x1920 33x11 case ONLY!\n\nUsage: TUT-HDCA-ENCODER path_to_UNSW_disparities NrQLev mode med_filt_sz mode path_to_camera_centers path_to_references output_dir\npath_to_UNSW_disparities:\tpath to UNSW disparities\nNrQLev:\tnumber of quantization levels for disparity encoding\nmed_filt_sz:\tmedian filter window size for disparity filtering prior to encoding\nmode:\t CB or 5Ref\npath_to_camera_centers:\tUNSW camera centers file\npath_to_references:\tcompressed reference views\noutput_dir:\tpath to output directory for encoded files\n");
+		exit(0);
+	}
+
+
 	/* parameters for encoder: CB/5 path_to_original_views path_to_unsw path_to_camera_centers bitrate NrQLev output_directory */
 
 	//const char* path_original_views = argv[2];
@@ -25,14 +31,12 @@ int main(int argc, char** argv) {
 	char* MODE = "5Ref";
 	char* path_camera_centers = "";
 	char * path_to_references = "";
+	
+	MODE = argv[4];
+	path_camera_centers = argv[5];
+	path_to_references = argv[6];
 
-	if (argc > 3){
-		MODE = argv[4];
-		path_camera_centers = argv[5];
-		path_to_references = argv[6];
-	}
-
-	const std::string output_path = std::string(argv[4]) + "/";
+	const std::string output_path = std::string(argv[7]) + "/";
 
 	// if using hevc, locations for external binaries of x265 encoder and decoder need be defined as well as ffmpeg binary
 	/*const char x265_encoder_path[] = "C:/Local/astolap/Data/JPEG_PLENO/05_Software/x265/x265.exe";
