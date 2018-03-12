@@ -317,6 +317,68 @@ inline void aux_read8ppm(FILE *filept, int width, int height, int *img){
 }
 
 // read a 16 bit color pgm image
+void aux_read16pgm(FILE *filept, int *img)
+{
+	int  max, x, y;
+	int red, green, blue, pixelmax;
+	char dummy[100];
+
+	bool divd = 0;
+
+	unsigned short int *Image16bit = NULL;
+
+	int width, height;
+
+	//FILE* filept = fopen("007_007.ppm", "r");
+	/*--< Read header information of 16bit ppm image from filept >--*/
+	fscanf(filept, "%s", dummy);
+	fscanf(filept, "%d %d\n", &width, &height);
+	fscanf(filept, "%d", &max);
+	fgetc(filept);
+	//printf("%s\n", dummy);
+
+	/*--< Really 16bit ppm? Check it >--*/
+	if (strncmp(dummy, "P5", 2) != 0) {
+		fprintf(stderr, "Error: The input data is not PGM.\n");
+		exit(1);
+	}
+
+	Image16bit = (unsigned short int *)malloc(width*height* sizeof(unsigned short int));
+
+	/*--< Read 16bit ppm image from filept >--*/
+	fread(Image16bit, sizeof(unsigned short int), width*height, filept);
+
+	int i = 0;
+	/*--< Find maximum value in the image >--*/
+	pixelmax = 0;
+	/* UNSW inverse depth already in 4K resolution, just crop to 1080p */
+	for (x = 0; x < width; x++){
+		for (y = 0; y < height; y++){
+			red = Image16bit[(x + y*width)];
+
+			// Exhange upper 8bit and lower 8bit for Intel x86
+			red = ((red & 0x00ff) << 8) | ((red & 0xff00) >> 8);
+
+			if (pixelmax < red) pixelmax = red;
+
+
+			img[i] = red;
+
+
+			if (0){ //debug stuff
+				fprintf(stderr, "sample %i\n", img[i]);
+			}
+
+			i++;
+
+
+		}
+	}
+	free(Image16bit);
+}
+
+
+// read a 16 bit color pgm image
 inline void aux_read16pgm_1080p(FILE *filept, int *img)
 {
 	int  max, x, y;

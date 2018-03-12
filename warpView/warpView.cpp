@@ -16,30 +16,30 @@ int main(const int argc, const char** argv) {
 	aux_read_header_file(&nr, &nc, &ncomponents, &nvc, argv[1]);
 
 	/* reference */
-	unsigned short *AA1 = new unsigned short[nr*nc*ncomponents];
+	unsigned short *AA1 = new unsigned short[nr*nc*ncomponents]();
 	aux_read_file_uint16(nr, nc, ncomponents, argv[1], AA1);
 
 	/* disparity */
-	float *DM_ROW = new float[nr*nc];
+	float *DM_ROW = new float[nr*nc]();
 	aux_read_file_float(nr, nc, 1, argv[2], DM_ROW);
 
 	float *DM_COL = new float[nr*nc];
 	aux_read_file_float(nr, nc, 1, argv[3], DM_COL);
 	
 	
-	int *ROWS = new int[nr*nc];
-	int *COLS = new int[nr*nc];
+	int *ROWS = new int[nr*nc]();
+	int *COLS = new int[nr*nc]();
 
 	//aux_read_file_int32(nr, nc, 1, argv[7], ROWS); //maybe we use these later ...
 	//aux_read_file_int32(nr, nc, 1, argv[8], COLS);
 
 
-	float *DispTarg = new float[nr*nc];
+	float *DispTarg = new float[nr*nc]();
 
-	float *DispTarg_col = new float[nr*nc];
-	float *DispTarg_row = new float[nr*nc];
+	float *DispTarg_col = new float[nr*nc]();
+	float *DispTarg_row = new float[nr*nc]();
 
-	unsigned short *Warped = new unsigned short[nr*nc * 3];
+	unsigned short *Warped = new unsigned short[nr*nc * 3]();
 
 	for (int ij = 0; ij < nr*nc; ij++){
 		DispTarg[ij] = -1;
@@ -104,6 +104,8 @@ int main(const int argc, const char** argv) {
 
 	fclose(f_file);
 	
+
+	delete[] AA1, DM_ROW, DM_COL, ROWS, COLS, DispTarg, DispTarg_col, DispTarg_row, Warped;
 
 	return 0;
 
