@@ -58,7 +58,7 @@ int main(const int argc, const char** argv) {
 		int iynew = iy + (int)round( DM_COL[ij] );
 		int ixnew = ix + (int)round( DM_ROW[ij] );
 
-		if (iynew >= 0 && iynew<nc && ixnew >= 0 && ixnew < nr){
+		if (iynew >= 0 && iynew<nc && ixnew >= 0 && ixnew < nr && (int)round(DM_COL[ij])>-9999){
 			int indnew = ixnew + iynew*nr;
 			if (DispTarg[indnew] < disp0){
 				DispTarg[indnew] = disp0;
