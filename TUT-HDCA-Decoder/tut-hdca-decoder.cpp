@@ -4,15 +4,10 @@
 #include <string>
 #include <algorithm>
 
-//#include "..\CERV\cerv.h"
-//#include "..\GolombCoder\golomb_coder.hh"
-
 #include "..\include\gen_types.hh"
 #include "..\include\warpingFunctions.hh"
 
 int main(int argc, char** argv) {
-
-	/* parameters for encoder: CB/5 path_to_original_views path_to_unsw path_to_camera_centers bitrate NrQLev output_directory */
 
 	const char* path_to_references = argv[1];
 	const char* path_camera_centers = argv[2];
@@ -21,23 +16,15 @@ int main(int argc, char** argv) {
 	const int nr = 1080;
 	const int nc = 1920;
 
-	int *inverse_depths[5]; //inverse depth
-	float *qDMF[5]; //quantized inverse depth
+	float *qDMF[5];
 	int *qDM[5];
-	int *LDM[5]; //labels
 
 	float *p, *pp, *ppp;
-	int *ppi; // dummy pointer
-
-	//int ref_cols[] = { 2, 2, 50, 98, 98 };
-	//int ref_rows[] = { 0, 20, 10, 0, 20 };
 
 	int ref_cols[] = { 2, 98, 2, 98, 50 };
 	int ref_rows[] = { 0, 0, 20, 20, 10 };
 
 	float *d_cen0 = new float[101 * 21 * 2]();
-
-
 
 	FILE *filept;
 
@@ -62,7 +49,6 @@ int main(int argc, char** argv) {
 	}
 
 
-
 	float d_cen[21][101][2];
 
 	p = &d_cen0[0];
@@ -80,21 +66,16 @@ int main(int argc, char** argv) {
 			ref_array[r][c] = false;
 
 
-	if (0)//(strcmp(MODE, "CB") == 0)
-	{
-		for (int r = 0; r < 11; r = r + 2)
-			for (int c = 0; c < 33; c = c + 2)
-				ref_array[r][c] = true;
-		for (int r = 1; r < 11; r = r + 2)
-			for (int c = 1; c < 33; c = c + 2)
-				ref_array[r][c] = true;
+	char pathLSW[160];
+	sprintf(pathLSW, "%s%s", path_to_references, "LS_weights");
 
-	}
-	if (1)//(strcmp(MODE, "5Ref") == 0)
-	{
+	std::cout << pathLSW << "\n";
 
-		//unsigned short *ccomp = new unsigned short[nr*nc]();
-		//unsigned short *medccomp = new unsigned short[nr*nc]();
+	FILE *fileptLS;
+	fileptLS = fopen(pathLSW, "rb");
+
+	if (1)
+	{
 
 		ref_array[0][0] = true;
 		ref_array[10][0] = true;
@@ -161,83 +142,101 @@ int main(int argc, char** argv) {
 
 					printf("Decoding to %s\n ", path_out_ppm);
 					
-
-					float view_distances[5];
 					float ddy[5];
 					float ddx[5];
+
+					std::vector<std::pair<float, int>> view_distances(5);
+					std::vector<std::pair<float, float>> dydx(5);
+
+					std::cout << d_cen[r][c][0] << "\t" << d_cen[r][c][1] << "\t\n\n";
 
 					for (int ij = 0; ij < 5; ij++){
 
 						ddy[ij] = d_cen[ref_rows[ij]][ref_cols[ij]][1] - d_cen[r][c][1];
 						ddx[ij] = d_cen[ref_rows[ij]][ref_cols[ij]][0] - d_cen[r][c][0];
 
-						view_distances[ij] = ddy[ij] * ddy[ij] + ddx[ij] * ddx[ij];
+						dydx.at(ij).first = ref_rows[ij] - r;
+						dydx.at(ij).second = ref_cols[ij] - c;
 
+						view_distances.at(ij).first = sqrt( dydx.at(ij).first * dydx.at(ij).first + dydx.at(ij).second * dydx.at(ij).second );
+						view_distances.at(ij).second = ij;
 					}
 
-					for (int ij = 0; ij < 5; ij++){
+					sort(view_distances.begin(), view_distances.end());
 
 
-						p = qDMF[ij];
+					for (int uu = 0; uu < 5; uu++){
 
+						int ij = view_distances.at(uu).second;
 
 						p = qDMF[ij];
 						pp = RowDisps[ij];
 						ppp = ColDisps[ij];
+
 						for (int ii = 0; ii < nr*nc; ii++){
 							pp[ii] = -p[ii] * ddy[ij];
 							ppp[ii] = p[ii] * ddx[ij];
 						}
 
-
 						/* to zero for consistency */
-						memset(warpedColorViews[ij], 0x00, sizeof(unsigned short)*nr*nc * 3);
-						memset(DispTargs[ij], 0x00, sizeof(float)*nr*nc);
+						memset(warpedColorViews[uu], 0x00, sizeof(unsigned short)*nr*nc * 3);
+						memset(DispTargs[uu], 0x00, sizeof(float)*nr*nc);
 
-						warpColorView(colorViews[ij], RowDisps[ij], ColDisps[ij], nr, nc, warpedColorViews[ij], DispTargs[ij]);
+						warpColorView(colorViews[ij], RowDisps[ij], ColDisps[ij], nr, nc, warpedColorViews[uu], DispTargs[uu]);
 
 					}
 
 
 					signed short *LSw_s = new signed short[80];
 
-					char pathLSW[160];
-					sprintf(pathLSW, "%s%c%03d_%03d%s", path_to_references, '/', c, r, "_LS_weights");
-
-					std::cout << pathLSW << "\n";
-
-
-					filept = fopen(pathLSW, "rb");
-
-					if (filept == NULL){
-						std::cout << "Unable to open " << pathLSW << "\n";
-						return 0;
-					}
-					
-					fread(LSw_s, 80, sizeof(signed short), filept);
-					fclose(filept);
-
-					
-
-
 					float *LSw = new float[32 * 5]();
 
-					int uu = 0;
+					float stdd = 10.0;
 
-					for (int ii = 0; ii < 32 * 5; ii++){
-						if (bmask[ii]){
-							LSw[ii] = ((float)LSw_s[uu++])/pow(2,12);
+					if ( fileptLS==NULL ||  !(fread(LSw_s, sizeof(signed short), 80, fileptLS)==80) )
+					{
+
+						std::cout << "Fixed exponential weights, sigma = " << stdd << "\n";
+
+						for (int ii = 0; ii < 32; ii++){
+							float sumw = 0;
+							for (int ij = 0; ij < 5; ij++){
+								if (bmask[ii + ij * 32]){
+									LSw[ii + ij * 32] = exp(-(view_distances.at(ij).first * view_distances.at(ij).first) / (2*stdd*stdd));
+									sumw = sumw + LSw[ii + ij * 32];
+								}
+								else{
+									LSw[ii + ij * 32] = 0.0;
+								}
+
+							}
+							for (int ij = 0; ij < 5; ij++)
+								if (bmask[ii + ij * 32])
+									LSw[ii + ij * 32] = LSw[ii + ij * 32] / sumw;
 						}
-						else{
-							LSw[ii] = 0.0;
+
+					}
+					else{
+
+						std::cout << "LS weights " << pathLSW << "\n";
+
+						int uu = 0;
+
+						for (int ii = 0; ii < 32 * 5; ii++){
+							if (bmask[ii]){
+								LSw[ii] = ((float)LSw_s[uu++]) / pow(2.0, 14.0);
+							}
+							else{
+								LSw[ii] = 0.0;
+							}
 						}
 					}
 
 
-
+					
 					//for (int ii = 0; ii < 32 * 5; ii++)
 					//	std::cout << LSw[ii] << "\n";
-
+						
 					/* results are collected to warpedColorViews[0] and DispTargs[0] */
 					/*here we need the LS weights*/
 					collectWarpedLS(warpedColorViews, DispTargs, nr, nc, 3, 5, LSw);
@@ -301,6 +300,8 @@ int main(int argc, char** argv) {
 		delete[](ccomp);
 		delete[](medccomp);*/
 	}
+
+	fclose(fileptLS);
 
 	/* clean up ... */
 	for (int ij = 0; ij < 5; ij++){
