@@ -46,7 +46,7 @@ int getMedian(std::vector<int> scores)
 
 	if (size % 2 == 0)
 	{
-		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
+		median = floor( ( (float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2 );
 	}
 	else
 	{
@@ -65,7 +65,7 @@ unsigned short getMedian(std::vector<unsigned short> scores)
 
 	if (size % 2 == 0)
 	{
-		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
+		median = floor(((float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2);
 	}
 	else
 	{
@@ -85,7 +85,7 @@ float getMedian(std::vector<float> scores)
 
 	if (size % 2 == 0)
 	{
-		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
+		median = floor(((float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2);
 	}
 	else
 	{

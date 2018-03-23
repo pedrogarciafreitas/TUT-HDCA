@@ -17,7 +17,7 @@ void collectWarpedLS(unsigned short *warpedColorViews[5], float *DispTargs[5], c
 
 		for (int ik = 0; ik < n_views; ik++){
 			float *pf = DispTargs[ik];
-			if( *(pf+ii)>=1 )
+			if( *(pf+ii)>-1 )
 				ci = ci + pow(2, ik);
 		}
 
@@ -49,7 +49,7 @@ void collectWarpedLS(unsigned short *warpedColorViews[5], float *DispTargs[5], c
 			if (AA1[ii + icomp*nr*nc]>(pow(2,16)-1))
 				AA1[ii + icomp*nr*nc] = (pow(2, 16) - 1);
 
-			AA2[ii + icomp*nr*nc] = (unsigned short)( round(AA1[ii + icomp*nr*nc]) );
+			AA2[ii + icomp*nr*nc] = (unsigned short)( floor(AA1[ii + icomp*nr*nc]) );
 
 		}
 	}
