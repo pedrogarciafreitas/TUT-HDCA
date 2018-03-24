@@ -6,8 +6,8 @@
 
 #include <cstdint>
 
-#include "..\include\gen_types.hh"
-#include "..\include\warpingFunctions.hh"
+#include "../include/gen_types.hh"
+#include "../include/warpingFunctions.hh"
 
 int main(int argc, char** argv) {
 
@@ -366,7 +366,7 @@ int main(int argc, char** argv) {
 					delete[] Regr0;
 					delete[] theta0;
 
-					if (0){
+					if (1){
 						/* residual here */
 
 						FILE *jp2_residual_file;
@@ -429,8 +429,10 @@ int main(int argc, char** argv) {
 		delete[](ccomp);
 		delete[](medccomp);*/
 
-		fclose(fileptLS);
-		fclose(fileptSPARSEGLOBAL);
+		if (fileptLS != NULL)
+			fclose(fileptLS);
+		if (fileptSPARSEGLOBAL != NULL)
+			fclose(fileptSPARSEGLOBAL);
 	}
 
 	

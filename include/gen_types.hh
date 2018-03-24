@@ -85,7 +85,7 @@ float getMedian(std::vector<float> scores)
 
 	if (size % 2 == 0)
 	{
-		median = floor(((float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2);
+		median = (((float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2);
 	}
 	else
 	{
