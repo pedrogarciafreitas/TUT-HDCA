@@ -358,7 +358,8 @@ int main(int argc, char** argv) {
 
 						memcpy(pshort, final_view_s, sizeof(unsigned short)*nr*nc * 3);
 
-						delete[] final_view, final_view_s;
+						delete[] final_view;
+						delete[] final_view_s;
 
 					}
 
@@ -426,8 +427,8 @@ int main(int argc, char** argv) {
 			delete[](warpedColorViews[ij]);// = new unsigned short[nr*nc * 3];
 			delete[](DispTargs[ij]);// = new float[nr*nc];
 		}/*
-		delete[](ccomp);
-		delete[](medccomp);*/
+		 delete[](ccomp);
+		 delete[](medccomp);*/
 
 		if (fileptLS != NULL)
 			fclose(fileptLS);
@@ -435,7 +436,7 @@ int main(int argc, char** argv) {
 			fclose(fileptSPARSEGLOBAL);
 	}
 
-	
+
 
 	/* clean up ... */
 	for (int ij = 0; ij < 5; ij++){
