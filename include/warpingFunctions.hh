@@ -2,6 +2,210 @@
 
 #include <cmath>
 
+void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[5], const unsigned short* original_intermediate_view, 
+	const int nr, const int nc, const bool *bmask, signed short *LScoeffs)
+{
+
+	/* This function puts the LS view merging weights into LSw */
+
+	unsigned short *seg_vp = new unsigned short[nr*nc]();
+
+	unsigned short *seg_vp2 = new unsigned short[nr*nc * 3]();
+
+	int *number_of_pixels_per_region = new int[32]();
+
+
+	for (int ii = 0; ii < nr*nc; ii++){
+
+		int ci = 0;
+
+		for (int ik = 0; ik < 5; ik++){
+			float *pf = DispTargs[ik];
+			if (*(pf + ii)>-1)
+				ci = ci + pow(2, ik);
+		}
+
+		seg_vp[ii] = ci;
+
+		seg_vp2[ii] = ci;
+		seg_vp2[ii + nr*nc] = ci;
+		seg_vp2[ii + 2 * nr*nc] = ci;
+
+		number_of_pixels_per_region[ci] = number_of_pixels_per_region[ci] + 1;
+
+	}
+
+	
+	/* go through all regions, collect regressors from references */
+	unsigned short **reference_view_pixels_in_classes = new unsigned short*[32 * 5]();
+
+	/* also collect desired values */
+	unsigned short **original_view_in_classes = new unsigned short*[32]();
+
+	for (int ij = 0; ij < 32; ij++){ // region
+
+		int NN = number_of_pixels_per_region[ij];
+
+		original_view_in_classes[ij] = new unsigned short[NN*3]();
+		unsigned short *p3s = original_view_in_classes[ij];
+
+		int jj = 0;
+
+		for (int ii = 0; ii < nr*nc; ii++){
+			if (seg_vp[ii] == ij){
+				for (int icomp = 0; icomp < 3;icomp++)
+					*(p3s + jj + icomp*NN) = *(original_intermediate_view+ii+icomp*nr*nc);
+				jj++;
+			}
+		}
+
+		for (int ik = 0; ik < 5; ik++){ // reference view
+
+			if (bmask[ij + ik * 32]){
+
+				/* allocate pixels for region */
+				reference_view_pixels_in_classes[ij + ik * 32] = new unsigned short[NN * 3]();
+
+				unsigned short *ps = reference_view_pixels_in_classes[ij + ik * 32];
+				unsigned short *pss = warpedColorViews[ik];		
+
+				
+				jj = 0;
+
+				for (int ii = 0; ii < nr*nc; ii++){
+					if (seg_vp[ii] == ij){
+						for (int icomp = 0; icomp < 3; icomp++)
+							*(ps + jj + icomp*NN) = *(pss + ii + icomp*nr*nc);
+						jj++;
+					}
+				}
+
+			}
+
+		}
+
+	}
+
+	
+	/* run fastOLS on the classes */
+
+	unsigned short *thetas = new unsigned short[32 * 5]();
+
+	for (int ij = 1; ij < 32; ij++){
+
+		/* form A for this class, compute A'*A (phi)
+		also compute A'*y (psi), where y is the desired data from the original view */
+
+		int M = 0;
+
+		for( int ik = 0; ik<5; ik++ )
+		{
+			M += bmask[ij + 32 * ik];
+		}
+
+		int N = number_of_pixels_per_region[ij] * 3; // number of rows in A
+
+		double *A = new double[N*M]();
+		double *Yd = new double[N]();
+
+		unsigned short *ps;
+
+		int ikk = 0;
+
+		for (int ik = 0; ik < 5; ik++){
+			if (bmask[ij + ik * 32]){
+				ps = reference_view_pixels_in_classes[ij + ik * 32];
+				for (int ii = 0; ii < N; ii++){
+					*(A + ii + ikk*N) = ((double)*(ps + ii)) / 65536;
+				}
+				ikk++;
+			}
+		}
+
+		ps = original_view_in_classes[ij];
+
+		for (int ii = 0; ii < N; ii++){
+			*(Yd + ii) = ((double)*(ps + ii)) / 65536;
+		}
+
+		double *ATA = new double[M*M]();
+		double *ATYd = new double[M]();
+
+		/* make ATA */
+		for (int i1 = 0; i1 < M; i1++){
+			for (int j1 = 0; j1 < M; j1++){
+				for (int ii = 0; ii < N; ii++){
+					*(ATA + i1 + j1*M) += (*(A + ii + i1*M))*(*(A + ii + j1*M));
+				}
+			}
+		}
+
+		/* make ATYd */
+		for (int i1 = 0; i1 < M; i1++){
+			for (int ii = 0; ii < N; ii++){
+				*(ATYd + i1) += (*(A + ii + i1*M))*(*(Yd + ii));
+			}
+		}
+
+		/* YdTYd */
+		double YdTYd = 0;
+		for (int ii = 0; ii < N; ii++)
+			YdTYd += (*(Yd + ii))*(*(Yd + ii));
+
+		/* fastols */
+
+		int *PredRegr0 = new int[M]();
+		double *PredTheta0 = new double[M]();
+
+		int Mtrue = FastOLS(ATA, ATYd, YdTYd, PredRegr0, PredTheta0, M, M, M);
+
+		for (int ii = 0; ii < M; ii++){
+			thetas[ij + 32*PredRegr0[ii]] = (signed short)round(*(PredTheta0 + ii)*pow(2, 14));
+			
+		}
+
+		delete[](PredRegr0);
+		delete[](PredTheta0);
+
+		delete[](ATA);
+		delete[](ATYd);
+		delete[](A);
+		delete[](Yd);
+
+		
+
+	}
+
+	/* columnwise collecting of thetas */
+	int in = 0;
+	for (int ik = 0; ik < 5; ik++){
+		for (int ij = 0; ij < 32; ij++){
+			if (bmask[ij + ik * 32]){
+				LScoeffs[in] = thetas[ij + 32 * ik];
+				in++;
+			}
+		}
+	}
+
+	delete[](thetas);
+
+	for (int ij = 0; ij < 32; ij++){
+
+		delete[](original_view_in_classes[ij]);
+
+		for (int ik = 0; ik < 5; ik++){
+			delete[](reference_view_pixels_in_classes[ij+32*ik]);
+		}
+
+	}
+
+	delete[](original_view_in_classes);
+	delete[](reference_view_pixels_in_classes);
+	delete[](seg_vp);
+	delete[](seg_vp2);
+	delete[](number_of_pixels_per_region);
+}
+
 
 void collectWarpedLS(unsigned short *warpedColorViews[5], float *DispTargs[5], const int nr, const int nc, const int ncomponents, const int n_views, const float* LSw){
 
