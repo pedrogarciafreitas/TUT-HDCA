@@ -10,7 +10,7 @@ void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[
 
 	unsigned short *seg_vp = new unsigned short[nr*nc]();
 
-	unsigned short *seg_vp2 = new unsigned short[nr*nc * 3]();
+	//unsigned short *seg_vp2 = new unsigned short[nr*nc * 3]();
 
 	int *number_of_pixels_per_region = new int[32]();
 
@@ -27,13 +27,19 @@ void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[
 
 		seg_vp[ii] = ci;
 
-		seg_vp2[ii] = ci;
-		seg_vp2[ii + nr*nc] = ci;
-		seg_vp2[ii + 2 * nr*nc] = ci;
+		//seg_vp2[ii] = ci;
+		//seg_vp2[ii + nr*nc] = ci;
+		//seg_vp2[ii + 2 * nr*nc] = ci;
 
-		number_of_pixels_per_region[ci] = number_of_pixels_per_region[ci] + 1;
+		number_of_pixels_per_region[ci]++;
 
 	}
+
+	/* debug */
+	//FILE *filept1;
+	//filept1 = fopen("G:/HEVC_HDCA/Berlin_verification_model/Encoder_1st_tests/seg_vp", "wb");
+	//fwrite(seg_vp, sizeof(unsigned short), nr*nc, filept1);
+	//fclose(filept1);
 
 	
 	/* go through all regions, collect regressors from references */
@@ -42,7 +48,7 @@ void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[
 	/* also collect desired values */
 	unsigned short **original_view_in_classes = new unsigned short*[32]();
 
-	for (int ij = 0; ij < 32; ij++){ // region
+	for (int ij = 1; ij < 32; ij++){ // region
 
 		int NN = number_of_pixels_per_region[ij];
 
@@ -100,7 +106,8 @@ void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[
 
 		for( int ik = 0; ik<5; ik++ )
 		{
-			M += bmask[ij + 32 * ik];
+			if (bmask[ij + 32 * ik])
+				M++;
 		}
 
 		int N = number_of_pixels_per_region[ij] * 3; // number of rows in A
@@ -128,47 +135,68 @@ void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[
 			*(Yd + ii) = ((double)*(ps + ii)) / 65536;
 		}
 
-		double *ATA = new double[M*M]();
-		double *ATYd = new double[M]();
+		//double *ATA = new double[M*M]();
+		//double *ATYd = new double[M]();
 
-		/* make ATA */
-		for (int i1 = 0; i1 < M; i1++){
-			for (int j1 = 0; j1 < M; j1++){
-				for (int ii = 0; ii < N; ii++){
-					*(ATA + i1 + j1*M) += (*(A + ii + i1*M))*(*(A + ii + j1*M));
-				}
-			}
-		}
+		///* make ATA */
+		//for (int i1 = 0; i1 < M; i1++){
+		//	for (int j1 = 0; j1 < M; j1++){
+		//		for (int ii = 0; ii < N; ii++){
+		//			*(ATA + i1 + j1*M) += (*(A + ii + i1*N))*(*(A + ii + j1*N));
+		//		}
+		//	}
+		//}
 
-		/* make ATYd */
-		for (int i1 = 0; i1 < M; i1++){
-			for (int ii = 0; ii < N; ii++){
-				*(ATYd + i1) += (*(A + ii + i1*M))*(*(Yd + ii));
-			}
-		}
+		////for (int i1 = 0; i1 < M; i1++){
+		////	for (int j1 = 0; j1 < M; j1++){
+		////		std::cout << *(ATA + i1 + j1*M) << "\n";
+		////	}
+		////}
 
-		/* YdTYd */
-		double YdTYd = 0;
-		for (int ii = 0; ii < N; ii++)
-			YdTYd += (*(Yd + ii))*(*(Yd + ii));
+		////std::cout << "------------------------------------------------\n";
+
+		///* make ATYd */
+		//for (int i1 = 0; i1 < M; i1++){
+		//	for (int ii = 0; ii < N; ii++){
+		//		*(ATYd + i1) += (*(A + ii + i1*N))*(*(Yd + ii));
+		//	}
+		//}
+
+		///* YdTYd */
+		//double YdTYd = 0;
+		//for (int ii = 0; ii < N; ii++)
+		//	YdTYd += (*(Yd + ii))*(*(Yd + ii));
 
 		/* fastols */
 
 		int *PredRegr0 = new int[M]();
 		double *PredTheta0 = new double[M]();
 
-		int Mtrue = FastOLS(ATA, ATYd, YdTYd, PredRegr0, PredTheta0, M, M, M);
+		//int Mtrue = FastOLS(ATA, ATYd, YdTYd, PredRegr0, PredTheta0, M, M, M);
+
+		int Mtrue = FastOLS_new(A, Yd, PredRegr0, PredTheta0, M, M, M, N);
+
+		/* establish the subset of reference views available for class */
+		int *iks = new int[M]();
+		int ee = 0;
+		for (int ik = 0; ik < 5; ik++){
+			if (bmask[ij + ik * 32]){
+				*(iks + ee) = ik;
+				ee++;
+			}
+		}
 
 		for (int ii = 0; ii < M; ii++){
-			thetas[ij + 32*PredRegr0[ii]] = (signed short)round(*(PredTheta0 + ii)*pow(2, 14));
-			
+			thetas[ij + 32 * iks[PredRegr0[ii]]] = (signed short)round(*(PredTheta0 + ii)*pow(2, 14));
 		}
+
+		delete[](iks);
 
 		delete[](PredRegr0);
 		delete[](PredTheta0);
 
-		delete[](ATA);
-		delete[](ATYd);
+		//delete[](ATA);
+		//delete[](ATYd);
 		delete[](A);
 		delete[](Yd);
 
@@ -202,7 +230,7 @@ void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[
 	delete[](original_view_in_classes);
 	delete[](reference_view_pixels_in_classes);
 	delete[](seg_vp);
-	delete[](seg_vp2);
+	//delete[](seg_vp2);
 	delete[](number_of_pixels_per_region);
 }
 
