@@ -286,7 +286,7 @@ int main(int argc, char** argv) {
 					for (int ii = 0; ii < 32 * 5; ii++){
 						if (bmask[ii]){
 							LSw[ii] = ((float)LSw_s[uu++]) / pow(2.0, 14.0);
-							std::cout << LSw[ii] << "\n";
+							//std::cout << LSw[ii] << "\n";
 						}
 						else{
 							LSw[ii] = 0.0;
@@ -332,87 +332,135 @@ int main(int argc, char** argv) {
 					}
 
 
-					filept = fopen(path_out_ppm, "wb");
-					aux_write16ppm_16(filept, nc, nr, warpedColorViews[0]);
-					fclose(filept);
-
-					exit(0);
+					//filept = fopen(path_out_ppm, "wb");
+					//aux_write16ppm_16(filept, nc, nr, warpedColorViews[0]);
+					//fclose(filept);
 
 					/* global sparse here */
+					int NNt = 3; // window -NNt:NNt
+					int Npp = (nr - NNt * 2)*(nc - NNt * 2) * 3;
+					int Npp0 = Npp / 3;
+
+					double *AA = new double[Npp*((NNt * 2 + 1)*(NNt * 2 + 1) + 1)]();
+					double *Yd = new double[Npp]();
+
+					for (int ii = 0; ii < Npp; ii++)
+						*(AA + ii + (NNt * 2 + 1)*(NNt * 2 + 1)*Npp) = 1.0;
+
+					int iiu = 0;
+
+					for (int ir = NNt; ir < nr - NNt; ir++){
+						for (int ic = NNt; ic < nc - NNt; ic++){
+							int ai = 0;
+							for (int dy = -NNt; dy <= NNt; dy++){
+								for (int dx = -NNt; dx <= NNt; dx++){
+									for (int icomp = 0; icomp < 3; icomp++){
+
+										int offset = ir + dy + nr*(ic + dx) + icomp*nr*nc;
+
+										/* get the desired Yd*/
+										if (dy == 0 && dx == 0){
+											*(Yd + iiu + icomp*Npp0) = ((double)*(original_intermediate_view + offset)) / 65536;
+										}
+
+										/* get the regressors */
+										*(AA + iiu + icomp*Npp0 + ai*Npp) = ((double)*(pshort + offset)) / 65536;
+
+									}
+									ai++;
+								}
+							}
+							iiu++;
+						}
+					}
+
+					int *PredRegr0 = new int[(2 * NNt + 1)*(2 * NNt + 1) + 1]();
+					double *PredTheta0 = new double[(2 * NNt + 1)*(2 * NNt + 1) + 1]();
+
+					int Mtrue = FastOLS_new(AA, Yd, PredRegr0, PredTheta0, 25, (NNt * 2 + 1)*(NNt * 2 + 1) + 1, (NNt * 2 + 1)*(NNt * 2 + 1) + 1, Npp);
+
+					delete[](AA);
+					delete[](Yd);
 
 					unsigned char *Regr0 = new unsigned char[Ms]();
 					int32_t *theta0 = new int32_t[Ms]();
 
 					double *theta = new double[(2 * NNt + 1)*(2 * NNt + 1) + 1]();
 
-					int n_regr = fread(Regr0, sizeof(unsigned char), Ms, fileptSPARSEGLOBAL);
-					int n_theta = fread(theta0, sizeof(int32_t), Ms, fileptSPARSEGLOBAL);
+					//int n_regr = fread(Regr0, sizeof(unsigned char), Ms, fileptSPARSEGLOBAL);
+					//int n_theta = fread(theta0, sizeof(int32_t), Ms, fileptSPARSEGLOBAL);
 
-					if (fileptSPARSEGLOBAL != NULL && n_regr == Ms && n_theta == Ms)
-					{
-
-						for (int ii = 0; ii < Ms; ii++){
-							if (Regr0[ii] > 0){
-								theta[Regr0[ii] - 1] = ((double)theta0[ii]) / pow(2, 20);
-								//std::cout << theta[Regr0[ii] - 1] << "\t";
-							}
-						}
-
-						double *final_view = new double[nr*nc * 3]();
-
-						pshort = warpedColorViews[0];
-
-						for (int ii = 0; ii < nr*nc * 3; ii++)
-							final_view[ii] = pshort[ii];
-
-						for (int rr = NNt; rr < nr - NNt; rr++){
-							for (int cc = NNt; cc < nc - NNt; cc++)
-							{
-								for (int icomp = 0; icomp < 3; icomp++)
-									final_view[rr + cc*nr + icomp*nr*nc] = 0;
-
-								int ee = 0;
-
-								for (int dy = -NNt; dy <= NNt; dy++){
-									for (int dx = -NNt; dx <= NNt; dx++){
-										for (int icomp = 0; icomp < 3; icomp++){
-											final_view[rr + cc*nr + icomp*nr*nc] = final_view[rr + cc*nr + icomp*nr*nc] + theta[ee] * ((double)pshort[rr + dy + (cc + dx)*nr + icomp*nr*nc]);
-										}
-										ee++;
-									}
-								}
-
-								/* bias term */
-								for (int icomp = 0; icomp < 3; icomp++){
-									final_view[rr + cc*nr + icomp*nr*nc] = final_view[rr + cc*nr + icomp*nr*nc] + theta[(2 * NNt + 1)*(2 * NNt + 1)];
-								}
-
-							}
-						}
-
-						unsigned short *final_view_s = new unsigned short[nr*nc * 3]();
-
-						for (int ii = 0; ii < nr*nc * 3; ii++){
-							if (final_view[ii] < 0)
-								final_view[ii] = 0;
-							if (final_view[ii]> (pow(2, 16) - 1))
-								final_view[ii] = (pow(2, 16) - 1);
-
-							final_view_s[ii] = (unsigned short)(final_view[ii]);
-						}
-
-						memcpy(pshort, final_view_s, sizeof(unsigned short)*nr*nc * 3);
-
-						delete[] final_view;
-						delete[] final_view_s;
-
+					for (int ii = 0; ii < Ms; ii++){
+						*(Regr0 + ii) = ((unsigned char)*(PredRegr0 + ii) + 1);
+						*(theta0 + ii) = (int32_t)round(*(PredTheta0 + ii) * pow(2, 20));
+						/* now these should be added to bitstream */
 					}
+
+					//if (fileptSPARSEGLOBAL != NULL && n_regr == Ms && n_theta == Ms)
+					//{
+
+					for (int ii = 0; ii < Ms; ii++){
+						if (Regr0[ii] > 0){
+							theta[Regr0[ii] - 1] = ((double)theta0[ii]) / pow(2, 20);
+							//std::cout << theta[Regr0[ii] - 1] << "\t";
+						}
+					}
+
+					double *final_view = new double[nr*nc * 3]();
+
+					pshort = warpedColorViews[0];
+
+					for (int ii = 0; ii < nr*nc * 3; ii++)
+						final_view[ii] = pshort[ii];
+
+					for (int rr = NNt; rr < nr - NNt; rr++){
+						for (int cc = NNt; cc < nc - NNt; cc++)
+						{
+							for (int icomp = 0; icomp < 3; icomp++)
+								final_view[rr + cc*nr + icomp*nr*nc] = 0;
+
+							int ee = 0;
+
+							for (int dy = -NNt; dy <= NNt; dy++){
+								for (int dx = -NNt; dx <= NNt; dx++){
+									for (int icomp = 0; icomp < 3; icomp++){
+										final_view[rr + cc*nr + icomp*nr*nc] = final_view[rr + cc*nr + icomp*nr*nc] + theta[ee] * ((double)pshort[rr + dy + (cc + dx)*nr + icomp*nr*nc]);
+									}
+									ee++;
+								}
+							}
+
+							/* bias term */
+							for (int icomp = 0; icomp < 3; icomp++){
+								final_view[rr + cc*nr + icomp*nr*nc] = final_view[rr + cc*nr + icomp*nr*nc] + theta[(2 * NNt + 1)*(2 * NNt + 1)];
+							}
+
+						}
+					}
+
+					unsigned short *final_view_s = new unsigned short[nr*nc * 3]();
+
+					for (int ii = 0; ii < nr*nc * 3; ii++){
+						if (final_view[ii] < 0)
+							final_view[ii] = 0;
+						if (final_view[ii]> (pow(2, 16) - 1))
+							final_view[ii] = (pow(2, 16) - 1);
+
+						final_view_s[ii] = (unsigned short)(final_view[ii]);
+					}
+
+					memcpy(pshort, final_view_s, sizeof(unsigned short)*nr*nc * 3);
+
+					delete[] final_view;
+					delete[] final_view_s;
+
+					//}
 
 					delete[] theta;
 					delete[] Regr0;
 					delete[] theta0;
 
-					if (1){
+					if (0){
 						/* residual here */
 
 						FILE *jp2_residual_file;
@@ -446,6 +494,9 @@ int main(int argc, char** argv) {
 					filept = fopen(path_out_ppm, "wb");
 
 					aux_write16ppm_16(filept, nc, nr, warpedColorViews[0]);
+
+					/* DEBUG */
+					//exit(0);
 
 				}
 				else{
