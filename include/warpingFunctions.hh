@@ -123,7 +123,7 @@ void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[
 			if (bmask[ij + ik * 32]){
 				ps = reference_view_pixels_in_classes[ij + ik * 32];
 				for (int ii = 0; ii < N; ii++){
-					*(A + ii + ikk*N) = ((double)*(ps + ii)) / 65536;
+					*(A + ii + ikk*N) = ((double)*(ps + ii)) / 65535;
 				}
 				ikk++;
 			}
@@ -132,7 +132,7 @@ void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[
 		ps = original_view_in_classes[ij];
 
 		for (int ii = 0; ii < N; ii++){
-			*(Yd + ii) = ((double)*(ps + ii)) / 65536;
+			*(Yd + ii) = ((double)*(ps + ii)) / 65535;
 		}
 
 		//double *ATA = new double[M*M]();

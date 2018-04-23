@@ -16,6 +16,9 @@ int main(int argc, char** argv) {
 	const char* path_out_dir = argv[3];
 	const char* path_to_original_views = argv[4];
 
+	const char *kdu_compress_path = "\"C:/Program Files (x86)/Kakadu/kdu_compress.exe\"";
+	const char *kdu_expand_path = "\"C:/Program Files (x86)/Kakadu/kdu_expand.exe\"";
+
 	const int nr = 1080;
 	const int nc = 1920;
 	const int r_crop = 209 + 540;
@@ -336,6 +339,8 @@ int main(int argc, char** argv) {
 					//aux_write16ppm_16(filept, nc, nr, warpedColorViews[0]);
 					//fclose(filept);
 
+					//exit(0);
+
 					/* global sparse here */
 					int NNt = 3; // window -NNt:NNt
 					int Npp = (nr - NNt * 2)*(nc - NNt * 2) * 3;
@@ -360,11 +365,11 @@ int main(int argc, char** argv) {
 
 										/* get the desired Yd*/
 										if (dy == 0 && dx == 0){
-											*(Yd + iiu + icomp*Npp0) = ((double)*(original_intermediate_view + offset)) / 65536;
+											*(Yd + iiu + icomp*Npp0) = ((double)*(original_intermediate_view + offset)) / 65535;
 										}
 
 										/* get the regressors */
-										*(AA + iiu + icomp*Npp0 + ai*Npp) = ((double)*(pshort + offset)) / 65536;
+										*(AA + iiu + icomp*Npp0 + ai*Npp) = ((double)*(pshort + offset)) / 65535;
 
 									}
 									ai++;
@@ -460,26 +465,68 @@ int main(int argc, char** argv) {
 					delete[] Regr0;
 					delete[] theta0;
 
-					if (0){
+					if (1){
+
 						/* residual here */
 
-						FILE *jp2_residual_file;
+						FILE *residual_file;
 
-						char jp2_residual_path[256];
-						sprintf(jp2_residual_path, "%s%c%03d_%03d%s", path_to_references, '/', c, r, "_residual.ppm");
+						char ppm_residual_path[256];
 
-						jp2_residual_file = fopen(jp2_residual_path, "rb");
+						char jp2_residual_path_jp2[256];
 
-						if (!(jp2_residual_file == NULL)){
+						sprintf(ppm_residual_path, "%s%c%03d_%03d%s", path_out_dir, '/', c, r, "_residual.ppm");
+
+						sprintf(jp2_residual_path_jp2, "%s%c%03d_%03d%s", path_out_dir, '/', c, r, "_residual.jp2");
+
+						/*establish residual*/
+						unsigned short *residual_image = new unsigned short[nr*nc * 3]();
+						for (int ii = 0; ii < nr*nc*3; ii++){
+							unsigned short res_val = (unsigned short)( ( (signed int)*(original_intermediate_view + ii) ) - ( (signed int)*(pshort + ii) ) + pow(2,15) );
+							if (res_val>pow(2, 16)-1)
+								res_val = pow(2, 16)-1;
+							if (res_val < 0)
+								res_val = 0;
+							*(residual_image + ii) = res_val;
+						}
+
+						residual_file = fopen(ppm_residual_path, "wb");
+						aux_write16ppm_16(residual_file, nc, nr, residual_image);
+						fclose(residual_file);
+
+						delete[](residual_image);
+
+						/* here encode residual with kakadu */
+
+						char kdu_compress_s[256];
+						sprintf(kdu_compress_s, "%s%s%s%s%s%s%f", kdu_compress_path, " -i ", ppm_residual_path, " -o ", jp2_residual_path_jp2, " -no_weights -precise -full -rate ", 0.02);
+
+						std::cout << kdu_compress_s << "\n";
+
+						int status = system(kdu_compress_s);
+
+						/* decode residual with kakadu */
+						char kdu_expand_s[256];
+						sprintf(kdu_expand_s, "%s%s%s%s%s", kdu_expand_path, " -i ", jp2_residual_path_jp2, " -o ", ppm_residual_path);
+
+						std::cout << kdu_expand_s << "\n";
+
+						status = system(kdu_expand_s);
+
+						/* apply residual */
+
+						residual_file = fopen(ppm_residual_path, "rb");
+
+						if (!(residual_file == NULL)){
 
 							unsigned short* jp2_residual = new unsigned short[nr*nc * 3]();
 
-							aux_read16ppm(jp2_residual_file, nc, nr, jp2_residual);
-							fclose(jp2_residual_file);
+							aux_read16ppm(residual_file, nc, nr, jp2_residual);
+							fclose(residual_file);
 
 							for (int ii = 0; ii < nr*nc * 3; ii++)
 							{
-								signed int val = ((signed int)pshort[ii]) + ((signed int)jp2_residual[ii]) - pow(2, 15);
+								signed int val = ((signed int)pshort[ii]) + ((signed int)jp2_residual[ii]) - pow(2,15);
 								if (val < 0)
 									val = 0;
 								if (val >(pow(2, 16) - 1))
