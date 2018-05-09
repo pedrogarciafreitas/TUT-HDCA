@@ -19,7 +19,7 @@
 #include <cmath>
 #include <sys/stat.h>
 
-
+#define IO_V true
 #define NBIT_GR 32
 
 const bool verbose = false;
@@ -271,53 +271,56 @@ inline void aux_read_pred_header(int* Ms, int* maxiS) {
 }
 
 
-// read an 8 bit ppm file (here only one channel)
-inline void aux_read8ppm(FILE *filept, int width, int height, int *img){
-	int  max, x, y;
-	int red;
-	char dummy[100];
-
-	unsigned char *Image8bit = NULL;
-
-	/*--< Read header information of 16bit ppm image from filept >--*/
-	fscanf(filept, "%s", dummy);
-	fscanf(filept, "%d %d\n", &width, &height);
-	fscanf(filept, "%d", &max);
-	fgetc(filept);
-	printf("%s %d %d %d\n", dummy, max, width, height);
-
-
-	Image8bit = (unsigned char *)malloc(width*height * 3 * sizeof(unsigned char));
-
-	/*--< Read 16bit ppm image from filept >--*/
-	fread(Image8bit, sizeof(unsigned char), width*height * 3, filept);
-
-	int i = 0;
-	/*--< Find maximum value in the image >--*/
-	for (x = 0; x < width; x++){
-		for (y = 0; y < height; y++){
-			red = (int)Image8bit[(x + y*width) * 3];
-			img[i] = red;
-			i++;
-		}
-	}
-
-	free(Image8bit);
-
-}
+//// read an 8 bit ppm file (here only one channel)
+//inline void aux_read8ppm(FILE *filept, int width, int height, int *img){
+//	int  max, x, y;
+//	int red;
+//	char dummy[100];
+//
+//	unsigned char *Image8bit = NULL;
+//
+//	/*--< Read header information of 16bit ppm image from filept >--*/
+//	fscanf(filept, "%s", dummy);
+//	fscanf(filept, "%d %d\n", &width, &height);
+//	fscanf(filept, "%d", &max);
+//	fgetc(filept);
+//	printf("%s %d %d %d\n", dummy, max, width, height);
+//
+//
+//	Image8bit = (unsigned char *)malloc(width*height * 3 * sizeof(unsigned char));
+//
+//	/*--< Read 16bit ppm image from filept >--*/
+//	fread(Image8bit, sizeof(unsigned char), width*height * 3, filept);
+//
+//	int i = 0;
+//	/*--< Find maximum value in the image >--*/
+//	for (x = 0; x < width; x++){
+//		for (y = 0; y < height; y++){
+//			red = (int)Image8bit[(x + y*width) * 3];
+//			img[i] = red;
+//			i++;
+//		}
+//	}
+//
+//	free(Image8bit);
+//
+//}
 
 // read a 16 bit color pgm image
-void aux_read16pgm(FILE *filept, int *img)
+bool aux_read16pgm(const char* filename, int &width, int &height, unsigned short *&img)
 {
+	if (IO_V)
+		printf("Reading %s\n", filename);
+
 	int  max, x, y;
 	int red, green, blue, pixelmax;
 	char dummy[100];
 
-	bool divd = 0;
+	//int width, height;
 
-	unsigned short int *Image16bit = NULL;
+	FILE *filept;
 
-	int width, height;
+	filept = fopen(filename, "rb");
 
 	//FILE* filept = fopen("007_007.ppm", "r");
 	/*--< Read header information of 16bit ppm image from filept >--*/
@@ -330,13 +333,22 @@ void aux_read16pgm(FILE *filept, int *img)
 	/*--< Really 16bit ppm? Check it >--*/
 	if (strncmp(dummy, "P5", 2) != 0) {
 		fprintf(stderr, "Error: The input data is not PGM.\n");
-		exit(1);
+		return false;
 	}
 
-	Image16bit = (unsigned short int *)malloc(width*height* sizeof(unsigned short int));
+	unsigned short *Image16bit = new unsigned short[width*height]();
+	img = new unsigned short[width*height]();
 
 	/*--< Read 16bit ppm image from filept >--*/
-	fread(Image16bit, sizeof(unsigned short int), width*height, filept);
+	int nread = fread(Image16bit, sizeof(unsigned short), width*height, filept);
+
+	if (nread != width*height){
+		fprintf(stderr, "READ ERROR aux_read16pgm() %s\n", filename);
+		return false;
+	}
+
+
+	fclose(filept);
 
 	int i = 0;
 	/*--< Find maximum value in the image >--*/
@@ -364,160 +376,27 @@ void aux_read16pgm(FILE *filept, int *img)
 
 		}
 	}
-	free(Image16bit);
+	
+	delete[](Image16bit);
+
+	return true;
 }
 
-
-// read a 16 bit color pgm image
-inline void aux_read16pgm_1080p(FILE *filept, int *img)
+bool aux_read16ppm(const char* filename, int &width, int &height, unsigned short *&img)
 {
-	int  max, x, y;
-	int red, green, blue, pixelmax;
-	char dummy[100];
+	if (IO_V)
+		printf("Reading %s\n", filename);
 
-	bool divd = 0;
-
-	unsigned short int *Image16bit = NULL;
-
-	int width, height;
-
-	//FILE* filept = fopen("007_007.ppm", "r");
-	/*--< Read header information of 16bit ppm image from filept >--*/
-	fscanf(filept, "%s", dummy);
-	fscanf(filept, "%d %d\n", &width, &height);
-	fscanf(filept, "%d", &max);
-	fgetc(filept);
-	//printf("%s\n", dummy);
-
-	/*--< Really 16bit ppm? Check it >--*/
-	if (strncmp(dummy, "P5", 2) != 0) {
-		fprintf(stderr, "Error: The input data is not PGM.\n");
-		exit(1);
-	}
-	//if (max == 65535){
-	//	divd = 1;
-	//}
-
-	Image16bit = (unsigned short int *)malloc(width*height* sizeof(unsigned short int));
-
-	/*--< Read 16bit ppm image from filept >--*/
-	fread(Image16bit, sizeof(unsigned short int), width*height, filept);
-
-	int i = 0;
-	/*--< Find maximum value in the image >--*/
-	pixelmax = 0;
-	/* UNSW inverse depth already in 4K resolution, just crop to 1080p */
-	for (x = 960; x < 960 + 1920; x++){
-		for (y = 540; y < 540 + 1080; y++){
-			//if (y>209 + 540 && x > 85 + 960 && y < 209 + 540 + 1080 && x < 85 + 960 + 1920)
-				{
-					red = Image16bit[(x + y*width)];
-					//green = Image16bit[(x + y*width) * 3 + 1];
-					//blue = Image16bit[(x + y*width) * 3 + 2];
-
-					// Exhange upper 8bit and lower 8bit for Intel x86
-					red = ((red & 0x00ff) << 8) | ((red & 0xff00) >> 8);
-					//green = ((green & 0x00ff) << 8) | ((green & 0xff00) >> 8);
-					//blue = ((blue & 0x00ff) << 8) | ((blue & 0xff00) >> 8);
-
-					if (pixelmax < red) pixelmax = red;
-					//if (pixelmax < green) pixelmax = green;
-					//if (pixelmax < blue) pixelmax = blue;
-
-
-					//if (divd) // fix for 16bit to 10bit
-					//{
-					//	red = red >> 6;
-					//	//green = green >> 6;
-					//	//blue = blue >> 6;
-					//}
-
-					img[i] = red;
-					//img[i + height*width] = green;
-					//img[i + 2 * height*width] = blue;
-
-					if (0){ //debug stuff
-						fprintf(stderr, "sample %i\n", img[i]);
-						/*fprintf(stderr, "sample %i\t%i\t%i\n", img[i] >> 6, img[i + height*width] >> 6, img[i + 2 * height*width] >> 6);*/
-					}
-
-					i++;
-
-				}
-		}
-	}
-	free(Image16bit);
-}
-
-inline void aux_read16ppm(FILE *filept, int width, int height, unsigned short *img)
-{
-	int  max, x, y;
-	int red, green, blue, pixelmax;
-	char dummy[100];
-
-	unsigned short int *Image16bit = NULL;
-
-	fscanf(filept, "%s", dummy);
-	fscanf(filept, "%d %d\n", &width, &height);
-	fscanf(filept, "%d", &max);
-	fgetc(filept);
-
-	if (strncmp(dummy, "P6", 2) != 0) {
-		fprintf(stderr, "Error: The input data is not binary PPM.\n");
-		exit(1);
-	}
-
-	Image16bit = (unsigned short int *)malloc(width*height * 3 * sizeof(unsigned short int));
-
-	/*--< Read 16bit ppm image from filept >--*/
-	fread(Image16bit, sizeof(unsigned short int), width*height * 3, filept);
-
-	int i = 0;
-	/*--< Find maximum value in the image >--*/
-	pixelmax = 0;
-	for (x = 0; x < width; x++){
-		for (y = 0; y < height; y++){
-			red = Image16bit[(x + y*width) * 3];
-			green = Image16bit[(x + y*width) * 3 + 1];
-			blue = Image16bit[(x + y*width) * 3 + 2];
-
-			// Exhange upper 8bit and lower 8bit for Intel x86
-			red = ((red & 0x00ff) << 8) | ((red & 0xff00) >> 8);
-			green = ((green & 0x00ff) << 8) | ((green & 0xff00) >> 8);
-			blue = ((blue & 0x00ff) << 8) | ((blue & 0xff00) >> 8);
-
-			if (pixelmax < red) pixelmax = red;
-			if (pixelmax < green) pixelmax = green;
-			if (pixelmax < blue) pixelmax = blue;
-
-
-			img[i] = red;
-			img[i + height*width] = green;
-			img[i + 2 * height*width] = blue;
-
-			if (0){ //debug stuff
-				fprintf(stderr, "sample %i\t%i\t%i\n", img[i], img[i + height*width], img[i + 2 * height*width]);
-				fprintf(stderr, "sample %i\t%i\t%i\n", img[i] >> 6, img[i + height*width] >> 6, img[i + 2 * height*width] >> 6);
-			}
-
-			i++;
-
-
-		}
-	}
-
-	free(Image16bit);
-
-}
-
-void aux_read16ppm_1(FILE *filept, int &width, int &height, unsigned short *&img)
-{
 	int  max, x, y;
 	int red, green, blue;
 	char dummy[100];
 
 	unsigned short *Image16bit = NULL;
 
+	FILE *filept;
+
+	filept = fopen(filename, "rb");
+
 	fscanf(filept, "%s", dummy);
 	fscanf(filept, "%d %d\n", &width, &height);
 	fscanf(filept, "%d", &max);
@@ -525,7 +404,7 @@ void aux_read16ppm_1(FILE *filept, int &width, int &height, unsigned short *&img
 
 	if (strncmp(dummy, "P6", 2) != 0) {
 		fprintf(stderr, "Error: The input data is not binary PPM.\n");
-		exit(1);
+		return false;
 	}
 
 	std::cout << width << "\t" << height << "\n";
@@ -535,7 +414,15 @@ void aux_read16ppm_1(FILE *filept, int &width, int &height, unsigned short *&img
 	Image16bit = new unsigned short[width*height * 3]();
 
 	/*--< Read 16bit ppm image from filept >--*/
-	fread(Image16bit, sizeof(unsigned short int), width*height * 3, filept);
+	int nread = fread(Image16bit, sizeof(unsigned short), width*height * 3, filept);
+
+	if (nread != width*height * 3)
+	{
+		fprintf(stderr,"READ ERROR aux_read16ppm() %s\n",filename);
+		return false;
+	}
+
+	fclose(filept);
 
 	int i = 0;
 
@@ -562,98 +449,27 @@ void aux_read16ppm_1(FILE *filept, int &width, int &height, unsigned short *&img
 
 	delete[](Image16bit);
 
-}
-
-// read a 16 bit color ppm image
-inline void aux_read16ppm(FILE *filept, int width, int height, int *img)
-{
-	int  max, x, y;
-	int red, green, blue, pixelmax;
-	char dummy[100];
-
-	bool divd = 0;
-
-	unsigned short int *Image16bit = NULL;
-
-	//FILE* filept = fopen("007_007.ppm", "r");
-	/*--< Read header information of 16bit ppm image from filept >--*/
-	fscanf(filept, "%s", dummy);
-	fscanf(filept, "%d %d\n", &width, &height);
-	fscanf(filept, "%d", &max);
-	fgetc(filept);
-	//printf("%s\n", dummy);
-
-	/*--< Really 16bit ppm? Check it >--*/
-	if (strncmp(dummy, "P6", 2) != 0) {
-		fprintf(stderr, "Error: The input data is not binary PPM.\n");
-		exit(1);
-	}
-	if (max == 65535){
-		//fprintf(stderr, "Warning: The input data is 16bit PPM.\n");
-		divd = 1;
-		//exit(1);
-	}
-	//if (max != 1023){
-	//    fprintf(stderr, "Error: The input data is not 10bit PPM.\n");
-	//    exit(1);
-	//}
-
-	Image16bit = (unsigned short int *)malloc(width*height * 3 * sizeof(unsigned short int));
-
-	/*--< Read 16bit ppm image from filept >--*/
-	fread(Image16bit, sizeof(unsigned short int), width*height * 3, filept);
-
-	int i = 0;
-	/*--< Find maximum value in the image >--*/
-	pixelmax = 0;
-	for (x = 0; x < width; x++){
-		for (y = 0; y < height; y++){
-			red = Image16bit[(x + y*width) * 3];
-			green = Image16bit[(x + y*width) * 3 + 1];
-			blue = Image16bit[(x + y*width) * 3 + 2];
-
-			// Exhange upper 8bit and lower 8bit for Intel x86
-			red = ((red & 0x00ff) << 8) | ((red & 0xff00) >> 8);
-			green = ((green & 0x00ff) << 8) | ((green & 0xff00) >> 8);
-			blue = ((blue & 0x00ff) << 8) | ((blue & 0xff00) >> 8);
-
-			if (pixelmax < red) pixelmax = red;
-			if (pixelmax < green) pixelmax = green;
-			if (pixelmax < blue) pixelmax = blue;
-
-
-			if (divd) // fix for 16bit to 10bit
-			{
-				red = red >> 6;
-				green = green >> 6;
-				blue = blue >> 6;
-			}
-
-			img[i] = red;
-			img[i + height*width] = green;
-			img[i + 2 * height*width] = blue;
-
-			if (0){ //debug stuff
-				fprintf(stderr, "sample %i\t%i\t%i\n", img[i], img[i + height*width], img[i + 2 * height*width]);
-				fprintf(stderr, "sample %i\t%i\t%i\n", img[i] >> 6, img[i + height*width] >> 6, img[i + 2 * height*width] >> 6);
-			}
-
-			i++;
-
-
-		}
-	}
-
-	free(Image16bit);
+	return true;
 
 }
 
-inline void aux_write16pgm(FILE *fp, int width, int height, int *img)
+void aux_write16pgm(const char* filename, int width, int height, unsigned short *img)
 {
+	if (IO_V)
+		printf("Writing %s\n", filename);
+
 	unsigned char *p;
 	int i, tmp, j;
 
-	unsigned short* img16bit = (unsigned short*)malloc(height*width*sizeof(unsigned short));
+	unsigned int maxi = 0;
+
+
+	FILE *filept;
+
+	filept = fopen(filename, "wb");
+
+	unsigned short* img16bit = new unsigned short[height*width]();
+
 	int lin_ind = 0;
 	for (j = 0; j < height; j++) {
 		for (i = 0; i < width; i++) {
@@ -662,25 +478,41 @@ inline void aux_write16pgm(FILE *fp, int width, int height, int *img)
 		}
 	}
 
+	for (i = 0; i < width*height; i++)
+	{
+		if (*(img16bit + i) > maxi)
+			maxi = *(img16bit + i);
+	}
+
 	p = (unsigned char *)img16bit;
 	for (i = 0; i < width*height; i++){
 		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
-		//tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
-		//tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
 	}
 
-	fprintf(fp, "P5\n%d %d\n65535\n", width, height);
-	fwrite(img16bit, sizeof(unsigned short int), width*height, fp);
-	free(img16bit);
+	fprintf(filept, "P5\n%d %d\n%d\n", width, height, maxi);
+	fwrite(img16bit, sizeof(unsigned short int), width*height, filept);
+	
+	fclose(filept);
+
+	delete[](img16bit);
 }
 
-inline void aux_write16ppm_16(FILE *fp, int width, int height, unsigned short int *img){
+void aux_write16ppm(const char* filename, int width, int height, unsigned short int *img)
+{
+	if (IO_V)
+		printf("Writing %s\n", filename);
+
 	unsigned char *p;
 	int i, tmp, j;
 
-	//unsigned short int maxi = 0;
+	unsigned short int maxi = 0;
 
-	unsigned short* img16bit = (unsigned short*)malloc(height*width * 3 * sizeof(unsigned short));
+	FILE *filept;
+
+	filept = fopen(filename, "wb");
+
+	unsigned short* img16bit = new unsigned short[height*width*3]();
+
 	int lin_ind = 0;
 	for (j = 0; j < height; j++) {
 		for (i = 0; i < width; i++) {
@@ -691,42 +523,27 @@ inline void aux_write16ppm_16(FILE *fp, int width, int height, unsigned short in
 		}
 	}
 
-	p = (unsigned char *)img16bit;
+	for (i = 0; i < width*height * 3; i++)
+	{
+		if (*(img16bit + i) > maxi)
+			maxi = *(img16bit + i);
+	}
+
+	p = (unsigned char *) img16bit;
 	for (i = 0; i < width*height; i++){
 		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
 		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
 		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
 	}
-	fprintf(fp, "P6\n%d %d\n65535\n", width, height);
-	fwrite(img16bit, sizeof(unsigned short int), width*height * 3, fp);
-	free(img16bit);
-}
 
-// write a 16 bit color ppm image
-inline void aux_write16ppm(FILE *fp, int width, int height, unsigned short int *img){
-	unsigned char *p;
-	int i, tmp, j;
 
-	unsigned short* img16bit = (unsigned short*)malloc(height*width * 3 * sizeof(unsigned short));
-	int lin_ind = 0;
-	for (j = 0; j < height; j++) {
-		for (i = 0; i < width; i++) {
-			img16bit[lin_ind] = img[j + i*height];
-			img16bit[lin_ind + 1] = img[j + i*height + width*height];
-			img16bit[lin_ind + 2] = img[j + i*height + 2 * width*height];
-			lin_ind = lin_ind + 3;
-		}
-	}
 
-	p = (unsigned char *)img16bit;
-	for (i = 0; i < width*height; i++){
-		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
-		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
-		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
-	}
-	fprintf(fp, "P6\n%d %d\n1023\n", width, height);
-	fwrite(img16bit, sizeof(unsigned short int), width*height * 3, fp);
-	free(img16bit);
+	fprintf(filept, "P6\n%d %d\n%d\n", width, height, maxi);
+	fwrite(img16bit, sizeof(unsigned short int), width*height * 3, filept);
+
+	fclose(filept);
+
+	delete[](img16bit);
 }
 
 // allocates an int vector of size m

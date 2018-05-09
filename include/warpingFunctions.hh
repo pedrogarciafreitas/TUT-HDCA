@@ -1,6 +1,13 @@
 /* View warping. */
 
+#ifndef WARPING_FUN_HH
+#define WARPING_FUN_HH
+
 #include <cmath>
+
+#ifndef BIT_DEPTH
+#define BIT_DEPTH 10
+#endif
 
 void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[5], const unsigned short* original_intermediate_view, 
 	const int nr, const int nc, const bool *bmask, signed short *LScoeffs)
@@ -123,7 +130,7 @@ void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[
 			if (bmask[ij + ik * 32]){
 				ps = reference_view_pixels_in_classes[ij + ik * 32];
 				for (int ii = 0; ii < N; ii++){
-					*(A + ii + ikk*N) = ((double)*(ps + ii)) / 65535;
+					*(A + ii + ikk*N) = ((double)*(ps + ii)) / pow(2, BIT_DEPTH);
 				}
 				ikk++;
 			}
@@ -132,7 +139,7 @@ void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[
 		ps = original_view_in_classes[ij];
 
 		for (int ii = 0; ii < N; ii++){
-			*(Yd + ii) = ((double)*(ps + ii)) / 65535;
+			*(Yd + ii) = ((double)*(ps + ii)) / pow(2, BIT_DEPTH);
 		}
 
 		//double *ATA = new double[M*M]();
@@ -278,8 +285,8 @@ void collectWarpedLS(unsigned short *warpedColorViews[5], float *DispTargs[5], c
 		for (int icomp = 0; icomp < 3; icomp++){
 			if (AA1[ii + icomp*nr*nc] < 0)
 				AA1[ii + icomp*nr*nc] = 0;
-			if (AA1[ii + icomp*nr*nc]>(pow(2,16)-1))
-				AA1[ii + icomp*nr*nc] = (pow(2, 16) - 1);
+			if (AA1[ii + icomp*nr*nc]>(pow(2, BIT_DEPTH) - 1))
+				AA1[ii + icomp*nr*nc] = (pow(2, BIT_DEPTH) - 1);
 
 			AA2[ii + icomp*nr*nc] = (unsigned short)( floor(AA1[ii + icomp*nr*nc]) );
 
@@ -375,3 +382,5 @@ void warpColorView(const unsigned short *AA1, const float *DM_ROW, const float *
 	delete[](DispTarg_col);
 	delete[](DispTarg_row);
 }
+
+#endif
