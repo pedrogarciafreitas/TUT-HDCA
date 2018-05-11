@@ -21,11 +21,31 @@
 
 #define IO_V true
 #define NBIT_GR 32
+#define SYSTEM_VERBOSE 0
 
 const bool verbose = false;
 
 // number of pixels in the original lenslet image.
 const int num_pixels_in_lenslet = 41483904;
+
+int system_1(char *str){
+
+	std::string sys_call_str(str);
+
+#ifdef SYSTEM_VERBOSE
+
+#ifdef _WIN32 || _WIN64 
+	sys_call_str.append("> nul");
+#endif
+#ifdef __unix__
+	sys_call_str.append("> /dev/null");
+#endif
+
+#endif
+
+	return system(sys_call_str.c_str());
+
+}
 
 int getMedian(std::vector<int> scores)
 {
@@ -407,7 +427,7 @@ bool aux_read16ppm(const char* filename, int &width, int &height, unsigned short
 		return false;
 	}
 
-	std::cout << width << "\t" << height << "\n";
+	//std::cout << width << "\t" << height << "\n";
 
 	img = new unsigned short[width*height * 3]();
 

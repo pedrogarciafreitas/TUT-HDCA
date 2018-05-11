@@ -27,6 +27,8 @@ int main(int argc, char** argv) {
 	const float ref_depth_rate = atof(argv[9]);
 	const float residual_rate = atof(argv[10]);
 
+	const char *difftest_call = "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/ScriptJan2018/ScriptSolution/difftest_ng.exe --toycbcr --psnr ";
+
 	const int nr = 1080;
 	const int nc = 1920;
 	const int r_crop = 209 + 540;
@@ -89,10 +91,10 @@ int main(int argc, char** argv) {
 
 
 	char pathLSW[160];
-	sprintf(pathLSW, "%s%s", path_to_references, "LS_weights");
+	sprintf(pathLSW, "%s%s", path_out_dir, "LS_weights");
 
 	char pathSPARSEGLOBAL[256];
-	sprintf(pathSPARSEGLOBAL, "%s%s", path_to_references, "/sparse_global_weights");
+	sprintf(pathSPARSEGLOBAL, "%s%s", path_out_dir, "/sparse_global_weights");
 
 	//std::cout << pathLSW << "\n";
 	//std::cout << pathSPARSEGLOBAL << "\n";
@@ -112,8 +114,6 @@ int main(int argc, char** argv) {
 	//}
 
 	//std::cout << NNt << "\t" << Ms << "\n";
-
-
 
 	ref_array[0][0] = true;
 	ref_array[10][0] = true;
@@ -171,7 +171,6 @@ int main(int argc, char** argv) {
 		delete[](im_read);
 
 
-
 		// kakadu calls here
 
 		char pathtoref_jp2[256];
@@ -180,17 +179,17 @@ int main(int argc, char** argv) {
 		char kdu_compress_s[256];
 		sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", pathtoref, " -o ", pathtoref_jp2, " -no_weights -precise -full -rate ", ref_color_rate);
 
-		std::cout << kdu_compress_s << "\n";
+		//std::cout << kdu_compress_s << "\n";
 
-		int status = system(kdu_compress_s);
+		int status = system_1(kdu_compress_s);
 
 		/* decode residual with kakadu */
 		char kdu_expand_s[256];
 		sprintf(kdu_expand_s, "\"%s\"%s%s%s%s", kdu_expand_path, " -i ", pathtoref_jp2, " -o ", pathtoref);
 
-		std::cout << kdu_expand_s << "\n";
+		//std::cout << kdu_expand_s << "\n";
 
-		status = system(kdu_expand_s);
+		status = system_1(kdu_expand_s);
 
 		aux_read16ppm(pathtoref, nc0, nr0, colorViews[ij]);
 
@@ -229,6 +228,8 @@ int main(int argc, char** argv) {
 				}
 			}
 
+			/* median filter here ? */
+
 			aux_write16pgm(pgm_filename, nc, nr, tmp_depth_cropped);
 
 			delete[](tmp_depth);
@@ -241,8 +242,8 @@ int main(int argc, char** argv) {
 
 		sprintf(kdu_expand_s, "\"%s\"%s%s%s%s", kdu_expand_path, " -i ", depth_jp2_filename, " -o ", pgm_filename);
 
-		status = system(kdu_compress_s);
-		status = system(kdu_expand_s);
+		status = system_1(kdu_compress_s);
+		status = system_1(kdu_expand_s);
 
 		unsigned short *tmpq;
 
@@ -320,7 +321,6 @@ int main(int argc, char** argv) {
 				}
 
 				sort(view_distances.begin(), view_distances.end());
-
 
 				for (int uu = 0; uu < 5; uu++){
 
@@ -448,9 +448,9 @@ int main(int argc, char** argv) {
 
 
 				//filept = fopen(path_out_ppm, "wb");
-				aux_write16ppm(path_out_ppm, nc, nr, warpedColorViews[0]);
+				//aux_write16ppm(path_out_ppm, nc, nr, warpedColorViews[0]);
 
-				char dummy;
+				//char dummy;
 				//std::cin >> dummy;
 				//fclose(filept);
 
@@ -522,7 +522,7 @@ int main(int argc, char** argv) {
 				for (int ii = 0; ii < Ms; ii++){
 					if (Regr0[ii] > 0){
 						theta[Regr0[ii] - 1] = ((double)theta0[ii]) / pow(2, 20);
-						std::cout << theta[Regr0[ii] - 1] << "\t";
+						//std::cout << theta[Regr0[ii] - 1] << "\t";
 					}
 				}
 
@@ -580,7 +580,7 @@ int main(int argc, char** argv) {
 				delete[] Regr0;
 				delete[] theta0;
 
-				aux_write16ppm(path_out_ppm, nc, nr, warpedColorViews[0]);
+				//aux_write16ppm(path_out_ppm, nc, nr, warpedColorViews[0]);
 
 				//std::cin >> dummy;
 
@@ -619,17 +619,17 @@ int main(int argc, char** argv) {
 					char kdu_compress_s[256];
 					sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", ppm_residual_path, " -o ", jp2_residual_path_jp2, " -no_weights -precise -full -rate ", residual_rate);
 
-					std::cout << kdu_compress_s << "\n";
+					//std::cout << kdu_compress_s << "\n";
 
-					int status = system(kdu_compress_s);
+					int status = system_1(kdu_compress_s);
 
 					/* decode residual with kakadu */
 					char kdu_expand_s[256];
 					sprintf(kdu_expand_s, "\"%s\"%s%s%s%s", kdu_expand_path, " -i ", jp2_residual_path_jp2, " -o ", ppm_residual_path);
 
-					std::cout << kdu_expand_s << "\n";
+					//std::cout << kdu_expand_s << "\n";
 
-					status = system(kdu_expand_s);
+					status = system_1(kdu_expand_s);
 
 					/* apply residual */
 
@@ -653,6 +653,30 @@ int main(int argc, char** argv) {
 				}
 
 				aux_write16ppm(path_out_ppm, nc, nr, warpedColorViews[0]);
+
+				if (1){
+
+					/* run psnr here */
+
+					char tmp_original_intermediate_view[256];
+					sprintf(tmp_original_intermediate_view, "%s%s", path_out_dir, "tmp_iv.ppm");
+					aux_write16ppm(tmp_original_intermediate_view, nc, nr, original_intermediate_view);
+
+					char psnr_call[256];
+					sprintf(psnr_call, "%s%s%s%s", difftest_call, path_out_ppm, " ", tmp_original_intermediate_view);
+
+					FILE *pfile;
+					pfile = _popen(psnr_call, "r");
+
+					char psnr_buffer[256];
+					while (fgets(psnr_buffer, sizeof(psnr_buffer), pfile) != 0) {
+						/*...*/
+					}
+					_pclose(pfile);
+
+					printf("PSNR %s\n", psnr_buffer);
+
+				}
 
 				/* DEBUG */
 				//exit(0);
