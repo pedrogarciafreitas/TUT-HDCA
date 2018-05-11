@@ -9,7 +9,7 @@
 #define BIT_DEPTH 10
 #endif
 
-void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[5], const unsigned short* original_intermediate_view, 
+void getViewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[5], const unsigned short* original_intermediate_view,
 	const int nr, const int nc, const bool *bmask, signed short *LScoeffs)
 {
 
@@ -142,38 +142,6 @@ void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[
 			*(Yd + ii) = ((double)*(ps + ii)) / pow(2, BIT_DEPTH);
 		}
 
-		//double *ATA = new double[M*M]();
-		//double *ATYd = new double[M]();
-
-		///* make ATA */
-		//for (int i1 = 0; i1 < M; i1++){
-		//	for (int j1 = 0; j1 < M; j1++){
-		//		for (int ii = 0; ii < N; ii++){
-		//			*(ATA + i1 + j1*M) += (*(A + ii + i1*N))*(*(A + ii + j1*N));
-		//		}
-		//	}
-		//}
-
-		////for (int i1 = 0; i1 < M; i1++){
-		////	for (int j1 = 0; j1 < M; j1++){
-		////		std::cout << *(ATA + i1 + j1*M) << "\n";
-		////	}
-		////}
-
-		////std::cout << "------------------------------------------------\n";
-
-		///* make ATYd */
-		//for (int i1 = 0; i1 < M; i1++){
-		//	for (int ii = 0; ii < N; ii++){
-		//		*(ATYd + i1) += (*(A + ii + i1*N))*(*(Yd + ii));
-		//	}
-		//}
-
-		///* YdTYd */
-		//double YdTYd = 0;
-		//for (int ii = 0; ii < N; ii++)
-		//	YdTYd += (*(Yd + ii))*(*(Yd + ii));
-
 		/* fastols */
 
 		int *PredRegr0 = new int[M]();
@@ -242,7 +210,7 @@ void viewMergingLSWeights(unsigned short *warpedColorViews[5], float *DispTargs[
 }
 
 
-void collectWarpedLS(unsigned short *warpedColorViews[5], float *DispTargs[5], const int nr, const int nc, const int ncomponents, const int n_views, const float* LSw){
+void mergeWarpedLS(unsigned short *warpedColorViews[5], float *DispTargs[5], const int nr, const int nc, const int ncomponents, const int n_views, const float* LSw){
 
 
 	unsigned short *seg_vp = new unsigned short[nr*nc]();
