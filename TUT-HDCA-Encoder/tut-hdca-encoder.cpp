@@ -9,6 +9,99 @@
 #include "../include/gen_types.hh"
 #include "../include/warpingFunctions.hh"
 
+void FiveRefHierarchy_2_disk(const char *input_dir)
+{
+	const int ref_cols[] = { 2, 98, 2, 98, 50 };
+	const int ref_rows[] = { 0, 0, 20, 20, 10 };
+
+	bool vmask[256][256];
+	//bool wmask[256][256];
+
+	for (int rr = 0; rr < 256; rr++){
+		for (int cc = 0; cc < 256; cc++){
+			vmask[rr][cc] = false;
+			//wmask[rr][cc] = false;
+		}
+	}
+
+	//for (int rr = 0; rr < 11; rr++){
+	//	for (int cc = 0; cc < 33; cc++){
+
+	//		int r, c;
+	//		r = rr * 2;
+	//		c = cc * 3 + 2;
+
+	//		wmask[r][c] = true;
+
+	//	}
+	//}
+
+	char hname[256];
+	sprintf(hname, "%s%s", input_dir, "five.h");
+
+	FILE *filept = fopen(hname, "wb");
+
+	int val = 33*11;
+
+	fwrite(&val, sizeof(int), 1, filept);
+
+
+	int ee_mask[21][101];
+	int ee = 0;
+
+
+	for (int ik = 0; ik < 5; ik++)
+	{
+		fwrite(&ref_rows[ik], sizeof(int), 1, filept);
+		
+		fwrite(&ref_cols[ik], sizeof(int), 1, filept);
+
+		int val = 0;
+
+		fwrite(&val, sizeof(int), 1, filept);
+
+		vmask[ref_rows[ik]][ref_cols[ik]] = true;
+
+		ee_mask[ref_rows[ik]][ref_cols[ik]] = ee;
+		ee++;
+
+	}
+
+	for (int rr = 0; rr < 11; rr++){
+		for (int cc = 0; cc < 33; cc++){
+
+			int r, c;
+			r = rr * 2;
+			c = cc * 3 + 2;
+
+			if (!vmask[r][c]){
+
+				fwrite(&r, sizeof(int), 1, filept);
+
+				fwrite(&c, sizeof(int), 1, filept);
+
+				int val = 5;
+
+				fwrite(&val, sizeof(int), 1, filept);
+
+				for (int ik = 0; ik < 5; ik++)
+				{
+
+					fwrite(&ee_mask[ref_rows[ik]][ref_cols[ik]], sizeof(int), 1, filept);
+				}
+
+				vmask[r][c] = 1;
+
+				ee_mask[r][c] = ee;
+				ee++;
+			}
+
+		}
+	}
+
+	fclose(filept);
+}
+
 int main(int argc, char** argv) {
 
 	const char* input_dir = argv[1];
@@ -30,14 +123,23 @@ int main(int argc, char** argv) {
 	const int nr = 1080;
 	const int nc = 1920;
 
+	FiveRefHierarchy_2_disk(input_dir);
+
 	const char *difftest_call = "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/ScriptJan2018/ScriptSolution/difftest_ng.exe --toycbcr --psnr ";
 
 	char path_camera_centers[256];
 	sprintf(path_camera_centers, "%s%s", input_dir, "/camera_displacement.bin");
 
-	float d_cen[256][256][2];
+	FILE *filept;
 
 	float *d_cen0 = new float[nar * nac * 2]();
+
+	filept = fopen(path_camera_centers, "rb");
+	fread(d_cen0, sizeof(float), nar * nac * 2, filept);
+	fclose(filept);
+
+	float d_cen[256][256][2];
+
 	float *p = &d_cen0[0];
 
 	for (int k = 0; k < 2; k++)
@@ -45,46 +147,68 @@ int main(int argc, char** argv) {
 			for (int c = 0; c < nac; c++)
 				d_cen[r][c][k] = *(p++);
 
+
+	char hname[256];
+	sprintf(hname, "%s%s", input_dir, "five.h");
+
+	filept = fopen(hname, "rb");
+
 	view *LF = new view[11 * 33]();
 
-	int ikiv = 0;
+	int n_views_total;
+	fread(&n_views_total, sizeof(int), 1, filept);
 
-	for (int rr = 0; rr < 11; rr++){
-		for (int cc = 0; cc < 33; cc++){
+	int ee_mask[21][101];
+	int ee = 0;
 
-			int r, c;
-			r = rr * 2;
-			c = cc * 3 + 2;
+	for (int ikiv = 0; ikiv < n_views_total; ikiv++){
 
-			(LF + ikiv)->r = r;
-			(LF + ikiv)->c = c;
+		fread(&( (LF + ikiv)->r), sizeof(int), 1, filept);
+		fread(&( (LF + ikiv)->c), sizeof(int), 1, filept);
 
-			(LF + ikiv)->n_references = 0;
+		ee_mask[(LF + ikiv)->r][(LF + ikiv)->c] = ee;
+		ee++;
 
-			(LF + ikiv)->y = d_cen[r][c][1];
-			(LF + ikiv)->x = d_cen[r][c][0];
+		fread(&((LF + ikiv)->n_references), sizeof(int), 1, filept);
 
-			(LF + ikiv)->nr = nr;
-			(LF + ikiv)->nc = nc;
+		if ((LF + ikiv)->n_references > 0){
 
-			ikiv++;
+			(LF + ikiv)->references = new int[(LF + ikiv)->n_references]();
+
+			int *ip = (LF + ikiv)->references;
+
+			for (int uu = 0; uu < (LF + ikiv)->n_references; uu++){
+				fread(ip + uu, sizeof(int), 1, filept);
+			}
 
 		}
+
+		(LF + ikiv)->y = d_cen[(LF + ikiv)->r][(LF + ikiv)->c][1];
+		(LF + ikiv)->x = d_cen[(LF + ikiv)->r][(LF + ikiv)->c][0];
+
+		(LF + ikiv)->nr = nr;
+		(LF + ikiv)->nc = nc;
+
 	}
 
 
 	for (int ii = 0; ii < 11 * 33; ii++){
 	
-		(LF + ii)->color = new unsigned short[nr*nc * 3]();
-		(LF + ii)->depth = new unsigned short[nr*nc]();
+		(LF + ii)->color = new unsigned short[(LF+ii)->nr*(LF+ii)->nc * 3]();
+		(LF + ii)->depth = new unsigned short[(LF + ii)->nr*(LF + ii)->nc]();
 
-		unsigned short *original_intermediate_view = new unsigned short[(LF + ii)->nr*(LF + ii)->nc * 3]();
+		unsigned short *original_intermediate_view = NULL;
+		unsigned short *original_depth_view = NULL;
 
 		char path_input_ppm[160];
 		sprintf(path_input_ppm, "%s%c%03d_%03d%s", input_dir, '/', (LF + ii)->c, (LF + ii)->r, ".ppm");
 
-		int nc1, nr1;
-		aux_read16ppm(path_input_ppm, nc1, nr1, original_intermediate_view);
+		int nc1, nr1, ncomp1;
+		aux_read16PGMPPM(path_input_ppm, nc1, nr1, ncomp1, original_intermediate_view);
+
+		char path_input_depth_pgm[160];
+		sprintf(path_input_depth_pgm, "%s%c%03d_%03d%s", input_dir, '/', (LF + ii)->c, (LF + ii)->r, ".pgm");
+		bool depth_file_exist = aux_read16PGMPPM(path_input_depth_pgm, nc1, nr1, ncomp1, original_depth_view);
 
 		if ((LF + ii)->n_references > 0){
 
@@ -97,14 +221,19 @@ int main(int argc, char** argv) {
 			for (int ij = 0; ij < (LF + ii)->n_references; ij++)
 			{
 
-				warped_color_views[ij] = new unsigned short[nr*nc * 3]();
-				warped_depth_views[ij] = new unsigned short[nr*nc]();
-				DispTargs[ij] = new float[nr*nc]();
+				warped_color_views[ij] = new unsigned short[(LF + ii)->nr*(LF + ii)->nc * 3]();
+				warped_depth_views[ij] = new unsigned short[(LF + ii)->nr*(LF + ii)->nc]();
+				DispTargs[ij] = new float[(LF + ii)->nr*(LF + ii)->nc]();
 
 				int uu = (LF + ii)->references[ij];
 
 				/* warp color AND warp depth */
-				warpView0_2_View1(LF + ii, LF + uu, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
+				warpView0_2_View1(LF + uu, LF+ii, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
+
+				char tmp_str[256];
+				//tmp_str << "warpedColorView_" << uu << ".ppm";
+				sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (LF + uu)->c, (LF + uu)->r, "_warped_to_", (LF + ii)->c, (LF + ii)->r,".ppm");
+				aux_write16ppm(tmp_str, nc, nr, warped_color_views[ij]);
 
 			}
 
@@ -116,7 +245,7 @@ int main(int argc, char** argv) {
 			/* get LS weights */
 
 			getViewMergingLSWeights_N((LF + ii)->n_references, warped_color_views, DispTargs, original_intermediate_view,
-				(LF + ii)->nr, (LF + ii)->nc, (LF + ii)->merge_weights);
+				(LF + ii)->nr, (LF + ii)->nc, (LF + ii)->merge_weights); //kaatuu
 
 			/* merge color */
 
@@ -165,10 +294,12 @@ int main(int argc, char** argv) {
 		char path_out_ppm[160];
 		sprintf(path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', (LF+ii)->c, (LF+ii)->r, ".ppm");
 
+
+
 		if (residual_rate > 0.0001)
 		{
 
-			/* residual here */
+			/* COLOR residual here */
 
 			FILE *residual_file;
 
@@ -180,63 +311,30 @@ int main(int argc, char** argv) {
 
 			sprintf(jp2_residual_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', (LF + ii)->c, (LF + ii)->r, "_residual.jp2");
 
-			/*establish residual*/
-			unsigned short *residual_image = new unsigned short[(LF + ii)->nr*(LF + ii)->nc * 3]();
+			encodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, original_intermediate_view, (LF + ii)->color, ppm_residual_path,
+				kdu_compress_path, jp2_residual_path_jp2, residual_rate,3);
 
-			unsigned short *ps = (LF + ii)->color;
+			decodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, (LF + ii)->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path,ncomp1);
 
-			for (int iir = 0; iir < ((LF + ii)->nr) * ((LF + ii)->nc) * 3; iir++){
-				unsigned short res_val = (unsigned short)(((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + (pow(2, BIT_DEPTH) - 1));
-				if (res_val>pow(2, BIT_DEPTH_RESIDUAL) - 1)
-					res_val = pow(2, BIT_DEPTH_RESIDUAL) - 1;
-				if (res_val < 0)
-					res_val = 0;
-				*(residual_image + iir) = res_val;
-			}
+			if (depth_file_exist){
 
-			aux_write16ppm(ppm_residual_path, (LF + ii)->nc, (LF + ii)->nr, residual_image);
+				char pgm_residual_depth_path[256];
 
-			delete[](residual_image);
+				char jp2_residual_depth_path_jp2[256];
 
-			/* here encode residual with kakadu */
+				sprintf(pgm_residual_depth_path, "%s%c%03d_%03d%s", output_dir, '/', (LF + ii)->c, (LF + ii)->r, "_depth_residual.pgm");
 
-			char kdu_compress_s[256];
-			sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", ppm_residual_path, " -o ", jp2_residual_path_jp2, " -no_weights -precise -full -rate ", residual_rate);
+				sprintf(jp2_residual_depth_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', (LF + ii)->c, (LF + ii)->r, "_depth_residual.jp2");
 
-			//std::cout << kdu_compress_s << "\n";
+				encodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, original_intermediate_view, (LF + ii)->depth, pgm_residual_depth_path,
+					kdu_compress_path, jp2_residual_depth_path_jp2, residual_rate, 1);
 
-			int status = system_1(kdu_compress_s);
+				decodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, (LF + ii)->depth, kdu_expand_path, jp2_residual_depth_path_jp2, pgm_residual_depth_path, ncomp1);
 
-			/* decode residual with kakadu */
-			char kdu_expand_s[256];
-			sprintf(kdu_expand_s, "\"%s\"%s%s%s%s", kdu_expand_path, " -i ", jp2_residual_path_jp2, " -o ", ppm_residual_path);
-
-			//std::cout << kdu_expand_s << "\n";
-
-			status = system_1(kdu_expand_s);
-
-			/* apply residual */
-
-			unsigned short* jp2_residual;
-
-			if (aux_read16ppm(ppm_residual_path, nc1, nr1, jp2_residual))
-			{
-
-				for (int iir = 0; iir < nr*nc * 3; iir++)
-				{
-					signed int val = ((signed int)*(ps + iir)) + ((signed int)jp2_residual[iir]) - (pow(2, BIT_DEPTH) - 1);
-					if (val < 0)
-						val = 0;
-					if (val >(pow(2, BIT_DEPTH) - 1))
-						val = pow(2, BIT_DEPTH) - 1;
-					*(ps + iir) = (unsigned short)(val);
-				}
-
-				delete[](jp2_residual);
 			}
 		}
 
-		aux_write16ppm(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, (LF + ii)->color);
+		aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 
 		if (1){
 

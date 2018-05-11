@@ -5,18 +5,6 @@
 
 #include <cmath>
 
-#ifndef BIT_DEPTH
-#define BIT_DEPTH 10
-#endif
-
-#ifndef D_DEPTH
-#define D_DEPTH 14
-#endif
-
-#ifndef BIT_DEPTH_RESIDUAL
-#define BIT_DEPTH_RESIDUAL 16
-#endif
-
 struct view{
 
 	unsigned short *color;
@@ -265,7 +253,7 @@ void getViewMergingLSWeights_N(const int n_references, unsigned short **warpedCo
 	for (int ik = 0; ik < n_references; ik++){
 		for (int ij = 0; ij < MMM; ij++){
 			if (bmask[ij + ik * MMM]){
-				LScoeffs[in] = thetas[ij + 32 * ik];
+				LScoeffs[in] = thetas[ij + MMM * ik];
 				in++;
 			}
 		}
@@ -705,6 +693,10 @@ void warpView0_2_View1(view *view0, view *view1, unsigned short *warpedColor, un
 
 	warpedColor = new unsigned short[view0->nr*view0->nc * 3]();
 	warpedDepth = new unsigned short[view0->nr*view0->nc]();
+
+	for (int ij = 0; ij < view0->nr*view0->nc; ij++){
+		DispTarg[ij] = -1;
+	}
 
 	for (int ij = 0; ij < view0->nr*view0->nc; ij++)
 	{

@@ -23,6 +23,11 @@
 #define NBIT_GR 32
 #define SYSTEM_VERBOSE 0
 
+#define BIT_DEPTH 10
+#define D_DEPTH 14
+#define BIT_DEPTH_RESIDUAL 16
+
+
 const bool verbose = false;
 
 // number of pixels in the original lenslet image.
@@ -46,6 +51,7 @@ int system_1(char *str){
 	return system(sys_call_str.c_str());
 
 }
+
 
 int getMedian(std::vector<int> scores)
 {
@@ -290,43 +296,93 @@ inline void aux_read_pred_header(int* Ms, int* maxiS) {
 	fclose(f_main_header);
 }
 
+bool aux_read16PGMPPM(const char* filename, int &width, int &height, int &ncomp, unsigned short *&img)
+{
+	if (IO_V)
+		printf("Reading %s\n", filename);
 
-//// read an 8 bit ppm file (here only one channel)
-//inline void aux_read8ppm(FILE *filept, int width, int height, int *img){
-//	int  max, x, y;
-//	int red;
-//	char dummy[100];
-//
-//	unsigned char *Image8bit = NULL;
-//
-//	/*--< Read header information of 16bit ppm image from filept >--*/
-//	fscanf(filept, "%s", dummy);
-//	fscanf(filept, "%d %d\n", &width, &height);
-//	fscanf(filept, "%d", &max);
-//	fgetc(filept);
-//	printf("%s %d %d %d\n", dummy, max, width, height);
-//
-//
-//	Image8bit = (unsigned char *)malloc(width*height * 3 * sizeof(unsigned char));
-//
-//	/*--< Read 16bit ppm image from filept >--*/
-//	fread(Image8bit, sizeof(unsigned char), width*height * 3, filept);
-//
-//	int i = 0;
-//	/*--< Find maximum value in the image >--*/
-//	for (x = 0; x < width; x++){
-//		for (y = 0; y < height; y++){
-//			red = (int)Image8bit[(x + y*width) * 3];
-//			img[i] = red;
-//			i++;
-//		}
-//	}
-//
-//	free(Image8bit);
-//
-//}
+	int  max, x, y;
+	int red, green, blue;
+	char dummy[100];
 
-// read a 16 bit color pgm image
+	unsigned short *Image16bit = NULL;
+
+	FILE *filept;
+
+	filept = fopen(filename, "rb");
+
+	if (filept == NULL){
+		printf("%s does not exist\n", filename);
+		return false;
+	}
+
+
+	fscanf(filept, "%s", dummy);
+	fscanf(filept, "%d %d\n", &width, &height);
+	fscanf(filept, "%d", &max);
+	fgetc(filept);
+
+	if (!strncmp(dummy, "P6", 2)) {
+		ncomp = 3;
+	}
+	else if (!strncmp(dummy, "P5", 2)){ 
+		ncomp = 1;  
+	}
+	else{ printf("ERROR NOT PGM OR PPM\n"); return false; }
+
+
+	//std::cout << width << "\t" << height << "\n";
+
+	img = new unsigned short[width*height * ncomp]();
+
+	Image16bit = new unsigned short[width*height * ncomp]();
+
+	/*--< Read 16bit ppm image from filept >--*/
+	int nread = fread(Image16bit, sizeof(unsigned short), width*height * ncomp, filept);
+
+	if (nread != width*height * ncomp)
+	{
+		fprintf(stderr, "READ ERROR aux_read16ppm() %s\n", filename);
+		return false;
+	}
+
+	fclose(filept);
+
+	int i = 0;
+
+	for (x = 0; x < width; x++){
+		for (y = 0; y < height; y++){
+
+			red = Image16bit[(x + y*width) * ncomp];
+			if (ncomp == 3){
+				green = Image16bit[(x + y*width) * ncomp + 1];
+				blue = Image16bit[(x + y*width) * ncomp + 2];
+			}
+
+			// Exhange upper 8bit and lower 8bit for Intel x86
+			red = ((red & 0x00ff) << 8) | ((red & 0xff00) >> 8);
+			if (ncomp == 3){
+				green = ((green & 0x00ff) << 8) | ((green & 0xff00) >> 8);
+				blue = ((blue & 0x00ff) << 8) | ((blue & 0xff00) >> 8);
+			}
+
+			img[i] = red;
+			if (ncomp == 3){
+				img[i + height*width] = green;
+				img[i + 2 * height*width] = blue;
+			}
+
+			i++;
+
+		}
+	}
+
+	delete[](Image16bit);
+
+	return true;
+
+}
+
 bool aux_read16pgm(const char* filename, int &width, int &height, unsigned short *&img)
 {
 	if (IO_V)
@@ -473,6 +529,72 @@ bool aux_read16ppm(const char* filename, int &width, int &height, unsigned short
 
 }
 
+bool aux_write16PGMPPM(const char* filename, const int width, const int height, const int ncomp, unsigned short *img)
+{
+
+	if (IO_V)
+		printf("Writing %s\n", filename);
+
+	unsigned char *p;
+	int i, tmp, j;
+
+	unsigned short int maxi = 0;
+
+	FILE *filept;
+
+	filept = fopen(filename, "wb");
+
+	if (filept == NULL){
+		printf("Cannot open %s\n", filename);
+		return false;
+	}
+
+	unsigned short* img16bit = new unsigned short[height*width * ncomp]();
+
+	int lin_ind = 0;
+	for (j = 0; j < height; j++) {
+		for (i = 0; i < width; i++) {
+			img16bit[lin_ind] = img[j + i*height];
+			if (ncomp == 3){
+				img16bit[lin_ind + 1] = img[j + i*height + width*height];
+				img16bit[lin_ind + 2] = img[j + i*height + 2 * width*height];
+				lin_ind = lin_ind + 3;
+			}else
+				lin_ind = lin_ind + 1;
+			
+		}
+	}
+
+	for (i = 0; i < width*height * ncomp; i++)
+	{
+		if (*(img16bit + i) > maxi)
+			maxi = *(img16bit + i);
+	}
+
+	p = (unsigned char *)img16bit;
+	for (i = 0; i < width*height; i++){
+		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
+		if (ncomp == 3){
+			tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
+			tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
+		}
+	}
+
+
+	if (ncomp == 3)
+		fprintf(filept, "P6\n%d %d\n%d\n", width, height, maxi);
+	else
+		fprintf(filept, "P5\n%d %d\n%d\n", width, height, maxi);
+
+	fwrite(img16bit, sizeof(unsigned short int), width*height * ncomp, filept);
+
+	fclose(filept);
+
+	delete[](img16bit);
+
+	return true;
+}
+
 void aux_write16pgm(const char* filename, int width, int height, unsigned short *img)
 {
 	if (IO_V)
@@ -517,7 +639,7 @@ void aux_write16pgm(const char* filename, int width, int height, unsigned short 
 	delete[](img16bit);
 }
 
-void aux_write16ppm(const char* filename, int width, int height, unsigned short int *img)
+void aux_write16ppm(const char* filename, int width, int height, unsigned short *img)
 {
 	if (IO_V)
 		printf("Writing %s\n", filename);
@@ -565,6 +687,69 @@ void aux_write16ppm(const char* filename, int width, int height, unsigned short 
 
 	delete[](img16bit);
 }
+
+void decodeResidualJP2(const int nr, const int nc, unsigned short *ps, const char *kdu_expand_path, const char *jp2_residual_path_jp2, const char *ppm_residual_path, int ncomp)
+{
+	/* decode residual with kakadu */
+	char kdu_expand_s[256];
+	sprintf(kdu_expand_s, "\"%s\"%s%s%s%s", kdu_expand_path, " -i ", jp2_residual_path_jp2, " -o ", ppm_residual_path);
+
+	//std::cout << kdu_expand_s << "\n";
+
+	int status = system_1(kdu_expand_s);
+
+	/* apply residual */
+
+	unsigned short* jp2_residual;
+
+	int nc1, nr1;
+
+	if (aux_read16PGMPPM(ppm_residual_path, nc1, nr1, ncomp, jp2_residual))
+	{
+
+		for (int iir = 0; iir < nr*nc * ncomp; iir++)
+		{
+			signed int val = ((signed int)*(ps + iir)) + ((signed int)jp2_residual[iir]) - (pow(2, BIT_DEPTH) - 1);
+			if (val < 0)
+				val = 0;
+			if (val >(pow(2, BIT_DEPTH) - 1))
+				val = pow(2, BIT_DEPTH) - 1;
+			*(ps + iir) = (unsigned short)(val);
+		}
+
+		delete[](jp2_residual);
+	}
+}
+
+void encodeResidualJP2(const int nr, const int nc, unsigned short *original_intermediate_view, unsigned short *ps, const char *ppm_residual_path,
+	const char *kdu_compress_path, const char *jp2_residual_path_jp2, const float residual_rate, const int ncomp)
+{
+	/*establish residual*/
+	unsigned short *residual_image = new unsigned short[nr*nc * ncomp]();
+
+	for (int iir = 0; iir < nr*nc*ncomp; iir++){
+		unsigned short res_val = (unsigned short)(((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + (pow(2, BIT_DEPTH) - 1));
+		if (res_val>pow(2, BIT_DEPTH_RESIDUAL) - 1)
+			res_val = pow(2, BIT_DEPTH_RESIDUAL) - 1;
+		if (res_val < 0)
+			res_val = 0;
+		*(residual_image + iir) = res_val;
+	}
+
+	aux_write16PGMPPM(ppm_residual_path, nc, nr, ncomp, residual_image);
+
+	delete[](residual_image);
+
+	/* here encode residual with kakadu */
+
+	char kdu_compress_s[256];
+	sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", ppm_residual_path, " -o ", jp2_residual_path_jp2, " -no_weights -precise -full -rate ", residual_rate);
+
+	//std::cout << kdu_compress_s << "\n";
+
+	int status = system_1(kdu_compress_s);
+}
+
 
 // allocates an int vector of size m
 inline int* alocaVector(int m)
