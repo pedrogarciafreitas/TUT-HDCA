@@ -155,6 +155,9 @@
       <Project>{c585ba82-b0ef-4b71-8302-a9a6d2cb4efb}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\warpingFunctions.hh" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
