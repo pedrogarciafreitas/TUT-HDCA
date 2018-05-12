@@ -28,11 +28,16 @@ struct view{
 	float *merge_weights_float;
 	float *sparse_weights_float;
 
-	unsigned short *residual_color;
-	unsigned short *residual_depth;
+	//unsigned short *residual_color;
+	//unsigned short *residual_depth;
 
 	bool *bmask;
 	unsigned short *seg_vp;
+
+	float residual_rate_color;
+	float residual_rate_depth;
+
+	int NNt, Ms; //for sparse
 
 };
 
