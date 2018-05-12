@@ -213,6 +213,9 @@ int main(int argc, char** argv) {
 		char path_out_ppm[160];
 		sprintf(path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', (LF + ii)->c, (LF + ii)->r, ".ppm");
 
+		char path_out_pgm[160];
+		sprintf(path_out_pgm, "%s%c%03d_%03d%s", output_dir, '/', (LF + ii)->c, (LF + ii)->r, ".pgm");
+
 		if ((LF + ii)->n_references > 0){
 
 			/* holds partial warped views for ii */
@@ -223,10 +226,6 @@ int main(int argc, char** argv) {
 
 			for (int ij = 0; ij < (LF + ii)->n_references; ij++)
 			{
-
-				//warped_color_views[ij] = new unsigned short[(LF + ii)->nr*(LF + ii)->nc * 3]();
-				//warped_depth_views[ij] = new unsigned short[(LF + ii)->nr*(LF + ii)->nc]();
-				//DispTargs[ij] = new float[(LF + ii)->nr*(LF + ii)->nc]();
 
 				int uu = (LF + ii)->references[ij];
 
@@ -250,12 +249,11 @@ int main(int argc, char** argv) {
 
 			/* get LS weights */
 
-			getViewMergingLSWeights_N((LF + ii)->n_references, warped_color_views, DispTargs, original_intermediate_view,
-				(LF + ii)->nr, (LF + ii)->nc, (LF + ii)->merge_weights); //bugaaaa disptarg
+			getViewMergingLSWeights_N( (LF + ii), warped_color_views, DispTargs, original_intermediate_view);
 
 			/* merge color */
 
-			mergeWarpedLS_N(warped_color_views, DispTargs, LF+ii, 3); //bugaaaa
+			mergeWarped_N(warped_color_views, DispTargs, LF+ii, 3);
 
 			aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 
@@ -266,23 +264,28 @@ int main(int argc, char** argv) {
 
 			/* merge depth */
 
-			for (int ij = 0; ij < nr*nc; ij++)
-				(LF + ii)->depth[ij] = 9999;
+			unsigned short *pp = warped_depth_views[0];
+			float *pf = DispTargs[0];
+			for (int ij = 0; ij < nr*nc; ij++){
+				if (*(pf + ij) > -1){
+					(LF + ii)->depth[ij] = *(pp + ij);
+				}
+				else{
+					(LF + ii)->depth[ij] = 0;
+				}
+			}
 
 			for (int ij = 0; ij < nr*nc; ij++){
-				for (int uu = 0; uu < (LF + ii)->n_references; uu++){
+				for (int uu = 1; uu < (LF + ii)->n_references; uu++){
 					unsigned short *pp = warped_depth_views[uu];
-					if (*(pp + ij) < (LF + ii)->depth[ij])
+					float *pf = DispTargs[uu];
+					if ((*(pf + ij)>-1) && (*(pp + ij) > (LF + ii)->depth[ij]))
 						(LF + ii)->depth[ij] = *(pp + ij);
 				}
 			}
 
-			//for (int ij = 0; ij < nr*nc; ij++)
-			//	if ((LF + ii)->depth[ij] == 9999)
-			//		(LF + ii)->depth[ij] = 0;
-
 			/* hole filling */
-			holefilling((LF + ii)->depth, 1, (LF + ii)->nr, (LF + ii)->nc, 9999);
+			holefilling((LF + ii)->depth, 1, (LF + ii)->nr, (LF + ii)->nc, 0);
 
 			/* clean */
 			for (int ij = 0; ij < (LF + ii)->n_references; ij++)
@@ -296,12 +299,8 @@ int main(int argc, char** argv) {
 		}
 
 		/* get sparse weights */
+		
 		/* get residual */
-
-
-
-
-
 		if (residual_rate > 0.0001)
 		{
 
@@ -341,6 +340,7 @@ int main(int argc, char** argv) {
 		}
 
 		aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
+		aux_write16PGMPPM(path_out_pgm, (LF + ii)->nc, (LF + ii)->nr, 1, (LF + ii)->depth);
 
 		if (1){
 
