@@ -105,17 +105,17 @@ int main(int argc, char** argv) {
 	const char *kdu_compress_path = argv[3];
 	const char *kdu_expand_path = argv[4];
 
-	const float ref_color_rate = atof(argv[5]);
-	const float ref_depth_rate = atof(argv[6]);
-	const float residual_rate = atof(argv[7]);
+	//const float ref_color_rate = atof(argv[5]);
+	//const float ref_depth_rate = atof(argv[6]);
+	//const float residual_rate = atof(argv[7]);
 
-	const int nar = atoi(argv[8]);
-	const int nac = atoi(argv[9]);
+	const int nar = atoi(argv[5]);
+	const int nac = atoi(argv[6]);
 
-	const char *hiearchy_file = argv[10];
+	const char *hiearchy_file = argv[7];
 
-	const int nr = 1080;
-	const int nc = 1920;
+	//const int nr = 1080;
+	//const int nc = 1920;
 
 	FiveRefHierarchy_2_disk(hiearchy_file);
 
@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
 
 	view *LF = new view[n_views_total]();
 
-	int ee_mask[21][101];
+	int ee_mask[256][256];
 	int ee = 0;
 
 	for (int ikiv = 0; ikiv < n_views_total; ikiv++){
@@ -179,17 +179,14 @@ int main(int argc, char** argv) {
 		(LF + ikiv)->y = d_cen[(LF + ikiv)->r][(LF + ikiv)->c][1];
 		(LF + ikiv)->x = d_cen[(LF + ikiv)->r][(LF + ikiv)->c][0];
 
-		(LF + ikiv)->nr = nr;
-		(LF + ikiv)->nc = nc;
+		//(LF + ikiv)->nr = nr;
+		//(LF + ikiv)->nc = nc;
 
 	}
 
 
-	for (int ii = 0; ii < 11 * 33; ii++){
+	for (int ii = 0; ii < n_views_total; ii++){
 	
-		(LF + ii)->color = new unsigned short[(LF+ii)->nr*(LF+ii)->nc * 3]();
-		(LF + ii)->depth = new unsigned short[(LF + ii)->nr*(LF + ii)->nc]();
-
 		unsigned short *original_intermediate_view = NULL;
 		unsigned short *original_depth_view = NULL;
 
@@ -197,7 +194,7 @@ int main(int argc, char** argv) {
 		sprintf(path_input_ppm, "%s%c%03d_%03d%s", input_dir, '/', (LF + ii)->c, (LF + ii)->r, ".ppm");
 
 		int nc1, nr1, ncomp1;
-		aux_read16PGMPPM(path_input_ppm, nc1, nr1, ncomp1, original_intermediate_view);
+		aux_read16PGMPPM(path_input_ppm, (LF + ii)->nc, (LF + ii)->nr, ncomp1, original_intermediate_view);
 
 		char path_input_depth_pgm[160];
 		sprintf(path_input_depth_pgm, "%s%c%03d_%03d%s", input_dir, '/', (LF + ii)->c, (LF + ii)->r, ".pgm");
@@ -208,6 +205,9 @@ int main(int argc, char** argv) {
 
 		char path_out_pgm[160];
 		sprintf(path_out_pgm, "%s%c%03d_%03d%s", output_dir, '/', (LF + ii)->c, (LF + ii)->r, ".pgm");
+
+		(LF + ii)->color = new unsigned short[(LF + ii)->nr*(LF + ii)->nc * 3]();
+		(LF + ii)->depth = new unsigned short[(LF + ii)->nr*(LF + ii)->nc]();
 
 		if ((LF + ii)->n_references > 0){
 
@@ -227,7 +227,7 @@ int main(int argc, char** argv) {
 
 				char tmp_str[256];
 				sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (LF + uu)->c, (LF + uu)->r, "_warped_to_", (LF + ii)->c, (LF + ii)->r,".ppm");
-				aux_write16PGMPPM(tmp_str, nc, nr, 3, warped_color_views[ij]);
+				aux_write16PGMPPM(tmp_str, (LF + ii)->nc, (LF + ii)->nr, 3, warped_color_views[ij]);
 
 				//FILE *tmpf;
 				//tmpf = fopen("G:/HEVC_HDCA/Berlin_verification_model/TMP_CPP/disptarg.float", "wb");
@@ -259,7 +259,7 @@ int main(int argc, char** argv) {
 
 			unsigned short *pp = warped_depth_views[0];
 			float *pf = DispTargs[0];
-			for (int ij = 0; ij < nr*nc; ij++){
+			for (int ij = 0; ij < (LF + ii)->nr*(LF + ii)->nc; ij++){
 				if (*(pf + ij) > -1){
 					(LF + ii)->depth[ij] = *(pp + ij);
 				}
@@ -268,7 +268,7 @@ int main(int argc, char** argv) {
 				}
 			}
 
-			for (int ij = 0; ij < nr*nc; ij++){
+			for (int ij = 0; ij < (LF + ii)->nr*(LF + ii)->nc; ij++){
 				for (int uu = 1; uu < (LF + ii)->n_references; uu++){
 					unsigned short *pp = warped_depth_views[uu];
 					float *pf = DispTargs[uu];
@@ -285,10 +285,11 @@ int main(int argc, char** argv) {
 			{
 				delete[](warped_color_views[ij]);
 				delete[](warped_depth_views[ij]);
+				delete[](DispTargs[ij]);
 			}
 			delete[](warped_color_views);
 			delete[](warped_depth_views);
-
+			delete[](DispTargs);
 		}
 
 		/* get sparse weights */
@@ -360,7 +361,7 @@ int main(int argc, char** argv) {
 		}
 	
 		delete[](original_intermediate_view);
-
+		delete[](original_depth_view);
 	}
 
 	for (int ii = 0; ii < 11 * 33; ii++){
