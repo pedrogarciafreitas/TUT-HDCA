@@ -210,6 +210,9 @@ int main(int argc, char** argv) {
 		sprintf(path_input_depth_pgm, "%s%c%03d_%03d%s", input_dir, '/', (LF + ii)->c, (LF + ii)->r, ".pgm");
 		bool depth_file_exist = aux_read16PGMPPM(path_input_depth_pgm, nc1, nr1, ncomp1, original_depth_view);
 
+		char path_out_ppm[160];
+		sprintf(path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', (LF + ii)->c, (LF + ii)->r, ".ppm");
+
 		if ((LF + ii)->n_references > 0){
 
 			/* holds partial warped views for ii */
@@ -221,41 +224,45 @@ int main(int argc, char** argv) {
 			for (int ij = 0; ij < (LF + ii)->n_references; ij++)
 			{
 
-				warped_color_views[ij] = new unsigned short[(LF + ii)->nr*(LF + ii)->nc * 3]();
-				warped_depth_views[ij] = new unsigned short[(LF + ii)->nr*(LF + ii)->nc]();
-				DispTargs[ij] = new float[(LF + ii)->nr*(LF + ii)->nc]();
+				//warped_color_views[ij] = new unsigned short[(LF + ii)->nr*(LF + ii)->nc * 3]();
+				//warped_depth_views[ij] = new unsigned short[(LF + ii)->nr*(LF + ii)->nc]();
+				//DispTargs[ij] = new float[(LF + ii)->nr*(LF + ii)->nc]();
 
 				int uu = (LF + ii)->references[ij];
 
 				/* warp color AND warp depth */
-				warpView0_2_View1(LF + uu, LF+ii, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
+				warpView0_to_View1(LF + uu, LF+ii, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
 
 				char tmp_str[256];
-				//tmp_str << "warpedColorView_" << uu << ".ppm";
 				sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (LF + uu)->c, (LF + uu)->r, "_warped_to_", (LF + ii)->c, (LF + ii)->r,".ppm");
-				aux_write16ppm(tmp_str, nc, nr, warped_color_views[ij]);
+				aux_write16PGMPPM(tmp_str, nc, nr, 3, warped_color_views[ij]);
+
+				//FILE *tmpf;
+				//tmpf = fopen("G:/HEVC_HDCA/Berlin_verification_model/TMP_CPP/disptarg.float", "wb");
+				//fwrite(DispTargs[ij], sizeof(float), 1080 * 1920, tmpf);
+				//fclose(tmpf);
 
 			}
 
-			int NCOEFFS = (pow(2, (LF + ii)->n_references)*(LF + ii)->n_references) / 2;
-
-			(LF + ii)->merge_weights = new signed short[NCOEFFS]();
-			(LF + ii)->merge_weights_float = new float[NCOEFFS]();
+			(LF + ii)->NCOEFFS = (pow(2, (LF + ii)->n_references)*(LF + ii)->n_references);
+			(LF + ii)->merge_weights = new signed short[(LF + ii)->NCOEFFS]();
+			(LF + ii)->merge_weights_float = new float[(LF + ii)->NCOEFFS]();
 
 			/* get LS weights */
 
 			getViewMergingLSWeights_N((LF + ii)->n_references, warped_color_views, DispTargs, original_intermediate_view,
-				(LF + ii)->nr, (LF + ii)->nc, (LF + ii)->merge_weights); //kaatuu
+				(LF + ii)->nr, (LF + ii)->nc, (LF + ii)->merge_weights); //bugaaaa disptarg
 
 			/* merge color */
 
-			for (int ij = 0; ij < NCOEFFS; ij++)
-				(LF + ii)->merge_weights_float[ij] = ((float)(LF + ii)->merge_weights[ij]) / pow(2, 14);
+			mergeWarpedLS_N(warped_color_views, DispTargs, LF+ii, 3); //bugaaaa
 
-			mergeWarpedLS_N(warped_color_views, DispTargs, (LF + ii)->nr, (LF + ii)->nc, 3, (LF + ii)->n_references, (LF + ii)->merge_weights_float);
+			aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 
 			/* hole filling */
-			holefilling((LF + ii)->color, 3, (LF + ii)->nr, (LF + ii)->nc);
+			holefilling((LF + ii)->color, 3, (LF + ii)->nr, (LF + ii)->nc,0);
+
+			aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 
 			/* merge depth */
 
@@ -270,12 +277,12 @@ int main(int argc, char** argv) {
 				}
 			}
 
-			for (int ij = 0; ij < nr*nc; ij++)
-				if ((LF + ii)->depth[ij] == 9999)
-					(LF + ii)->depth[ij] = 0;
+			//for (int ij = 0; ij < nr*nc; ij++)
+			//	if ((LF + ii)->depth[ij] == 9999)
+			//		(LF + ii)->depth[ij] = 0;
 
 			/* hole filling */
-			holefilling((LF + ii)->depth, 1, (LF + ii)->nr, (LF + ii)->nc);
+			holefilling((LF + ii)->depth, 1, (LF + ii)->nr, (LF + ii)->nc, 9999);
 
 			/* clean */
 			for (int ij = 0; ij < (LF + ii)->n_references; ij++)
@@ -291,8 +298,7 @@ int main(int argc, char** argv) {
 		/* get sparse weights */
 		/* get residual */
 
-		char path_out_ppm[160];
-		sprintf(path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', (LF+ii)->c, (LF+ii)->r, ".ppm");
+
 
 
 
@@ -312,9 +318,9 @@ int main(int argc, char** argv) {
 			sprintf(jp2_residual_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', (LF + ii)->c, (LF + ii)->r, "_residual.jp2");
 
 			encodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, original_intermediate_view, (LF + ii)->color, ppm_residual_path,
-				kdu_compress_path, jp2_residual_path_jp2, residual_rate,3);
+				kdu_compress_path, jp2_residual_path_jp2, residual_rate,3,pow(2,10)-1);
 
-			decodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, (LF + ii)->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path,ncomp1);
+			decodeResidualJP2((LF + ii)->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path,ncomp1,pow(2,10)-1,pow(2,10)-1);
 
 			if (depth_file_exist){
 
@@ -326,10 +332,10 @@ int main(int argc, char** argv) {
 
 				sprintf(jp2_residual_depth_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', (LF + ii)->c, (LF + ii)->r, "_depth_residual.jp2");
 
-				encodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, original_intermediate_view, (LF + ii)->depth, pgm_residual_depth_path,
-					kdu_compress_path, jp2_residual_depth_path_jp2, residual_rate, 1);
+				encodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, original_depth_view, (LF + ii)->depth, pgm_residual_depth_path,
+					kdu_compress_path, jp2_residual_depth_path_jp2, residual_rate, 1, 0);
 
-				decodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, (LF + ii)->depth, kdu_expand_path, jp2_residual_depth_path_jp2, pgm_residual_depth_path, ncomp1);
+				decodeResidualJP2((LF + ii)->depth, kdu_expand_path, jp2_residual_depth_path_jp2, pgm_residual_depth_path, ncomp1,0,pow(2,16)-1);
 
 			}
 		}
@@ -356,7 +362,7 @@ int main(int argc, char** argv) {
 			}
 			_pclose(pfile);
 
-			printf("PSNR %s\n", psnr_buffer);
+			printf("%s\n", psnr_buffer);
 
 		}
 	

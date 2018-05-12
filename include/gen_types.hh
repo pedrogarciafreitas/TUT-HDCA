@@ -538,7 +538,7 @@ bool aux_write16PGMPPM(const char* filename, const int width, const int height, 
 	unsigned char *p;
 	int i, tmp, j;
 
-	unsigned short int maxi = 0;
+	unsigned short maxi = 0;
 
 	FILE *filept;
 
@@ -559,8 +559,10 @@ bool aux_write16PGMPPM(const char* filename, const int width, const int height, 
 				img16bit[lin_ind + 1] = img[j + i*height + width*height];
 				img16bit[lin_ind + 2] = img[j + i*height + 2 * width*height];
 				lin_ind = lin_ind + 3;
-			}else
+			}
+			else{
 				lin_ind = lin_ind + 1;
+			}
 			
 		}
 	}
@@ -581,12 +583,14 @@ bool aux_write16PGMPPM(const char* filename, const int width, const int height, 
 	}
 
 
-	if (ncomp == 3)
+	if (ncomp == 3){
 		fprintf(filept, "P6\n%d %d\n%d\n", width, height, maxi);
-	else
+	}
+	else{
 		fprintf(filept, "P5\n%d %d\n%d\n", width, height, maxi);
+	}
 
-	fwrite(img16bit, sizeof(unsigned short int), width*height * ncomp, filept);
+	fwrite(img16bit, sizeof(unsigned short), width*height * ncomp, filept);
 
 	fclose(filept);
 
@@ -688,7 +692,7 @@ void aux_write16ppm(const char* filename, int width, int height, unsigned short 
 	delete[](img16bit);
 }
 
-void decodeResidualJP2(const int nr, const int nc, unsigned short *ps, const char *kdu_expand_path, const char *jp2_residual_path_jp2, const char *ppm_residual_path, int ncomp)
+void decodeResidualJP2(unsigned short *ps, const char *kdu_expand_path, const char *jp2_residual_path_jp2, const char *ppm_residual_path, int ncomp, const int offset, const int maxvali)
 {
 	/* decode residual with kakadu */
 	char kdu_expand_s[256];
@@ -707,13 +711,13 @@ void decodeResidualJP2(const int nr, const int nc, unsigned short *ps, const cha
 	if (aux_read16PGMPPM(ppm_residual_path, nc1, nr1, ncomp, jp2_residual))
 	{
 
-		for (int iir = 0; iir < nr*nc * ncomp; iir++)
+		for (int iir = 0; iir < nc1*nr1 * ncomp; iir++)
 		{
-			signed int val = ((signed int)*(ps + iir)) + ((signed int)jp2_residual[iir]) - (pow(2, BIT_DEPTH) - 1);
+			signed int val = ((signed int)*(ps + iir)) + ((signed int)jp2_residual[iir]) - offset;
 			if (val < 0)
 				val = 0;
-			if (val >(pow(2, BIT_DEPTH) - 1))
-				val = pow(2, BIT_DEPTH) - 1;
+			if (val > maxvali)
+				val = maxvali;
 			*(ps + iir) = (unsigned short)(val);
 		}
 
@@ -722,15 +726,15 @@ void decodeResidualJP2(const int nr, const int nc, unsigned short *ps, const cha
 }
 
 void encodeResidualJP2(const int nr, const int nc, unsigned short *original_intermediate_view, unsigned short *ps, const char *ppm_residual_path,
-	const char *kdu_compress_path, const char *jp2_residual_path_jp2, const float residual_rate, const int ncomp)
+	const char *kdu_compress_path, const char *jp2_residual_path_jp2, const float residual_rate, const int ncomp, const int offset)
 {
 	/*establish residual*/
 	unsigned short *residual_image = new unsigned short[nr*nc * ncomp]();
 
 	for (int iir = 0; iir < nr*nc*ncomp; iir++){
-		unsigned short res_val = (unsigned short)(((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + (pow(2, BIT_DEPTH) - 1));
-		if (res_val>pow(2, BIT_DEPTH_RESIDUAL) - 1)
-			res_val = pow(2, BIT_DEPTH_RESIDUAL) - 1;
+		unsigned short res_val = (unsigned short)(((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset);
+		if (res_val>pow(2, 16) - 1)
+			res_val = pow(2, 16) - 1;
 		if (res_val < 0)
 			res_val = 0;
 		*(residual_image + iir) = res_val;
