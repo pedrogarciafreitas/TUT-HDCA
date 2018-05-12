@@ -38,10 +38,10 @@ void FiveRefHierarchy_2_disk(const char *hiearchy_file)
 		
 		fwrite(&ref_cols[ik], sizeof(int), 1, filept);
 
-		float rate = 0.5;
+		int rate = 100000/2;
 
-		fwrite(&rate, sizeof(float), 1, filept);
-		fwrite(&rate, sizeof(float), 1, filept);
+		fwrite(&rate, sizeof(int), 1, filept);
+		fwrite(&rate, sizeof(int), 1, filept);
 
 		int val = 0;
 
@@ -67,10 +67,10 @@ void FiveRefHierarchy_2_disk(const char *hiearchy_file)
 
 				fwrite(&c, sizeof(int), 1, filept);
 
-				float rate = 0.5;
+				int rate = 100000 / 2;
 
-				fwrite(&rate, sizeof(float), 1, filept);
-				fwrite(&rate, sizeof(float), 1, filept);
+				fwrite(&rate, sizeof(int), 1, filept);
+				fwrite(&rate, sizeof(int), 1, filept);
 
 				int val = 5;
 
@@ -117,7 +117,8 @@ int main(int argc, char** argv) {
 	//const int nr = 1080;
 	//const int nc = 1920;
 
-	FiveRefHierarchy_2_disk(hiearchy_file);
+
+	//FiveRefHierarchy_2_disk(hiearchy_file);
 
 	const char *difftest_call = "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/ScriptJan2018/ScriptSolution/difftest_ng.exe --toycbcr --psnr ";
 
@@ -156,8 +157,13 @@ int main(int argc, char** argv) {
 		fread(&( (LF + ikiv)->r), sizeof(int), 1, filept);
 		fread(&( (LF + ikiv)->c), sizeof(int), 1, filept);
 
-		fread(&((LF + ikiv)->residual_rate_color), sizeof(float), 1, filept);
-		fread(&((LF + ikiv)->residual_rate_depth), sizeof(float), 1, filept);
+		int rate_color, rate_depth;
+
+		fread(&rate_color, sizeof(int), 1, filept);
+		fread(&rate_depth, sizeof(int), 1, filept);
+
+		(LF + ikiv)->residual_rate_color = ((float)rate_color) / 100000;
+		(LF + ikiv)->residual_rate_depth = ((float)rate_depth) / 100000;
 
 		ee_mask[(LF + ikiv)->r][(LF + ikiv)->c] = ee;
 		ee++;
