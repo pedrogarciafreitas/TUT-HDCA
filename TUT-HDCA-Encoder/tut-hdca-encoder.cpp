@@ -190,14 +190,14 @@ int main(int argc, char** argv) {
 
 	for (int ii = 0; ii < n_views_total; ii++){
 	
-		unsigned short *original_intermediate_view = NULL;
+		unsigned short *original_color_view = NULL;
 		unsigned short *original_depth_view = NULL;
 
 		char path_input_ppm[160];
 		sprintf(path_input_ppm, "%s%c%03d_%03d%s", input_dir, '/', (LF + ii)->c, (LF + ii)->r, ".ppm");
 
 		int nc1, nr1, ncomp1;
-		aux_read16PGMPPM(path_input_ppm, (LF + ii)->nc, (LF + ii)->nr, ncomp1, original_intermediate_view);
+		aux_read16PGMPPM(path_input_ppm, (LF + ii)->nc, (LF + ii)->nr, ncomp1, original_color_view);
 
 		char path_input_depth_pgm[160];
 		sprintf(path_input_depth_pgm, "%s%c%03d_%03d%s", input_dir, '/', (LF + ii)->c, (LF + ii)->r, ".pgm");
@@ -232,6 +232,9 @@ int main(int argc, char** argv) {
 				sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (LF + uu)->c, (LF + uu)->r, "_warped_to_", (LF + ii)->c, (LF + ii)->r,".ppm");
 				aux_write16PGMPPM(tmp_str, (LF + ii)->nc, (LF + ii)->nr, 3, warped_color_views[ij]);
 
+				//sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (LF + uu)->c, (LF + uu)->r, "_warped_to_", (LF + ii)->c, (LF + ii)->r, ".pgm");
+				//aux_write16PGMPPM(tmp_str, (LF + ii)->nc, (LF + ii)->nr, 1, warped_depth_views[ij]);
+
 				//FILE *tmpf;
 				//tmpf = fopen("G:/HEVC_HDCA/Berlin_verification_model/TMP_CPP/disptarg.float", "wb");
 				//fwrite(DispTargs[ij], sizeof(float), 1080 * 1920, tmpf);
@@ -239,24 +242,20 @@ int main(int argc, char** argv) {
 
 			}
 
-			(LF + ii)->NB = (pow(2, (LF + ii)->n_references)*(LF + ii)->n_references);
-			(LF + ii)->merge_weights = new signed short[(LF + ii)->NB]();
-			(LF + ii)->merge_weights_float = new float[(LF + ii)->NB]();
-
 			/* get LS weights */
 
-			getViewMergingLSWeights_N( (LF + ii), warped_color_views, DispTargs, original_intermediate_view);
+			getViewMergingLSWeights_N( (LF + ii), warped_color_views, DispTargs, original_color_view);
 
 			/* merge color */
 
 			mergeWarped_N(warped_color_views, DispTargs, LF+ii, 3);
 
-			aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
+			//aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 
-			/* hole filling */
+			/* hole filling for color*/
 			holefilling((LF + ii)->color, 3, (LF + ii)->nr, (LF + ii)->nc,0);
 
-			aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
+			//aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 
 			/* merge depth */
 
@@ -280,7 +279,7 @@ int main(int argc, char** argv) {
 				}
 			}
 
-			/* hole filling */
+			/* hole filling for depth */
 			holefilling((LF + ii)->depth, 1, (LF + ii)->nr, (LF + ii)->nc, 0);
 
 			/* clean */
@@ -295,7 +294,21 @@ int main(int argc, char** argv) {
 			delete[](DispTargs);
 		}
 
-		/* get sparse weights */
+
+
+		if ((LF+ii)->n_references>0 && (LF + ii)->NNt > 0 && (LF + ii)->Ms > 0){
+
+			aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
+			getPSNR(LF + ii, path_out_ppm, path_input_ppm, difftest_call);
+
+			getGlobalSparseFilter(LF + ii, original_color_view);
+			applyGlobalSparseFilter(LF + ii);
+
+			aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
+			getPSNR(LF + ii, path_out_ppm, path_input_ppm, difftest_call);
+		}
+
+
 		
 		/* get residual */
 		if ((LF + ii)->residual_rate_color > 0)
@@ -313,7 +326,7 @@ int main(int argc, char** argv) {
 
 			sprintf(jp2_residual_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', (LF + ii)->c, (LF + ii)->r, "_residual.jp2");
 
-			encodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, original_intermediate_view, (LF + ii)->color, ppm_residual_path,
+			encodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, original_color_view, (LF + ii)->color, ppm_residual_path,
 				kdu_compress_path, jp2_residual_path_jp2, (LF + ii)->residual_rate_color, 3, pow(2, 10) - 1);
 
 			decodeResidualJP2((LF + ii)->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path,ncomp1,pow(2,10)-1,pow(2,10)-1);
@@ -336,37 +349,12 @@ int main(int argc, char** argv) {
 			}
 		}
 
-		getGlobalSparseFilter(LF + ii, original_intermediate_view);
-		applyGlobalSparseFilter(LF + ii);
-
 		aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 		aux_write16PGMPPM(path_out_pgm, (LF + ii)->nc, (LF + ii)->nr, 1, (LF + ii)->depth);
 
-		if (1){
+		getPSNR(LF + ii, path_out_ppm, path_input_ppm, difftest_call);
 
-			/* run psnr here */
-
-			char tmp_original_intermediate_view[256];
-			sprintf(tmp_original_intermediate_view, "%s%s", output_dir, "tmp_iv.ppm");
-			aux_write16ppm(tmp_original_intermediate_view, (LF + ii)->nc, (LF + ii)->nr, original_intermediate_view);
-
-			char psnr_call[256];
-			sprintf(psnr_call, "%s%s%s%s", difftest_call, path_out_ppm, " ", tmp_original_intermediate_view);
-
-			FILE *pfile;
-			pfile = _popen(psnr_call, "r");
-
-			char psnr_buffer[256];
-			while (fgets(psnr_buffer, sizeof(psnr_buffer), pfile) != 0) {
-				/*...*/
-			}
-			_pclose(pfile);
-
-			printf("%s\n", psnr_buffer);
-
-		}
-	
-		delete[](original_intermediate_view);
+		delete[](original_color_view);
 		delete[](original_depth_view);
 	}
 
@@ -376,6 +364,7 @@ int main(int argc, char** argv) {
 		delete[]((LF + ii)->depth);
 		delete[]((LF + ii)->merge_weights);
 		delete[]((LF + ii)->sparse_weights);
+		delete[]((LF + ii)->sparse_mask);
 	}
 
 
