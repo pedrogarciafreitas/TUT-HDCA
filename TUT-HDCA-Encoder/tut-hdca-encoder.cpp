@@ -185,9 +185,6 @@ int main(int argc, char** argv) {
 		(LF + ikiv)->y = d_cen[(LF + ikiv)->r][(LF + ikiv)->c][1];
 		(LF + ikiv)->x = d_cen[(LF + ikiv)->r][(LF + ikiv)->c][0];
 
-		//(LF + ikiv)->nr = nr;
-		//(LF + ikiv)->nc = nc;
-
 	}
 
 
@@ -242,9 +239,9 @@ int main(int argc, char** argv) {
 
 			}
 
-			(LF + ii)->NCOEFFS = (pow(2, (LF + ii)->n_references)*(LF + ii)->n_references);
-			(LF + ii)->merge_weights = new signed short[(LF + ii)->NCOEFFS]();
-			(LF + ii)->merge_weights_float = new float[(LF + ii)->NCOEFFS]();
+			(LF + ii)->NB = (pow(2, (LF + ii)->n_references)*(LF + ii)->n_references);
+			(LF + ii)->merge_weights = new signed short[(LF + ii)->NB]();
+			(LF + ii)->merge_weights_float = new float[(LF + ii)->NB]();
 
 			/* get LS weights */
 
@@ -338,6 +335,9 @@ int main(int argc, char** argv) {
 
 			}
 		}
+
+		getGlobalSparseFilter(LF + ii, original_intermediate_view);
+		applyGlobalSparseFilter(LF + ii);
 
 		aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 		aux_write16PGMPPM(path_out_pgm, (LF + ii)->nc, (LF + ii)->nr, 1, (LF + ii)->depth);

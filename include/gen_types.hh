@@ -113,7 +113,7 @@ float getMedian(std::vector<float> scores)
 
 void medfilt2D(int* input, int* output, int SZ, int nr, int nc)
 {
-	int dsz = floor(SZ / 2);
+	int dsz = (SZ / 2);
 	std::vector<int> scores;
 	for (int y = 0; y < nr; y++){
 		for (int x = 0; x < nc; x++){
@@ -132,7 +132,7 @@ void medfilt2D(int* input, int* output, int SZ, int nr, int nc)
 
 void medfilt2D(unsigned short* input, unsigned short* output, int SZ, int nr, int nc)
 {
-	int dsz = floor(SZ / 2);
+	int dsz = (SZ / 2);
 	std::vector<unsigned short> scores;
 	for (int y = 0; y < nr; y++){
 		for (int x = 0; x < nc; x++){
@@ -152,7 +152,7 @@ void medfilt2D(unsigned short* input, unsigned short* output, int SZ, int nr, in
 
 void medfilt2D(float* input, float* output, int SZ, int nr, int nc)
 {
-	int dsz = floor(SZ / 2);
+	int dsz = (SZ / 2);
 	std::vector<float> scores;
 	for (int y = 0; y < nr; y++){
 		for (int x = 0; x < nc; x++){
@@ -605,12 +605,12 @@ void encodeResidualJP2(const int nr, const int nc, unsigned short *original_inte
 	unsigned short *residual_image = new unsigned short[nr*nc * ncomp]();
 
 	for (int iir = 0; iir < nr*nc*ncomp; iir++){
-		unsigned short res_val = (unsigned short)(((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset);
+		signed int res_val = (((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset);
 		if (res_val>pow(2, 16) - 1)
 			res_val = pow(2, 16) - 1;
 		if (res_val < 0)
 			res_val = 0;
-		*(residual_image + iir) = res_val;
+		*(residual_image + iir) = (unsigned short)res_val;
 	}
 
 	aux_write16PGMPPM(ppm_residual_path, nc, nr, ncomp, residual_image);

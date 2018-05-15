@@ -20,16 +20,15 @@ struct view{
 
 	int *references;
 
-	int NCOEFFS; // LS merging number of coefficients
+	int NB;
 
 	signed short *merge_weights;
-	signed short *sparse_weights;
+	int32_t *sparse_weights;
+
+	unsigned char *sparse_mask;
 
 	float *merge_weights_float;
 	float *sparse_weights_float;
-
-	//unsigned short *residual_color;
-	//unsigned short *residual_depth;
 
 	bool *bmask;
 	unsigned short *seg_vp;
@@ -37,9 +36,140 @@ struct view{
 	float residual_rate_color;
 	float residual_rate_depth;
 
-	int NNt, Ms; //for sparse
+	int NNt = 3, Ms = 25; //for sparse
 
 };
+
+void applyGlobalSparseFilter(view *view0){
+
+	unsigned char *Regr0 = view0->sparse_mask;
+	int32_t *theta0 = view0->sparse_weights;
+	int Ms = view0->Ms;
+	int NNt = view0->NNt;
+	int nr = view0->nr, nc = view0->nc;
+
+
+	double *theta = new double[(2 * NNt + 1)*(2 * NNt + 1) + 1]();
+
+	for (int ii = 0; ii < Ms; ii++){
+		if (Regr0[ii] > 0){
+			theta[Regr0[ii] - 1] = ((double)theta0[ii]) / pow(2, 20);
+			//std::cout << theta[Regr0[ii] - 1] << "\t";
+		}
+	}
+
+	double *final_view = new double[nr*nc * 3]();
+
+	unsigned short *pshort = view0->color;
+
+	for (int ii = 0; ii < nr*nc * 3; ii++)
+		final_view[ii] = pshort[ii];
+
+	for (int rr = NNt; rr < nr - NNt; rr++){
+		for (int cc = NNt; cc < nc - NNt; cc++)
+		{
+			for (int icomp = 0; icomp < 3; icomp++)
+				final_view[rr + cc*nr + icomp*nr*nc] = 0;
+
+			int ee = 0;
+
+			for (int dy = -NNt; dy <= NNt; dy++){
+				for (int dx = -NNt; dx <= NNt; dx++){
+					for (int icomp = 0; icomp < 3; icomp++){
+						final_view[rr + cc*nr + icomp*nr*nc] = final_view[rr + cc*nr + icomp*nr*nc] + theta[ee] * ((double)pshort[rr + dy + (cc + dx)*nr + icomp*nr*nc]);
+					}
+					ee++;
+				}
+			}
+
+			/* bias term */
+			for (int icomp = 0; icomp < 3; icomp++){
+				final_view[rr + cc*nr + icomp*nr*nc] = final_view[rr + cc*nr + icomp*nr*nc] + theta[(2 * NNt + 1)*(2 * NNt + 1)];
+			}
+
+		}
+	}
+
+	unsigned short *final_view_s = new unsigned short[nr*nc * 3]();
+
+	for (int ii = 0; ii < nr*nc * 3; ii++){
+		if (final_view[ii] < 0)
+			final_view[ii] = 0;
+		if (final_view[ii]> (pow(2, BIT_DEPTH) - 1))
+			final_view[ii] = (pow(2, BIT_DEPTH) - 1);
+
+		pshort[ii] = (unsigned short)(final_view[ii]);
+	}
+
+	delete[](final_view);
+
+}
+
+void getGlobalSparseFilter(view *view0, unsigned short *original_intermediate_view)
+{
+
+	int nr = view0->nr;
+	int nc = view0->nc;
+	int NNt = view0->NNt;
+	int Ms = view0->Ms;
+
+	unsigned char *Regr0 = new unsigned char[Ms]();
+	int32_t *theta0 = new int32_t[Ms]();
+
+	view0->sparse_weights = theta0;
+	view0->sparse_mask = Regr0;
+
+	int Npp = (nr - NNt * 2)*(nc - NNt * 2) * 3;
+	int Npp0 = Npp / 3;
+
+	double *AA = new double[Npp*((NNt * 2 + 1)*(NNt * 2 + 1) + 1)]();
+	double *Yd = new double[Npp]();
+
+	for (int ii = 0; ii < Npp; ii++)
+		*(AA + ii + (NNt * 2 + 1)*(NNt * 2 + 1)*Npp) = 1.0;
+
+	int iiu = 0;
+
+	unsigned short *pshort = view0->color;
+
+	for (int ir = NNt; ir < nr - NNt; ir++){
+		for (int ic = NNt; ic < nc - NNt; ic++){
+			int ai = 0;
+			for (int dy = -NNt; dy <= NNt; dy++){
+				for (int dx = -NNt; dx <= NNt; dx++){
+					for (int icomp = 0; icomp < 3; icomp++){
+
+						int offset = ir + dy + nr*(ic + dx) + icomp*nr*nc;
+
+						/* get the desired Yd*/
+						if (dy == 0 && dx == 0){
+							*(Yd + iiu + icomp*Npp0) = ((double)*(original_intermediate_view + offset)) / (pow(2, BIT_DEPTH) - 1);
+						}
+
+						/* get the regressors */
+						*(AA + iiu + icomp*Npp0 + ai*Npp) = ((double)*(pshort + offset)) / (pow(2, BIT_DEPTH) - 1);
+
+					}
+					ai++;
+				}
+			}
+			iiu++;
+		}
+	}
+
+	int *PredRegr0 = new int[(2 * NNt + 1)*(2 * NNt + 1) + 1]();
+	double *PredTheta0 = new double[(2 * NNt + 1)*(2 * NNt + 1) + 1]();
+
+	int Mtrue = FastOLS_new(AA, Yd, PredRegr0, PredTheta0, Ms, (NNt * 2 + 1)*(NNt * 2 + 1) + 1, (NNt * 2 + 1)*(NNt * 2 + 1) + 1, Npp);
+
+	delete[](AA);
+	delete[](Yd);
+
+	for (int ii = 0; ii < Ms; ii++){
+		*(Regr0 + ii) = ((unsigned char)*(PredRegr0 + ii) + 1);
+		*(theta0 + ii) = (int32_t)round(*(PredTheta0 + ii) * pow(2, 20));
+	}
+}
 
 void holefilling(unsigned short *pshort, const int ncomps, const int nr, const int nc, const unsigned short maskval)
 {
@@ -49,7 +179,7 @@ void holefilling(unsigned short *pshort, const int ncomps, const int nr, const i
 	for (int ii = 0; ii < nr*nc; ii++){
 		int y, x;
 		y = ii%nr;
-		x = floor(ii / nr);
+		x = (ii / nr);
 
 		bool is_hole = (pshort[ii] == maskval);
 		if (ncomps == 3){
@@ -259,7 +389,7 @@ void getViewMergingLSWeights_N(view *view0, unsigned short **warpedColorViews, f
 		}
 
 		for (int ii = 0; ii < M; ii++){
-			thetas[ij + MMM * iks[PredRegr0[ii]]] = (signed short)round(*(PredTheta0 + ii)*pow(2, 14));
+			thetas[ij + MMM * iks[PredRegr0[ii]]] = (signed short)floor(*(PredTheta0 + ii)*pow(2, 14)+0.5);
 		}
 
 		delete[](iks);
@@ -396,8 +526,8 @@ void warpView0_to_View1(view *view0, view *view1, unsigned short *&warpedColor, 
 		int ix = ij % view0->nr; //row
 		int iy = (ij - ix) / view0->nr; //col
 
-		int iynew = iy + (int)round(DM_COL);
-		int ixnew = ix + (int)round(DM_ROW);
+		int iynew = iy + (int)floor(DM_COL+0.5);
+		int ixnew = ix + (int)floor(DM_ROW+0.5);
 
 		if (iynew >= 0 && iynew < view0->nc && ixnew >= 0 && ixnew < view0->nr){
 			int indnew = ixnew + iynew*view0->nr;
