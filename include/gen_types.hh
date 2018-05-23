@@ -19,7 +19,7 @@
 #include <cmath>
 #include <sys/stat.h>
 
-#include <xmmintrin.h>	// Need this for SSE compiler intrinsics
+//#include <emmintrin.h>	// Need this for SSE compiler intrinsics
 
 #define IO_V true
 #define NBIT_GR 32
@@ -590,58 +590,57 @@ inline long aux_GetFileSize(char* filename)
 	return rc == 0 ? stat_buf.st_size : -1;
 }
 
-int FastOLS_new(const float *AA, const float *Yd, int *PredRegr0, float *PredTheta0, const int Ms, const int MT, const int MPHI, const int N)
+int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *PredTheta0, const int Ms, const int MT, const int MPHI, const int N)
 {
 	int mTheta, M, iM, iM1;
-	float *B, *C, sigerr, *Ag, *g;
-	float C1, valm1, temp, crit, sabsval;
+	double *B, *C, sigerr, *Ag, *g;
+	double C1, valm1, temp, crit, sabsval;
 	int p, j_p, i, j, k, itemp;
 
 
-	float *PHI = new float[MT*MT]();
-	float *PSI = new float[MT]();
+	double *PHI = new double[MT*MT]();
+	double *PSI = new double[MT]();
 
 	int startt = clock();
-	/* make ATA, super slow loop, 16-17sec with i7 3.6Ghz for 1080p. update: improved to 12-13sec with floats. now try with SSE ... */
-	/*for (int i1 = 0; i1 < MT; i1++) {
+
+	/* make ATA. slow. */
+	#pragma omp parallel for
+	for (int i1 = 0; i1 < MT; i1++) {
 		for (int j1 = 0; j1 < MT; j1++) {
 			for (int ii = 0; ii < N; ii++) {
 				*(PHI + i1 + j1*MT) += (*(AA + ii + i1*N))*(*(AA + ii + j1*N));
 			}
 		}
-	}*/
-
-	/* make ATA with simple SSE optimization, down to around 9sec for 1080p*/
-	float* result = (float*)_aligned_malloc(4 * sizeof(float), 16);
-
-	
-	for (int i1 = 0; i1 < MT; i1++) {
-		for (int j1 = 0; j1 < MT; j1++) {
-			int ii = 0;
-			while(ii+4<N)
-			{
-				__m128 x,y,z;
-				x = _mm_set_ps(*(AA + ii + i1*N), *(AA + ii + i1*N + 1), *(AA + ii + i1*N + 2), *(AA + ii + i1*N + 3));
-				y = _mm_set_ps(*(AA + ii + j1*N), *(AA + ii + j1*N + 1), *(AA + ii + j1*N + 2), *(AA + ii + j1*N + 3));
-				z = _mm_mul_ps(x, y);
-
-				x = _mm_add_ps(z, _mm_movehl_ps(z, z));
-				z = _mm_add_ss(x, _mm_shuffle_ps(x, x, 1));
-
-				_mm_store_ps(result, z);
-
-				*(PHI + i1 + j1*MT) += result[0];
-
-				//*(PHI + i1 + j1*MT) += result[0] + result[1] + result[2] + result[3]; //slow
-
-				ii += 4;
-			}
-			for (int ee = ii; ee < N; ee++) {
-				*(PHI + i1 + j1*MT) += (*(AA + ee + i1*N))*(*(AA + ee + j1*N));
-			}
-		}
 	}
-	_aligned_free(result);
+
+	///* try ATA with simple SSE optimization, down to around 9sec for 1080p*/
+	//double* result = (double*)_aligned_malloc(2 * sizeof(double), 16);
+
+	//__m128d x, y, z;
+
+	//for (int i1 = 0; i1 < MT; i1++) {
+	//	for (int j1 = 0; j1 < MT; j1++) {
+	//		int ii = 0;
+	//		while (ii + 2 < N)
+	//		{
+
+	//			x = _mm_set_pd(*(AA + ii + i1*N), *(AA + ii + i1*N + 1));
+	//			y = _mm_set_pd(*(AA + ii + j1*N), *(AA + ii + j1*N + 1));
+	//			z = _mm_mul_pd(x, y);
+
+	//			_mm_store_pd(result, z);
+
+	//			*(PHI + i1 + j1*MT) += result[0] + result[1];
+
+	//			ii += 2;
+	//		}
+	//		for (int ee = ii; ee < N; ee++) {
+	//			*(PHI + i1 + j1*MT) += (*(AA + ee + i1*N))*(*(AA + ee + j1*N));
+	//		}
+	//	}
+	//}
+	//_aligned_free(result);
+
 	//std::cout << "time elapsed in ATA\t" << (int)clock() - startt << "\n";
 
 	//for (int i1 = 0; i1 < MT; i1++){
@@ -660,7 +659,7 @@ int FastOLS_new(const float *AA, const float *Yd, int *PredRegr0, float *PredThe
 	}
 
 	/* YdTYd */
-	float yd2 = 0;
+	double yd2 = 0;
 	for (int ii = 0; ii < N; ii++)
 		yd2 += (*(Yd + ii))*(*(Yd + ii));
 
@@ -668,15 +667,15 @@ int FastOLS_new(const float *AA, const float *Yd, int *PredRegr0, float *PredThe
 	// Usage example: Ms= 3 says the sparsity (length of final predictor) and MT =42 tells how many regressors are available
 	// Finally, MPHI = 63 tells the dimensions of the matrices, for getting linear indices in PHI
 	M = MT + 1;
-	//B = alocaFloatVector(M*M);// ((M+2)*(M+2));
-	//C = alocaFloatVector(M*M);// ((M+2)*(M+2));
-	//Ag = alocaFloatVector(M*M);// ((M+2)*(M+2));
-	//g = alocaFloatVector(M);
+	//B = alocadoubleVector(M*M);// ((M+2)*(M+2));
+	//C = alocadoubleVector(M*M);// ((M+2)*(M+2));
+	//Ag = alocadoubleVector(M*M);// ((M+2)*(M+2));
+	//g = alocadoubleVector(M);
 
-	B = new float[M*M]();
-	C = new float[M*M]();
-	Ag = new float[M*M]();
-	g = new float[M]();
+	B = new double[M*M]();
+	C = new double[M*M]();
+	Ag = new double[M*M]();
+	g = new double[M]();
 
 	// Inputs: PHI is MTxMT, PSI is MTx1;
 	// Outputs: PredRegr and PredTheta are also MTx1 but only first Ms entries are needed
