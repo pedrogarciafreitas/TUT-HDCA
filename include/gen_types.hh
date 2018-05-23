@@ -19,6 +19,8 @@
 #include <cmath>
 #include <sys/stat.h>
 
+#include <xmmintrin.h>	// Need this for SSE compiler intrinsics
+
 #define IO_V true
 #define NBIT_GR 32
 #define SYSTEM_VERBOSE 0
@@ -33,7 +35,7 @@ const bool verbose = false;
 // number of pixels in the original lenslet image.
 const int num_pixels_in_lenslet = 41483904;
 
-int system_1(char *str){
+int system_1(char *str) {
 
 	std::string sys_call_str(str);
 
@@ -77,6 +79,7 @@ void medfilt2D(T* input, T* output, int SZ, int nr, int nc)
 {
 	int dsz = floor(SZ / 2);
 	std::vector<T> scores;
+
 	for (int y = 0; y < nr; y++) {
 		for (int x = 0; x < nc; x++) {
 			scores.clear();
@@ -91,123 +94,6 @@ void medfilt2D(T* input, T* output, int SZ, int nr, int nc)
 		}
 	}
 }
-
-
-//int getMedian(std::vector<int> scores)
-//{
-//	int median;
-//	size_t size = scores.size();
-//
-//	std::sort(scores.begin(), scores.end());
-//
-//	if (size % 2 == 0)
-//	{
-//		median = floor( ( (float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2 );
-//	}
-//	else
-//	{
-//		median = scores[size / 2];
-//	}
-//
-//	return median;
-//}
-//
-//unsigned short getMedian(std::vector<unsigned short> scores)
-//{
-//	unsigned short median;
-//	size_t size = scores.size();
-//
-//	std::sort(scores.begin(), scores.end());
-//
-//	if (size % 2 == 0)
-//	{
-//		median = floor(((float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2);
-//	}
-//	else
-//	{
-//		median = scores[size / 2];
-//	}
-//
-//	return median;
-//}
-//
-//
-//float getMedian(std::vector<float> scores)
-//{
-//	float median;
-//	size_t size = scores.size();
-//
-//	std::sort(scores.begin(), scores.end());
-//
-//	if (size % 2 == 0)
-//	{
-//		median = (((float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2);
-//	}
-//	else
-//	{
-//		median = scores[size / 2];
-//	}
-//
-//	return median;
-//}
-//
-//void medfilt2D(int* input, int* output, int SZ, int nr, int nc)
-//{
-//	int dsz = (SZ / 2);
-//	std::vector<int> scores;
-//	for (int y = 0; y < nr; y++){
-//		for (int x = 0; x < nc; x++){
-//			scores.clear();
-//			for (int dy = -dsz; dy < dsz; dy++){
-//				for (int dx = -dsz; dx < dsz; dx++){
-//					if ((y + dy) >= 0 && (y + dy) < nr
-//						&& (x + dx) >= 0 && (x + dx) < nc)
-//						scores.push_back(input[y + dy + (x + dx)*nr]);
-//				}
-//			}
-//			output[y + x*nr] = getMedian(scores);
-//		}
-//	}
-//}
-//
-//void medfilt2D(unsigned short* input, unsigned short* output, int SZ, int nr, int nc)
-//{
-//	int dsz = (SZ / 2);
-//	std::vector<unsigned short> scores;
-//	for (int y = 0; y < nr; y++){
-//		for (int x = 0; x < nc; x++){
-//			scores.clear();
-//			for (int dy = -dsz; dy < dsz; dy++){
-//				for (int dx = -dsz; dx < dsz; dx++){
-//					if ((y + dy) >= 0 && (y + dy) < nr
-//						&& (x + dx) >= 0 && (x + dx) < nc)
-//						scores.push_back(input[y + dy + (x + dx)*nr]);
-//				}
-//			}
-//			output[y + x*nr] = getMedian(scores);
-//		}
-//	}
-//}
-//
-//
-//void medfilt2D(float* input, float* output, int SZ, int nr, int nc)
-//{
-//	int dsz = (SZ / 2);
-//	std::vector<float> scores;
-//	for (int y = 0; y < nr; y++){
-//		for (int x = 0; x < nc; x++){
-//			scores.clear();
-//			for (int dy = -dsz; dy < dsz; dy++){
-//				for (int dx = -dsz; dx < dsz; dx++){
-//					if ((y + dy) >= 0 && (y + dy) < nr
-//						&& (x + dx) >= 0 && (x + dx) < nc)
-//						scores.push_back(input[y + dy + (x + dx)*nr]);
-//				}
-//			}
-//			output[y + x*nr] = getMedian(scores);
-//		}
-//	}
-//}
 
 bool aux_read16PGMPPM(const char* filename, int &width, int &height, int &ncomp, unsigned short *&img)
 {
@@ -224,7 +110,7 @@ bool aux_read16PGMPPM(const char* filename, int &width, int &height, int &ncomp,
 
 	filept = fopen(filename, "rb");
 
-	if (filept == NULL){
+	if (filept == NULL) {
 		printf("%s does not exist\n", filename);
 		return false;
 	}
@@ -238,10 +124,10 @@ bool aux_read16PGMPPM(const char* filename, int &width, int &height, int &ncomp,
 	if (!strncmp(dummy, "P6", 2)) {
 		ncomp = 3;
 	}
-	else if (!strncmp(dummy, "P5", 2)){ 
-		ncomp = 1;  
+	else if (!strncmp(dummy, "P5", 2)) {
+		ncomp = 1;
 	}
-	else{ printf("ERROR NOT PGM OR PPM\n"); return false; }
+	else { printf("ERROR NOT PGM OR PPM\n"); return false; }
 
 
 	//std::cout << width << "\t" << height << "\n";
@@ -263,24 +149,24 @@ bool aux_read16PGMPPM(const char* filename, int &width, int &height, int &ncomp,
 
 	int i = 0;
 
-	for (x = 0; x < width; x++){
-		for (y = 0; y < height; y++){
+	for (x = 0; x < width; x++) {
+		for (y = 0; y < height; y++) {
 
 			red = Image16bit[(x + y*width) * ncomp];
-			if (ncomp == 3){
+			if (ncomp == 3) {
 				green = Image16bit[(x + y*width) * ncomp + 1];
 				blue = Image16bit[(x + y*width) * ncomp + 2];
 			}
 
 			// Exhange upper 8bit and lower 8bit for Intel x86
 			red = ((red & 0x00ff) << 8) | ((red & 0xff00) >> 8);
-			if (ncomp == 3){
+			if (ncomp == 3) {
 				green = ((green & 0x00ff) << 8) | ((green & 0xff00) >> 8);
 				blue = ((blue & 0x00ff) << 8) | ((blue & 0xff00) >> 8);
 			}
 
 			img[i] = red;
-			if (ncomp == 3){
+			if (ncomp == 3) {
 				img[i + height*width] = green;
 				img[i + 2 * height*width] = blue;
 			}
@@ -331,7 +217,7 @@ bool aux_read16pgm(const char* filename, int &width, int &height, unsigned short
 	/*--< Read 16bit ppm image from filept >--*/
 	int nread = fread(Image16bit, sizeof(unsigned short), width*height, filept);
 
-	if (nread != width*height){
+	if (nread != width*height) {
 		fprintf(stderr, "READ ERROR aux_read16pgm() %s\n", filename);
 		return false;
 	}
@@ -343,8 +229,8 @@ bool aux_read16pgm(const char* filename, int &width, int &height, unsigned short
 	/*--< Find maximum value in the image >--*/
 	pixelmax = 0;
 	/* UNSW inverse depth already in 4K resolution, just crop to 1080p */
-	for (x = 0; x < width; x++){
-		for (y = 0; y < height; y++){
+	for (x = 0; x < width; x++) {
+		for (y = 0; y < height; y++) {
 			red = Image16bit[(x + y*width)];
 
 			// Exhange upper 8bit and lower 8bit for Intel x86
@@ -356,7 +242,7 @@ bool aux_read16pgm(const char* filename, int &width, int &height, unsigned short
 			img[i] = red;
 
 
-			if (0){ //debug stuff
+			if (0) { //debug stuff
 				fprintf(stderr, "sample %i\n", img[i]);
 			}
 
@@ -365,7 +251,7 @@ bool aux_read16pgm(const char* filename, int &width, int &height, unsigned short
 
 		}
 	}
-	
+
 	delete[](Image16bit);
 
 	return true;
@@ -407,7 +293,7 @@ bool aux_read16ppm(const char* filename, int &width, int &height, unsigned short
 
 	if (nread != width*height * 3)
 	{
-		fprintf(stderr,"READ ERROR aux_read16ppm() %s\n",filename);
+		fprintf(stderr, "READ ERROR aux_read16ppm() %s\n", filename);
 		return false;
 	}
 
@@ -415,8 +301,8 @@ bool aux_read16ppm(const char* filename, int &width, int &height, unsigned short
 
 	int i = 0;
 
-	for (x = 0; x < width; x++){
-		for (y = 0; y < height; y++){
+	for (x = 0; x < width; x++) {
+		for (y = 0; y < height; y++) {
 
 			red = Image16bit[(x + y*width) * 3];
 			green = Image16bit[(x + y*width) * 3 + 1];
@@ -457,7 +343,7 @@ bool aux_write16PGMPPM(const char* filename, const int width, const int height, 
 
 	filept = fopen(filename, "wb");
 
-	if (filept == NULL){
+	if (filept == NULL) {
 		printf("Cannot open %s\n", filename);
 		return false;
 	}
@@ -468,15 +354,15 @@ bool aux_write16PGMPPM(const char* filename, const int width, const int height, 
 	for (j = 0; j < height; j++) {
 		for (i = 0; i < width; i++) {
 			img16bit[lin_ind] = img[j + i*height];
-			if (ncomp == 3){
+			if (ncomp == 3) {
 				img16bit[lin_ind + 1] = img[j + i*height + width*height];
 				img16bit[lin_ind + 2] = img[j + i*height + 2 * width*height];
 				lin_ind = lin_ind + 3;
 			}
-			else{
+			else {
 				lin_ind = lin_ind + 1;
 			}
-			
+
 		}
 	}
 
@@ -487,9 +373,9 @@ bool aux_write16PGMPPM(const char* filename, const int width, const int height, 
 	}
 
 	p = (unsigned char *)img16bit;
-	for (i = 0; i < width*height; i++){
+	for (i = 0; i < width*height; i++) {
 		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
-		if (ncomp == 3){
+		if (ncomp == 3) {
 			tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
 			tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
 		}
@@ -500,10 +386,10 @@ bool aux_write16PGMPPM(const char* filename, const int width, const int height, 
 	else
 		maxi = 1023;
 
-	if (ncomp == 3){
+	if (ncomp == 3) {
 		fprintf(filept, "P6\n%d %d\n%d\n", width, height, maxi);
 	}
-	else{
+	else {
 		fprintf(filept, "P5\n%d %d\n%d\n", width, height, maxi);
 	}
 
@@ -548,13 +434,13 @@ void aux_write16pgm(const char* filename, int width, int height, unsigned short 
 	}
 
 	p = (unsigned char *)img16bit;
-	for (i = 0; i < width*height; i++){
+	for (i = 0; i < width*height; i++) {
 		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
 	}
 
 	fprintf(filept, "P5\n%d %d\n%d\n", width, height, maxi);
 	fwrite(img16bit, sizeof(unsigned short int), width*height, filept);
-	
+
 	fclose(filept);
 
 	delete[](img16bit);
@@ -574,7 +460,7 @@ void aux_write16ppm(const char* filename, int width, int height, unsigned short 
 
 	filept = fopen(filename, "wb");
 
-	unsigned short* img16bit = new unsigned short[height*width*3]();
+	unsigned short* img16bit = new unsigned short[height*width * 3]();
 
 	int lin_ind = 0;
 	for (j = 0; j < height; j++) {
@@ -592,8 +478,8 @@ void aux_write16ppm(const char* filename, int width, int height, unsigned short 
 			maxi = *(img16bit + i);
 	}
 
-	p = (unsigned char *) img16bit;
-	for (i = 0; i < width*height; i++){
+	p = (unsigned char *)img16bit;
+	for (i = 0; i < width*height; i++) {
 		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
 		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
 		tmp = *p; *p = *(p + 1); *(p + 1) = tmp; p += 2;
@@ -648,9 +534,9 @@ void encodeResidualJP2(const int nr, const int nc, unsigned short *original_inte
 	/*establish residual*/
 	unsigned short *residual_image = new unsigned short[nr*nc * ncomp]();
 
-	for (int iir = 0; iir < nr*nc*ncomp; iir++){
+	for (int iir = 0; iir < nr*nc*ncomp; iir++) {
 		signed int res_val = (((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset);
-		if (res_val>pow(2, 16) - 1)
+		if (res_val > pow(2, 16) - 1)
 			res_val = pow(2, 16) - 1;
 		if (res_val < 0)
 			res_val = 0;
@@ -676,7 +562,7 @@ void encodeResidualJP2(const int nr, const int nc, unsigned short *original_inte
 inline int* alocaVector(int m)
 {
 	int *vector, i;
-	vector = (int*)malloc(m*sizeof(int));
+	vector = (int*)malloc(m * sizeof(int));
 	for (i = 0; i < m; i++)
 	{
 		vector[i] = 0;
@@ -689,7 +575,7 @@ inline double* alocaDoubleVector(int m)
 {
 	double *vector;
 	int i;
-	vector = (double*)malloc(m*sizeof(double));
+	vector = (double*)malloc(m * sizeof(double));
 	for (i = 0; i < m; i++)
 	{
 		vector[i] = 0;
@@ -704,25 +590,59 @@ inline long aux_GetFileSize(char* filename)
 	return rc == 0 ? stat_buf.st_size : -1;
 }
 
-int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *PredTheta0, const int Ms, const int MT, const int MPHI, const int N)
+int FastOLS_new(const float *AA, const float *Yd, int *PredRegr0, float *PredTheta0, const int Ms, const int MT, const int MPHI, const int N)
 {
 	int mTheta, M, iM, iM1;
-	double *B, *C, sigerr, *Ag, *g;
-	double C1, valm1, temp, crit, sabsval;
+	float *B, *C, sigerr, *Ag, *g;
+	float C1, valm1, temp, crit, sabsval;
 	int p, j_p, i, j, k, itemp;
 
 
-	double *PHI = new double[MT*MT]();
-	double *PSI = new double[MT]();
+	float *PHI = new float[MT*MT]();
+	float *PSI = new float[MT]();
 
-	/* make ATA */
-	for (int i1 = 0; i1 < MT; i1++){
-		for (int j1 = 0; j1 < MT; j1++){
-			for (int ii = 0; ii < N; ii++){
+	int startt = clock();
+	/* make ATA, super slow loop, 16-17sec with i7 3.6Ghz for 1080p. update: improved to 12-13sec with floats. now try with SSE ... */
+	/*for (int i1 = 0; i1 < MT; i1++) {
+		for (int j1 = 0; j1 < MT; j1++) {
+			for (int ii = 0; ii < N; ii++) {
 				*(PHI + i1 + j1*MT) += (*(AA + ii + i1*N))*(*(AA + ii + j1*N));
 			}
 		}
+	}*/
+
+	/* make ATA with simple SSE optimization, down to around 9sec for 1080p*/
+	float* result = (float*)_aligned_malloc(4 * sizeof(float), 16);
+
+	
+	for (int i1 = 0; i1 < MT; i1++) {
+		for (int j1 = 0; j1 < MT; j1++) {
+			int ii = 0;
+			while(ii+4<N)
+			{
+				__m128 x,y,z;
+				x = _mm_set_ps(*(AA + ii + i1*N), *(AA + ii + i1*N + 1), *(AA + ii + i1*N + 2), *(AA + ii + i1*N + 3));
+				y = _mm_set_ps(*(AA + ii + j1*N), *(AA + ii + j1*N + 1), *(AA + ii + j1*N + 2), *(AA + ii + j1*N + 3));
+				z = _mm_mul_ps(x, y);
+
+				x = _mm_add_ps(z, _mm_movehl_ps(z, z));
+				z = _mm_add_ss(x, _mm_shuffle_ps(x, x, 1));
+
+				_mm_store_ps(result, z);
+
+				*(PHI + i1 + j1*MT) += result[0];
+
+				//*(PHI + i1 + j1*MT) += result[0] + result[1] + result[2] + result[3]; //slow
+
+				ii += 4;
+			}
+			for (int ee = ii; ee < N; ee++) {
+				*(PHI + i1 + j1*MT) += (*(AA + ee + i1*N))*(*(AA + ee + j1*N));
+			}
+		}
 	}
+	_aligned_free(result);
+	//std::cout << "time elapsed in ATA\t" << (int)clock() - startt << "\n";
 
 	//for (int i1 = 0; i1 < MT; i1++){
 	//	for (int j1 = 0; j1 < MT; j1++){
@@ -733,45 +653,50 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 	//std::cout << "------------------------------------------------\n";
 
 	/* make ATYd */
-	for (int i1 = 0; i1 < MT; i1++){
-		for (int ii = 0; ii < N; ii++){
+	for (int i1 = 0; i1 < MT; i1++) {
+		for (int ii = 0; ii < N; ii++) {
 			*(PSI + i1) += (*(AA + ii + i1*N))*(*(Yd + ii));
 		}
 	}
 
 	/* YdTYd */
-	double yd2 = 0;
+	float yd2 = 0;
 	for (int ii = 0; ii < N; ii++)
 		yd2 += (*(Yd + ii))*(*(Yd + ii));
+
 
 	// Usage example: Ms= 3 says the sparsity (length of final predictor) and MT =42 tells how many regressors are available
 	// Finally, MPHI = 63 tells the dimensions of the matrices, for getting linear indices in PHI
 	M = MT + 1;
-	B = alocaDoubleVector(M*M);// ((M+2)*(M+2));
-	C = alocaDoubleVector(M*M);// ((M+2)*(M+2));
-	Ag = alocaDoubleVector(M*M);// ((M+2)*(M+2));
-	g = alocaDoubleVector(M);
+	//B = alocaFloatVector(M*M);// ((M+2)*(M+2));
+	//C = alocaFloatVector(M*M);// ((M+2)*(M+2));
+	//Ag = alocaFloatVector(M*M);// ((M+2)*(M+2));
+	//g = alocaFloatVector(M);
 
+	B = new float[M*M]();
+	C = new float[M*M]();
+	Ag = new float[M*M]();
+	g = new float[M]();
 
 	// Inputs: PHI is MTxMT, PSI is MTx1;
 	// Outputs: PredRegr and PredTheta are also MTx1 but only first Ms entries are needed
 	// Internal variables: B and C are (MT+1)x(MT+1) i.e. MxM
 
 	B[MT + MT*M] = yd2; //B[MT,MT] = yd2; // we start from B[0,0]
-	for (iM = 0; iM<MT; iM++)
+	for (iM = 0; iM < MT; iM++)
 	{
 		PredRegr0[iM] = iM;
 		B[iM + MT*M] = PSI[iM];// B[iM,MT] = PSI[iM];
 		B[MT + iM*M] = PSI[iM];//B[MT,iM] = PSI[iM];
-		for (iM1 = 0; iM1<MT; iM1++)
+		for (iM1 = 0; iM1 < MT; iM1++)
 		{
 			B[iM + iM1*M] = PHI[iM + iM1*MPHI];//B[iM,iM1]=PHI[iM,iM1];
 		}
 	}
-	for (iM = 0; iM<M; iM++)
-		for (iM1 = 0; iM1<M; iM1++)
+	for (iM = 0; iM < M; iM++)
+		for (iM1 = 0; iM1 < M; iM1++)
 			C[iM + iM1*M] = 0;//C[iM,iM1] = 0
-	for (iM = 0; iM<MT; iM++)
+	for (iM = 0; iM < MT; iM++)
 		C[iM + iM*M] = 1;// C[iM,iM] = 1;
 	crit = B[MT + MT*M];//crit = B[MT,MT];
 	if (crit < 0.0000001)
@@ -782,15 +707,15 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 	}
 
 
-	for (p = 0; p<Ms; p++)
+	for (p = 0; p < Ms; p++)
 	{
 		valm1 = 0; j_p = 0; // pick the max value in next loop
-		for (j = p; j<MT; j++)
+		for (j = p; j < MT; j++)
 		{
 			//if(B[j+j*M] > 0.00000000000000001)
 			sigerr = B[j + MT*M] * B[j + MT*M] / B[j + j*M];//sigerr  = B[j,MT]*B[j,MT]/B[j,j];
-			//else
-			//	sigerr = 0;
+															//else
+															//	sigerr = 0;
 			if (sigerr > valm1)
 			{
 				valm1 = sigerr;
@@ -799,14 +724,14 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 		} // j_p is the index of maximum
 		crit = crit - valm1;
 		itemp = PredRegr0[j_p]; PredRegr0[j_p] = PredRegr0[p]; PredRegr0[p] = itemp;
-		for (j = p; j<M; j++)
+		for (j = p; j < M; j++)
 		{
 			//% interchange B(p:end,j_p) with B(p:end,p)
 			temp = B[j + j_p*M]; //temp = B[j,j_p];
 			B[j + j_p*M] = B[j + p*M]; //B[j,j_p] = B[j,p];
 			B[j + p*M] = temp;// B[j,p] = temp;
 		}
-		for (j = p; j<M; j++)
+		for (j = p; j < M; j++)
 		{
 			//% interchange B(j_p,p:end) with B(p,p:end)
 			temp = B[j_p + j*M]; // temp = B[j_p,j];
@@ -822,23 +747,23 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 			C[j + j_p*M] = C[j + p*M]; //C[j,j_p] = C[j,p];
 			C[j + p*M] = temp; //C[j,p] = temp;
 		}
-		for (j = (p + 1); j<M; j++)
+		for (j = (p + 1); j < M; j++)
 		{
 			//if(B[p+p*M] > 0.00000000000000000000001)
 			C[p + j*M] = B[p + j*M] / B[p + p*M];//C[p,j] = B[p,j]/B[p,p];
-			//else
-			//C[p+j*M] = 0;
+												 //else
+												 //C[p+j*M] = 0;
 		}
 
-		for (j = (p + 1); j<MT; j++)
+		for (j = (p + 1); j < MT; j++)
 			for (k = j; k <= MT; k++)
 			{
-			B[j + k*M] = B[j + k*M] - C[p + j*M] * C[p + k*M] * B[p + p*M];//B[j,k] = B[j,k]-C[p,j]*C[p,k]*B[p,p];
+				B[j + k*M] = B[j + k*M] - C[p + j*M] * C[p + k*M] * B[p + p*M];//B[j,k] = B[j,k]-C[p,j]*C[p,k]*B[p,p];
 			}
-		for (j = (p + 1); j<MT; j++)
+		for (j = (p + 1); j < MT; j++)
 			for (k = j; k <= MT; k++)
 			{
-			B[k + j*M] = B[j + k*M];//B[k,j] = B[j,k];
+				B[k + j*M] = B[j + k*M];//B[k,j] = B[j,k];
 			}
 		//for j = (p+1):M
 		//    for k = j:(M+1)
@@ -857,18 +782,18 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 	} //% for( p=0; p<M; p++ )
 
 
-	// final triangular backsolving
-	for (i = 0; i<Ms; i++)
+	  // final triangular backsolving
+	for (i = 0; i < Ms; i++)
 	{
 		g[i] = C[i + MT*M];//g[i] = C[i,MT];
-		for (j = 0; j<Ms; j++)
+		for (j = 0; j < Ms; j++)
 			Ag[i + j*M] = C[i + j*M];//Ag[i,j] = C[i,j];
 	}
 	PredTheta0[Ms - 1] = g[Ms - 1];
 	for (i = Ms - 2; i >= 0; i--)
 	{
 		PredTheta0[i] = g[i];
-		for (j = i + 1; j<Ms; j++)
+		for (j = i + 1; j < Ms; j++)
 			PredTheta0[i] = PredTheta0[i] - Ag[i + j*M] * PredTheta0[j];//PredTheta[i] = PredTheta[i]- Ag[i,j]*PredTheta[j];
 	}
 	//printf("pred FASTOLS [%f][%f][%f][%f][%f][%f]\n",PredTheta0[0], PredTheta0[1], PredTheta0[2], PredTheta0[3], PredTheta0[4], PredTheta0[5]);
@@ -885,7 +810,7 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 	}
 
 	sabsval = 0;
-	for (i = 0; i<Ms; i++)
+	for (i = 0; i < Ms; i++)
 	{
 
 		if (PredTheta0[i] != PredTheta0[i])
@@ -904,7 +829,7 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 	{
 		PredTheta0[0] = C[0 + MT*M];//g[0] = C[0,MT];
 
-		//PredTheta0[0] = 1;
+									//PredTheta0[0] = 1;
 
 		if (PredTheta0[0] != PredTheta0[0])
 		{// if is nan
@@ -916,7 +841,7 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 		//if (abs(PredTheta0[0]) > 100)
 		//PredTheta0[0] = PredTheta0[0] / abs(PredTheta0[0]);
 
-		for (i = 1; i<Ms; i++) {
+		for (i = 1; i < Ms; i++) {
 			PredTheta0[i] = 0.0;
 		}
 
@@ -926,10 +851,10 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 		i = Ms;
 	}
 
-	free(B);
-	free(C);
-	free(Ag);
-	free(g);
+	delete[](B);
+	delete[](C);
+	delete[](Ag);
+	delete[](g);
 
 	delete[](PSI);
 	delete[](PHI);

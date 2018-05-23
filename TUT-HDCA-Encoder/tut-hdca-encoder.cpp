@@ -6,8 +6,12 @@
 
 #include <cstdint>
 
+#include <chrono> //C++11
+#include <ctime>
+
 #include "../include/gen_types.hh"
 #include "../include/warpingFunctions.hh"
+
 
 void FiveRefHierarchy_2_disk(const char *hiearchy_file)
 {
@@ -322,7 +326,10 @@ int main(int argc, char** argv) {
 			//}
 
 			/* merge depth with median*/
-			
+
+			int startt = clock();
+
+			#pragma omp parallel for
 			for (int ij = 0; ij < (LF + ii)->nr*(LF + ii)->nc; ij++) {
 				std::vector<unsigned short> depth_values;
 				for (int uu = 0; uu < 5; uu++) {
@@ -337,7 +344,7 @@ int main(int argc, char** argv) {
 					(LF + ii)->depth[ij] = getMedian(depth_values);
 			}
 
-			
+			std::cout << "time elapsed in depth merging\t" << (int)clock() - startt << "\n";
 
 			/* hole filling for depth */
 			holefilling((LF + ii)->depth, 1, (LF + ii)->nr, (LF + ii)->nc, 0);
@@ -375,7 +382,12 @@ int main(int argc, char** argv) {
 
 		if ((LF + ii)->NNt > 0 && (LF + ii)->Ms > 0 && ii>4){ /*we need to put Ms and NNt in to the input config and remove ii>5*/
 
+			int startt = clock();
+
 			getGlobalSparseFilter(LF + ii, original_color_view);
+
+			std::cout <<  "time elapsed in getGlobalSparseFilter()\t" << (int)clock()-startt << "\n";
+
 			applyGlobalSparseFilter(LF + ii);
 
 			aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
@@ -427,7 +439,9 @@ int main(int argc, char** argv) {
 
 		/* medfilt depth */
 		unsigned short *tmp_depth = new unsigned short[(LF + ii)->nr*(LF + ii)->nc];
+		int startt = clock();
 		medfilt2D((LF + ii)->depth, tmp_depth, 3, (LF + ii)->nr, (LF + ii)->nc);
+		std::cout << "time elapsed in depth median filtering\t" << (int)clock() - startt << "\n";
 		memcpy((LF + ii)->depth, tmp_depth, sizeof(unsigned short)*(LF + ii)->nr*(LF + ii)->nc);
 
 		aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
