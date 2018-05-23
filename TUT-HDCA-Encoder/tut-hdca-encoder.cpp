@@ -20,8 +20,8 @@ void FiveRefHierarchy_2_disk(const char *hiearchy_file)
 
 	bool vmask[256][256];
 
-	for (int rr = 0; rr < 256; rr++){
-		for (int cc = 0; cc < 256; cc++){
+	for (int rr = 0; rr < 256; rr++) {
+		for (int cc = 0; cc < 256; cc++) {
 			vmask[rr][cc] = false;
 			//wmask[rr][cc] = false;
 		}
@@ -29,7 +29,7 @@ void FiveRefHierarchy_2_disk(const char *hiearchy_file)
 
 	FILE *filept = fopen(hiearchy_file, "wb");
 
-	int val = 33*11;
+	int val = 33 * 11;
 
 	fwrite(&val, sizeof(int), 1, filept);
 
@@ -39,10 +39,10 @@ void FiveRefHierarchy_2_disk(const char *hiearchy_file)
 	for (int ik = 0; ik < 5; ik++)
 	{
 		fwrite(&ref_rows[ik], sizeof(int), 1, filept);
-		
+
 		fwrite(&ref_cols[ik], sizeof(int), 1, filept);
 
-		int rate = 100000/2;
+		int rate = 100000 / 2;
 
 		fwrite(&rate, sizeof(int), 1, filept);
 		fwrite(&rate, sizeof(int), 1, filept);
@@ -58,14 +58,14 @@ void FiveRefHierarchy_2_disk(const char *hiearchy_file)
 
 	}
 
-	for (int rr = 0; rr < 11; rr++){
-		for (int cc = 0; cc < 33; cc++){
+	for (int rr = 0; rr < 11; rr++) {
+		for (int cc = 0; cc < 33; cc++) {
 
 			int r, c;
 			r = rr * 2;
 			c = cc * 3 + 2;
 
-			if (!vmask[r][c]){
+			if (!vmask[r][c]) {
 
 				fwrite(&r, sizeof(int), 1, filept);
 
@@ -162,10 +162,10 @@ int main(int argc, char** argv) {
 	int ee_mask[256][256];
 	int ee = 0;
 
-	for (int ikiv = 0; ikiv < n_views_total; ikiv++){
+	for (int ikiv = 0; ikiv < n_views_total; ikiv++) {
 
-		fread(&( (LF + ikiv)->r), sizeof(int), 1, filept);
-		fread(&( (LF + ikiv)->c), sizeof(int), 1, filept);
+		fread(&((LF + ikiv)->r), sizeof(int), 1, filept);
+		fread(&((LF + ikiv)->c), sizeof(int), 1, filept);
 
 		int rate_color, rate_depth;
 
@@ -180,13 +180,13 @@ int main(int argc, char** argv) {
 
 		fread(&((LF + ikiv)->n_references), sizeof(int), 1, filept);
 
-		if ((LF + ikiv)->n_references > 0){
+		if ((LF + ikiv)->n_references > 0) {
 
 			(LF + ikiv)->references = new int[(LF + ikiv)->n_references]();
 
 			int *ip = (LF + ikiv)->references;
 
-			for (int uu = 0; uu < (LF + ikiv)->n_references; uu++){
+			for (int uu = 0; uu < (LF + ikiv)->n_references; uu++) {
 				fread(ip + uu, sizeof(int), 1, filept);
 			}
 
@@ -198,12 +198,12 @@ int main(int argc, char** argv) {
 	}
 
 
-	for (int ii = 0; ii < n_views_total; ii++){
+	for (int ii = 0; ii < n_views_total; ii++) {
 
 		char output_results[1024];
 		int output_buffer_length = 0;
-		output_buffer_length += sprintf(output_results+output_buffer_length, "%03d\t%03d", (LF + ii)->r, (LF + ii)->c);
-	
+		output_buffer_length += sprintf(output_results + output_buffer_length, "%03d\t%03d", (LF + ii)->r, (LF + ii)->c);
+
 		unsigned short *original_color_view = NULL;
 		unsigned short *original_depth_view = NULL;
 
@@ -226,7 +226,7 @@ int main(int argc, char** argv) {
 		(LF + ii)->color = new unsigned short[(LF + ii)->nr*(LF + ii)->nc * 3]();
 		(LF + ii)->depth = new unsigned short[(LF + ii)->nr*(LF + ii)->nc]();
 
-		if ((LF + ii)->n_references > 0){
+		if ((LF + ii)->n_references > 0) {
 
 			/* holds partial warped views for ii */
 
@@ -250,11 +250,11 @@ int main(int argc, char** argv) {
 				int uu = (LF + ii)->references[ij];
 
 				/* FORWARD warp color AND depth */
-				warpView0_to_View1(LF + uu, LF+ii, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
+				warpView0_to_View1(LF + uu, LF + ii, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
 
 				char tmp_str[256];
 
-				sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (LF + uu)->c, (LF + uu)->r, "_warped_to_", (LF + ii)->c, (LF + ii)->r,".ppm");
+				sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (LF + uu)->c, (LF + uu)->r, "_warped_to_", (LF + ii)->c, (LF + ii)->r, ".ppm");
 				aux_write16PGMPPM(tmp_str, (LF + ii)->nc, (LF + ii)->nr, 3, warped_color_views[ij]);
 
 				sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (LF + uu)->c, (LF + uu)->r, "_warped_to_", (LF + ii)->c, (LF + ii)->r, ".pgm");
@@ -289,19 +289,26 @@ int main(int argc, char** argv) {
 
 			}*/
 
+			initViewW(LF + ii, DispTargs);
 
 			/* get LS weights */
-
-			getViewMergingLSWeights_N( (LF + ii), warped_color_views, DispTargs, original_color_view);
+			if (1) {
+				getViewMergingLSWeights_N((LF + ii), warped_color_views, DispTargs, original_color_view);
+			}
+			else {
+				/* we don't use LS weights but something derived on geometric distance in view array*/
+				getGeomWeight(LF + ii, LF, 10.0);
+			}
 
 			/* merge color */
-
-			mergeWarped_N(warped_color_views, DispTargs, LF+ii, 3);
+			mergeWarped_N(warped_color_views, DispTargs, LF + ii, 3);
 
 			//aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 
 			/* hole filling for color*/
-			holefilling((LF + ii)->color, 3, (LF + ii)->nr, (LF + ii)->nc,0);
+			holefilling((LF + ii)->color, 3, (LF + ii)->nr, (LF + ii)->nc, 0);
+
+			//aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 
 			//aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 
@@ -329,18 +336,18 @@ int main(int argc, char** argv) {
 
 			int startt = clock();
 
-			#pragma omp parallel for
+#pragma omp parallel for
 			for (int ij = 0; ij < (LF + ii)->nr*(LF + ii)->nc; ij++) {
 				std::vector<unsigned short> depth_values;
 				for (int uu = 0; uu < 5; uu++) {
-				//for (int uu = 0; uu < (LF + ii)->n_references; uu++) {
+					//for (int uu = 0; uu < (LF + ii)->n_references; uu++) {
 					unsigned short *pp = warped_depth_views_0_5[uu];
 					float *pf = DispTargs_0_5[uu];
 					if (*(pf + ij) > -1) {
 						depth_values.push_back(*(pp + ij));
 					}
 				}
-				if( depth_values.size()>0)
+				if (depth_values.size() > 0)
 					(LF + ii)->depth[ij] = getMedian(depth_values);
 			}
 
@@ -373,20 +380,20 @@ int main(int argc, char** argv) {
 			aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 			psnr_result = getPSNR(NULL, LF + ii, path_out_ppm, path_input_ppm, difftest_call);
 
-			output_buffer_length += sprintf(output_results+ output_buffer_length, "\t%f", psnr_result);
+			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 
 		}
 		else {
-			output_buffer_length += sprintf(output_results+ output_buffer_length, "\t%f", 0);
+			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", 0);
 		}
 
-		if ((LF + ii)->NNt > 0 && (LF + ii)->Ms > 0 && ii>4){ /*we need to put Ms and NNt in to the input config and remove ii>5*/
+		if ((LF + ii)->NNt > 0 && (LF + ii)->Ms > 0 && ii > 4) { /*we need to put Ms and NNt in to the input config and remove ii>5*/
 
 			int startt = clock();
 
 			getGlobalSparseFilter(LF + ii, original_color_view);
 
-			std::cout <<  "time elapsed in getGlobalSparseFilter()\t" << (int)clock()-startt << "\n";
+			std::cout << "time elapsed in getGlobalSparseFilter()\t" << (int)clock() - startt << "\n";
 
 			applyGlobalSparseFilter(LF + ii);
 
@@ -397,7 +404,7 @@ int main(int argc, char** argv) {
 		else {
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", 0);
 		}
-		
+
 		/* get residual */
 		if ((LF + ii)->residual_rate_color > 0)
 		{
@@ -417,9 +424,9 @@ int main(int argc, char** argv) {
 			encodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, original_color_view, (LF + ii)->color, ppm_residual_path,
 				kdu_compress_path, jp2_residual_path_jp2, (LF + ii)->residual_rate_color, 3, pow(2, 10) - 1);
 
-			decodeResidualJP2((LF + ii)->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path,ncomp1,pow(2,10)-1,pow(2,10)-1);
+			decodeResidualJP2((LF + ii)->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path, ncomp1, pow(2, 10) - 1, pow(2, 10) - 1);
 
-			if (depth_file_exist && (LF + ii)->residual_rate_depth>0){
+			if (depth_file_exist && (LF + ii)->residual_rate_depth > 0) {
 
 				char pgm_residual_depth_path[512];
 
@@ -432,7 +439,7 @@ int main(int argc, char** argv) {
 				encodeResidualJP2((LF + ii)->nr, (LF + ii)->nc, original_depth_view, (LF + ii)->depth, pgm_residual_depth_path,
 					kdu_compress_path, jp2_residual_depth_path_jp2, (LF + ii)->residual_rate_depth, 1, 0);
 
-				decodeResidualJP2((LF + ii)->depth, kdu_expand_path, jp2_residual_depth_path_jp2, pgm_residual_depth_path, ncomp1,0,pow(2,16)-1);
+				decodeResidualJP2((LF + ii)->depth, kdu_expand_path, jp2_residual_depth_path_jp2, pgm_residual_depth_path, ncomp1, 0, pow(2, 16) - 1);
 
 			}
 		}
@@ -456,9 +463,9 @@ int main(int argc, char** argv) {
 		}
 
 
-		psnr_result = getPSNR(NULL,LF + ii, path_out_ppm, path_input_ppm, difftest_call);
+		psnr_result = getPSNR(NULL, LF + ii, path_out_ppm, path_input_ppm, difftest_call);
 
-		output_buffer_length += sprintf(output_results+ output_buffer_length, "\t%f", psnr_result);
+		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 
 		delete[](original_color_view);
 		delete[](original_depth_view);
@@ -472,11 +479,11 @@ int main(int argc, char** argv) {
 		else {
 			output_results_file = fopen(output_results_filename, "a");
 		}
-		fprintf(output_results_file, "%s\n",output_results);
+		fprintf(output_results_file, "%s\n", output_results);
 		fclose(output_results_file);
 	}
 
-	for (int ii = 0; ii < 11 * 33; ii++){
+	for (int ii = 0; ii < 11 * 33; ii++) {
 
 		delete[]((LF + ii)->color);
 		delete[]((LF + ii)->depth);
