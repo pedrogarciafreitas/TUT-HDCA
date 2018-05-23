@@ -52,17 +52,17 @@ int system_1(char *str){
 
 }
 
-
-int getMedian(std::vector<int> scores)
+template <class T>
+T getMedian(std::vector<T> scores)
 {
-	int median;
+	T median;
 	size_t size = scores.size();
 
 	std::sort(scores.begin(), scores.end());
 
 	if (size % 2 == 0)
 	{
-		median = floor( ( (float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2 );
+		median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
 	}
 	else
 	{
@@ -72,73 +72,16 @@ int getMedian(std::vector<int> scores)
 	return median;
 }
 
-unsigned short getMedian(std::vector<unsigned short> scores)
+template <class T>
+void medfilt2D(T* input, T* output, int SZ, int nr, int nc)
 {
-	unsigned short median;
-	size_t size = scores.size();
-
-	std::sort(scores.begin(), scores.end());
-
-	if (size % 2 == 0)
-	{
-		median = floor(((float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2);
-	}
-	else
-	{
-		median = scores[size / 2];
-	}
-
-	return median;
-}
-
-
-float getMedian(std::vector<float> scores)
-{
-	float median;
-	size_t size = scores.size();
-
-	std::sort(scores.begin(), scores.end());
-
-	if (size % 2 == 0)
-	{
-		median = (((float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2);
-	}
-	else
-	{
-		median = scores[size / 2];
-	}
-
-	return median;
-}
-
-void medfilt2D(int* input, int* output, int SZ, int nr, int nc)
-{
-	int dsz = (SZ / 2);
-	std::vector<int> scores;
-	for (int y = 0; y < nr; y++){
-		for (int x = 0; x < nc; x++){
+	int dsz = floor(SZ / 2);
+	std::vector<T> scores;
+	for (int y = 0; y < nr; y++) {
+		for (int x = 0; x < nc; x++) {
 			scores.clear();
-			for (int dy = -dsz; dy < dsz; dy++){
-				for (int dx = -dsz; dx < dsz; dx++){
-					if ((y + dy) >= 0 && (y + dy) < nr
-						&& (x + dx) >= 0 && (x + dx) < nc)
-						scores.push_back(input[y + dy + (x + dx)*nr]);
-				}
-			}
-			output[y + x*nr] = getMedian(scores);
-		}
-	}
-}
-
-void medfilt2D(unsigned short* input, unsigned short* output, int SZ, int nr, int nc)
-{
-	int dsz = (SZ / 2);
-	std::vector<unsigned short> scores;
-	for (int y = 0; y < nr; y++){
-		for (int x = 0; x < nc; x++){
-			scores.clear();
-			for (int dy = -dsz; dy < dsz; dy++){
-				for (int dx = -dsz; dx < dsz; dx++){
+			for (int dy = -dsz; dy < dsz; dy++) {
+				for (int dx = -dsz; dx < dsz; dx++) {
 					if ((y + dy) >= 0 && (y + dy) < nr
 						&& (x + dx) >= 0 && (x + dx) < nc)
 						scores.push_back(input[y + dy + (x + dx)*nr]);
@@ -150,24 +93,121 @@ void medfilt2D(unsigned short* input, unsigned short* output, int SZ, int nr, in
 }
 
 
-void medfilt2D(float* input, float* output, int SZ, int nr, int nc)
-{
-	int dsz = (SZ / 2);
-	std::vector<float> scores;
-	for (int y = 0; y < nr; y++){
-		for (int x = 0; x < nc; x++){
-			scores.clear();
-			for (int dy = -dsz; dy < dsz; dy++){
-				for (int dx = -dsz; dx < dsz; dx++){
-					if ((y + dy) >= 0 && (y + dy) < nr
-						&& (x + dx) >= 0 && (x + dx) < nc)
-						scores.push_back(input[y + dy + (x + dx)*nr]);
-				}
-			}
-			output[y + x*nr] = getMedian(scores);
-		}
-	}
-}
+//int getMedian(std::vector<int> scores)
+//{
+//	int median;
+//	size_t size = scores.size();
+//
+//	std::sort(scores.begin(), scores.end());
+//
+//	if (size % 2 == 0)
+//	{
+//		median = floor( ( (float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2 );
+//	}
+//	else
+//	{
+//		median = scores[size / 2];
+//	}
+//
+//	return median;
+//}
+//
+//unsigned short getMedian(std::vector<unsigned short> scores)
+//{
+//	unsigned short median;
+//	size_t size = scores.size();
+//
+//	std::sort(scores.begin(), scores.end());
+//
+//	if (size % 2 == 0)
+//	{
+//		median = floor(((float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2);
+//	}
+//	else
+//	{
+//		median = scores[size / 2];
+//	}
+//
+//	return median;
+//}
+//
+//
+//float getMedian(std::vector<float> scores)
+//{
+//	float median;
+//	size_t size = scores.size();
+//
+//	std::sort(scores.begin(), scores.end());
+//
+//	if (size % 2 == 0)
+//	{
+//		median = (((float)scores[size / 2 - 1] + (float)scores[size / 2]) / 2);
+//	}
+//	else
+//	{
+//		median = scores[size / 2];
+//	}
+//
+//	return median;
+//}
+//
+//void medfilt2D(int* input, int* output, int SZ, int nr, int nc)
+//{
+//	int dsz = (SZ / 2);
+//	std::vector<int> scores;
+//	for (int y = 0; y < nr; y++){
+//		for (int x = 0; x < nc; x++){
+//			scores.clear();
+//			for (int dy = -dsz; dy < dsz; dy++){
+//				for (int dx = -dsz; dx < dsz; dx++){
+//					if ((y + dy) >= 0 && (y + dy) < nr
+//						&& (x + dx) >= 0 && (x + dx) < nc)
+//						scores.push_back(input[y + dy + (x + dx)*nr]);
+//				}
+//			}
+//			output[y + x*nr] = getMedian(scores);
+//		}
+//	}
+//}
+//
+//void medfilt2D(unsigned short* input, unsigned short* output, int SZ, int nr, int nc)
+//{
+//	int dsz = (SZ / 2);
+//	std::vector<unsigned short> scores;
+//	for (int y = 0; y < nr; y++){
+//		for (int x = 0; x < nc; x++){
+//			scores.clear();
+//			for (int dy = -dsz; dy < dsz; dy++){
+//				for (int dx = -dsz; dx < dsz; dx++){
+//					if ((y + dy) >= 0 && (y + dy) < nr
+//						&& (x + dx) >= 0 && (x + dx) < nc)
+//						scores.push_back(input[y + dy + (x + dx)*nr]);
+//				}
+//			}
+//			output[y + x*nr] = getMedian(scores);
+//		}
+//	}
+//}
+//
+//
+//void medfilt2D(float* input, float* output, int SZ, int nr, int nc)
+//{
+//	int dsz = (SZ / 2);
+//	std::vector<float> scores;
+//	for (int y = 0; y < nr; y++){
+//		for (int x = 0; x < nc; x++){
+//			scores.clear();
+//			for (int dy = -dsz; dy < dsz; dy++){
+//				for (int dx = -dsz; dx < dsz; dx++){
+//					if ((y + dy) >= 0 && (y + dy) < nr
+//						&& (x + dx) >= 0 && (x + dx) < nc)
+//						scores.push_back(input[y + dy + (x + dx)*nr]);
+//				}
+//			}
+//			output[y + x*nr] = getMedian(scores);
+//		}
+//	}
+//}
 
 bool aux_read16PGMPPM(const char* filename, int &width, int &height, int &ncomp, unsigned short *&img)
 {
@@ -455,6 +495,10 @@ bool aux_write16PGMPPM(const char* filename, const int width, const int height, 
 		}
 	}
 
+	if (maxi > 1023)
+		maxi = 65535;
+	else
+		maxi = 1023;
 
 	if (ncomp == 3){
 		fprintf(filept, "P6\n%d %d\n%d\n", width, height, maxi);
@@ -568,7 +612,7 @@ void aux_write16ppm(const char* filename, int width, int height, unsigned short 
 void decodeResidualJP2(unsigned short *ps, const char *kdu_expand_path, const char *jp2_residual_path_jp2, const char *ppm_residual_path, int ncomp, const int offset, const int maxvali)
 {
 	/* decode residual with kakadu */
-	char kdu_expand_s[256];
+	char kdu_expand_s[512];
 	sprintf(kdu_expand_s, "\"%s\"%s%s%s%s", kdu_expand_path, " -i ", jp2_residual_path_jp2, " -o ", ppm_residual_path);
 
 	//std::cout << kdu_expand_s << "\n";
@@ -619,7 +663,7 @@ void encodeResidualJP2(const int nr, const int nc, unsigned short *original_inte
 
 	/* here encode residual with kakadu */
 
-	char kdu_compress_s[256];
+	char kdu_compress_s[512];
 	sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", ppm_residual_path, " -o ", jp2_residual_path_jp2, " -no_weights -precise -full -rate ", residual_rate);
 
 	//std::cout << kdu_compress_s << "\n";

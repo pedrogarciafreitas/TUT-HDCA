@@ -16,9 +16,9 @@ struct view{
 
 	float y, x;
 
-	int n_references;
+	int n_references, n_depth_references;
 
-	int *references;
+	int *references, *depth_references;
 
 	int NB;
 
@@ -40,8 +40,11 @@ struct view{
 
 };
 
-void getPSNR(view *view0, const char *path_out_ppm, const char *path_input_ppm, const char *difftest_call)
+float getPSNR(FILE *fileout,view *view0, const char *path_out_ppm, const char *path_input_ppm, const char *difftest_call)
 {
+
+	if (fileout == NULL)
+		fileout = stdout;
 
 	/* run psnr here */
 
@@ -57,7 +60,14 @@ void getPSNR(view *view0, const char *path_out_ppm, const char *path_input_ppm, 
 	}
 	_pclose(pfile);
 
-	printf("%s\n", psnr_buffer);
+	char tmp_char[128];
+	float psnr_value = 0;
+
+	sscanf(psnr_buffer, "%s\t%f", tmp_char, &psnr_value);
+
+	fprintf(fileout,"%s\n", psnr_buffer);
+
+	return psnr_value;
 }
 
 void applyGlobalSparseFilter(view *view0){
@@ -527,6 +537,8 @@ void mergeWarped_N(unsigned short **warpedColorViews, float **DispTargs, view *v
 
 void warpView0_to_View1(view *view0, view *view1, unsigned short *&warpedColor, unsigned short *&warpedDepth, float *&DispTarg)
 {
+
+	/*this function forward warps from view0 to view1 for both color and depth*/
 
 	float ddy = view0->y - view1->y;
 	float ddx = view0->x - view1->x;
