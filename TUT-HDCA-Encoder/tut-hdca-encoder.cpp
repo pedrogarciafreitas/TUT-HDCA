@@ -157,6 +157,9 @@ int main(int argc, char** argv) {
 	int n_views_total;
 	fread(&n_views_total, sizeof(int), 1, filept);
 
+	int Nd; // defines how many of the reference views are used for warping of the depth, for HDCA Nd = 5, for lenslet Nd maybe just 1
+	fread(&Nd, sizeof(int), 1, filept);
+
 	view *LF = new view[n_views_total]();
 
 	int ee_mask[256][256];
@@ -167,10 +170,13 @@ int main(int argc, char** argv) {
 		fread(&((LF + ikiv)->r), sizeof(int), 1, filept);
 		fread(&((LF + ikiv)->c), sizeof(int), 1, filept);
 
-		int rate_color, rate_depth;
+		int rate_color, rate_depth, Ms, NNt;
 
 		fread(&rate_color, sizeof(int), 1, filept);
 		fread(&rate_depth, sizeof(int), 1, filept);
+
+		fread(&(LF + ikiv)->Ms, sizeof(int), 1, filept);
+		fread(&(LF + ikiv)->NNt, sizeof(int), 1, filept);
 
 		(LF + ikiv)->residual_rate_color = ((float)rate_color) / 100000;
 		(LF + ikiv)->residual_rate_depth = ((float)rate_depth) / 100000;
@@ -207,20 +213,20 @@ int main(int argc, char** argv) {
 		unsigned short *original_color_view = NULL;
 		unsigned short *original_depth_view = NULL;
 
-		char path_input_ppm[160];
+		char path_input_ppm[1024];
 		sprintf(path_input_ppm, "%s%c%03d_%03d%s", input_dir, '/', (LF + ii)->c, (LF + ii)->r, ".ppm");
 
 		int nc1, nr1, ncomp1;
 		aux_read16PGMPPM(path_input_ppm, (LF + ii)->nc, (LF + ii)->nr, ncomp1, original_color_view);
 
-		char path_input_depth_pgm[160];
+		char path_input_depth_pgm[1024];
 		sprintf(path_input_depth_pgm, "%s%c%03d_%03d%s", input_dir, '/', (LF + ii)->c, (LF + ii)->r, ".pgm");
 		bool depth_file_exist = aux_read16PGMPPM(path_input_depth_pgm, nc1, nr1, ncomp1, original_depth_view);
 
-		char path_out_ppm[160];
+		char path_out_ppm[1024];
 		sprintf(path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', (LF + ii)->c, (LF + ii)->r, ".ppm");
 
-		char path_out_pgm[160];
+		char path_out_pgm[1024];
 		sprintf(path_out_pgm, "%s%c%03d_%03d%s", output_dir, '/', (LF + ii)->c, (LF + ii)->r, ".pgm");
 
 		(LF + ii)->color = new unsigned short[(LF + ii)->nr*(LF + ii)->nc * 3]();
@@ -228,21 +234,20 @@ int main(int argc, char** argv) {
 
 		if ((LF + ii)->n_references > 0) {
 
-			/* holds partial warped views for ii */
+			/* currently we forward warp the depth from the N (for HDCA N = 5, lenslet maybe 1?) references */
+			unsigned short **warped_color_views_0_N = new unsigned short*[(LF + ii)->n_references]();
+			unsigned short **warped_depth_views_0_N = new unsigned short*[(LF + ii)->n_references]();
+			float **DispTargs_0_N = new float*[(LF + ii)->n_references]();
 
+			for (int ij = 0; ij < Nd; ij++)
+			{
+				warpView0_to_View1(LF + ij, LF + ii, warped_color_views_0_N[ij], warped_depth_views_0_N[ij], DispTargs_0_N[ij]);
+			}
+
+			/* holds partial warped views for ii */
 			unsigned short **warped_color_views = new unsigned short*[(LF + ii)->n_references]();
 			unsigned short **warped_depth_views = new unsigned short*[(LF + ii)->n_references]();
 			float **DispTargs = new float*[(LF + ii)->n_references]();
-
-			/* currently we forward warp the depth from the 5 references*/
-			unsigned short **warped_color_views_0_5 = new unsigned short*[(LF + ii)->n_references]();
-			unsigned short **warped_depth_views_0_5 = new unsigned short*[(LF + ii)->n_references]();
-			float **DispTargs_0_5 = new float*[(LF + ii)->n_references]();
-
-			for (int ij = 0; ij < 5; ij++)
-			{
-				warpView0_to_View1(LF + ij, LF + ii, warped_color_views_0_5[ij], warped_depth_views_0_5[ij], DispTargs_0_5[ij]);
-			}
 
 			for (int ij = 0; ij < (LF + ii)->n_references; ij++)
 			{
@@ -252,7 +257,7 @@ int main(int argc, char** argv) {
 				/* FORWARD warp color AND depth */
 				warpView0_to_View1(LF + uu, LF + ii, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
 
-				char tmp_str[256];
+				char tmp_str[1024];
 
 				sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (LF + uu)->c, (LF + uu)->r, "_warped_to_", (LF + ii)->c, (LF + ii)->r, ".ppm");
 				aux_write16PGMPPM(tmp_str, (LF + ii)->nc, (LF + ii)->nr, 3, warped_color_views[ij]);
@@ -266,28 +271,6 @@ int main(int argc, char** argv) {
 				//fclose(tmpf);
 
 			}
-
-			/* filtering step to remove erroneus pixels from merging */
-			/*for (int ij = 0; ij < (LF + ii)->n_references; ij++)
-			{
-
-				unsigned short *tmpd = new unsigned short[(LF + ii)->nr*(LF + ii)->nc];
-				medfilt2D(warped_depth_views[ij], tmpd, 3, (LF + ii)->nr, (LF + ii)->nc);
-
-				unsigned short *pp = warped_depth_views[ij];
-				float *pf = DispTargs[ij];
-
-				for (int jj = 0; jj < (LF + ii)->nr*(LF + ii)->nc; jj++) {
-					if (*(pf + jj) > -1 && abs((float)(*(tmpd + jj)) - (float)(*(pp + jj))) >(float)(*(pp + jj))*0.75)
-					{
-						*(pf + jj) = -1;
-					}
-
-				}
-
-				delete[](tmpd);
-
-			}*/
 
 			initViewW(LF + ii, DispTargs);
 
@@ -312,37 +295,17 @@ int main(int argc, char** argv) {
 
 			//aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 
-			/* merge depth with minimum winning*/
-			//unsigned short *pp = warped_depth_views[0];
-			//float *pf = DispTargs[0];
-			//for (int ij = 0; ij < (LF + ii)->nr*(LF + ii)->nc; ij++){
-			//	if (*(pf + ij) > -1){
-			//		(LF + ii)->depth[ij] = *(pp + ij);
-			//	}
-			//	else{
-			//		(LF + ii)->depth[ij] = 0;
-			//	}
-			//}
-			//for (int ij = 0; ij < (LF + ii)->nr*(LF + ii)->nc; ij++) {
-			//	for (int uu = 1; uu < (LF + ii)->n_references; uu++) {
-			//		unsigned short *pp = warped_depth_views[uu];
-			//		float *pf = DispTargs[uu];
-			//		if ((*(pf + ij)>-1) && (*(pp + ij) >(LF + ii)->depth[ij]))
-			//			(LF + ii)->depth[ij] = *(pp + ij);
-			//	}
-			//}
-
 			/* merge depth with median*/
 
 			int startt = clock();
 
-#pragma omp parallel for
+			#pragma omp parallel for
 			for (int ij = 0; ij < (LF + ii)->nr*(LF + ii)->nc; ij++) {
 				std::vector<unsigned short> depth_values;
-				for (int uu = 0; uu < 5; uu++) {
+				for (int uu = 0; uu < Nd; uu++) {
 					//for (int uu = 0; uu < (LF + ii)->n_references; uu++) {
-					unsigned short *pp = warped_depth_views_0_5[uu];
-					float *pf = DispTargs_0_5[uu];
+					unsigned short *pp = warped_depth_views_0_N[uu];
+					float *pf = DispTargs_0_N[uu];
 					if (*(pf + ij) > -1) {
 						depth_values.push_back(*(pp + ij));
 					}
@@ -363,9 +326,16 @@ int main(int argc, char** argv) {
 				delete[](warped_depth_views[ij]);
 				delete[](DispTargs[ij]);
 			}
-			delete[](warped_color_views_0_5);
-			delete[](warped_depth_views_0_5);
-			delete[](DispTargs_0_5);
+			for (int ij = 0; ij < Nd; ij++)
+			{
+				delete[](warped_color_views_0_N[ij]);
+				delete[](warped_depth_views_0_N[ij]);
+				delete[](DispTargs_0_N[ij]);
+			}
+
+			delete[](warped_color_views_0_N);
+			delete[](warped_depth_views_0_N);
+			delete[](DispTargs_0_N);
 
 			delete[](warped_color_views);
 			delete[](warped_depth_views);
@@ -378,7 +348,7 @@ int main(int argc, char** argv) {
 		if ((LF + ii)->n_references > 0) {
 
 			aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
-			psnr_result = getPSNR(NULL, LF + ii, path_out_ppm, path_input_ppm, difftest_call);
+			psnr_result = getPSNR(NULL, path_out_ppm, path_input_ppm, difftest_call);
 
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 
@@ -387,7 +357,7 @@ int main(int argc, char** argv) {
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", 0);
 		}
 
-		if ((LF + ii)->NNt > 0 && (LF + ii)->Ms > 0 && ii > 4) { /*we need to put Ms and NNt in to the input config and remove ii>5*/
+		if ((LF + ii)->NNt > 0 && (LF + ii)->Ms > 0) { /*we need to put Ms and NNt in to the input config and remove ii>5*/
 
 			int startt = clock();
 
@@ -398,7 +368,7 @@ int main(int argc, char** argv) {
 			applyGlobalSparseFilter(LF + ii);
 
 			aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
-			psnr_result = getPSNR(NULL, LF + ii, path_out_ppm, path_input_ppm, difftest_call);
+			psnr_result = getPSNR(NULL, path_out_ppm, path_input_ppm, difftest_call);
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 		}
 		else {
@@ -426,7 +396,7 @@ int main(int argc, char** argv) {
 
 			decodeResidualJP2((LF + ii)->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path, ncomp1, pow(2, 10) - 1, pow(2, 10) - 1);
 
-			if (depth_file_exist && (LF + ii)->residual_rate_depth > 0) {
+			if (depth_file_exist && (LF + ii)->residual_rate_depth > 0) { /* residual depth if needed */
 
 				char pgm_residual_depth_path[512];
 
@@ -445,17 +415,18 @@ int main(int argc, char** argv) {
 		}
 
 		/* medfilt depth */
-		unsigned short *tmp_depth = new unsigned short[(LF + ii)->nr*(LF + ii)->nc];
+		unsigned short *tmp_depth = new unsigned short[(LF + ii)->nr*(LF + ii)->nc]();
 		int startt = clock();
 		medfilt2D((LF + ii)->depth, tmp_depth, 3, (LF + ii)->nr, (LF + ii)->nc);
 		std::cout << "time elapsed in depth median filtering\t" << (int)clock() - startt << "\n";
 		memcpy((LF + ii)->depth, tmp_depth, sizeof(unsigned short)*(LF + ii)->nr*(LF + ii)->nc);
+		delete[](tmp_depth);
 
 		aux_write16PGMPPM(path_out_ppm, (LF + ii)->nc, (LF + ii)->nr, 3, (LF + ii)->color);
 		aux_write16PGMPPM(path_out_pgm, (LF + ii)->nc, (LF + ii)->nr, 1, (LF + ii)->depth);
 
 		if (depth_file_exist) {
-			psnr_result = getPSNR(NULL, LF + ii, path_out_pgm, path_input_depth_pgm, difftest_call_pgm);
+			psnr_result = getPSNR(NULL, path_out_pgm, path_input_depth_pgm, difftest_call_pgm);
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 		}
 		else {
@@ -463,7 +434,7 @@ int main(int argc, char** argv) {
 		}
 
 
-		psnr_result = getPSNR(NULL, LF + ii, path_out_ppm, path_input_ppm, difftest_call);
+		psnr_result = getPSNR(NULL, path_out_ppm, path_input_ppm, difftest_call);
 
 		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 
@@ -483,13 +454,22 @@ int main(int argc, char** argv) {
 		fclose(output_results_file);
 	}
 
-	for (int ii = 0; ii < 11 * 33; ii++) {
+	for (int ii = 0; ii < nar * nac; ii++) {
 
 		delete[]((LF + ii)->color);
 		delete[]((LF + ii)->depth);
-		delete[]((LF + ii)->merge_weights);
-		delete[]((LF + ii)->sparse_weights);
-		delete[]((LF + ii)->sparse_mask);
+		if ((LF + ii)->merge_weights != NULL)
+			delete[]((LF + ii)->merge_weights);
+		if ((LF + ii)->sparse_weights != NULL)
+			delete[]((LF + ii)->sparse_weights);
+		if ((LF + ii)->sparse_mask != NULL)
+			delete[]((LF + ii)->sparse_mask);
+		if ((LF + ii)->bmask != NULL)
+			delete[]((LF + ii)->bmask);
+		if ((LF + ii)->seg_vp != NULL)
+			delete[]((LF + ii)->seg_vp);
+		if ((LF + ii)->sparse_mask != NULL)
+			delete[]((LF + ii)->sparse_mask);
 	}
 
 

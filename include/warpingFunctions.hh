@@ -18,33 +18,33 @@ struct view{
 
 	int n_references, n_depth_references;
 
-	int *references, *depth_references;
+	int *references = NULL, *depth_references = NULL;
 
 	int NB;
 
-	signed short *merge_weights;
-	int32_t *sparse_weights;
+	signed short *merge_weights = NULL;
+	int32_t *sparse_weights = NULL;
 
-	unsigned char *sparse_mask;
+	unsigned char *sparse_mask = NULL;
 
-	float *merge_weights_float;
+	float *merge_weights_float = NULL;
 	//float *sparse_weights_float;
 
-	int *number_of_pixels_per_region;
+	int *number_of_pixels_per_region = NULL;
 
-	bool *bmask;
-	unsigned short *seg_vp;
+	bool *bmask = NULL;
+	unsigned short *seg_vp = NULL; /* class segmentation, used for view merging weights */
 
 	float residual_rate_color;
 	float residual_rate_depth;
 
 	float stdd;
 
-	int NNt = 3, Ms = 25; //for sparse
+	int NNt = 0, Ms = 0; //for sparse, NNt defines the neighborhood size [ -NNt:NNt,-NNt:NNt ], Ms is the filter order
 
 };
 
-float getPSNR(FILE *fileout,view *view0, const char *path_out_ppm, const char *path_input_ppm, const char *difftest_call)
+float getPSNR(FILE *fileout, const char *path_out_ppm, const char *path_input_ppm, const char *difftest_call)
 {
 
 	if (fileout == NULL)
@@ -52,19 +52,19 @@ float getPSNR(FILE *fileout,view *view0, const char *path_out_ppm, const char *p
 
 	/* run psnr here */
 
-	char psnr_call[256];
+	char psnr_call[1024];
 	sprintf(psnr_call, "%s%s%s%s", difftest_call, path_out_ppm, " ", path_input_ppm);
 
 	FILE *pfile;
 	pfile = _popen(psnr_call, "r");
 
-	char psnr_buffer[256];
+	char psnr_buffer[1024];
 	while (fgets(psnr_buffer, sizeof(psnr_buffer), pfile) != 0) {
 		/*...*/
 	}
 	_pclose(pfile);
 
-	char tmp_char[128];
+	char tmp_char[1024];
 	float psnr_value = 0;
 
 	sscanf(psnr_buffer, "%s\t%f", tmp_char, &psnr_value);
@@ -247,6 +247,10 @@ void holefilling(unsigned short *pshort, const int ncomps, const int nr, const i
 
 void setBMask(view *view0) 
 {
+
+	/* sets the binary mask used to derive view availability in each of the MMM classes,
+	size of the binary mask is [MMM x n_references] */
+
 	int MMM = pow(2, view0->n_references);
 
 	bool *bmask = new bool[MMM * view0->n_references]();
@@ -494,6 +498,8 @@ void initSegVp(view *view0, float **DispTargs) {
 }
 
 void initViewW(view *view0, float **DispTargs) {
+
+	/* sets some of the parameters for a view in the light view structure */
 
 	(view0)->NB = (pow(2, (view0)->n_references)*(view0)->n_references);
 
