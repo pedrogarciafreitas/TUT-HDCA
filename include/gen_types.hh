@@ -327,7 +327,7 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 
 	int startt = clock();
 
-	/* make ATA. slow. */
+	/* make ATA. this is slow. */
 	#pragma omp parallel for
 	for (int i1 = 0; i1 < MT; i1++) {
 		for (int j1 = 0; j1 < MT; j1++) {

@@ -7,10 +7,10 @@
 
 struct view{
 
-	unsigned short *color;
-	unsigned short *depth;
+	unsigned short *color = NULL;
+	unsigned short *depth = NULL;
 
-	int r, c;
+	int r = NULL, c = NULL;
 
 	int nr, nc;
 
@@ -458,7 +458,7 @@ void getViewMergingLSWeights_N(view *view0, unsigned short **warpedColorViews, f
 	delete[](original_view_in_classes);
 	delete[](reference_view_pixels_in_classes);
 	//delete[](seg_vp);
-	delete[](number_of_pixels_per_region);
+	//delete[](number_of_pixels_per_region);
 
 }
 
@@ -609,8 +609,8 @@ void mergeWarped_N(unsigned short **warpedColorViews, float **DispTargs, view *v
 
 	memcpy((view0)->color, AA2, sizeof(unsigned short)*nr*nc*ncomponents);
 
-	delete[](seg_vp);
-	delete[](bmask);
+	//delete[](seg_vp);
+	//delete[](bmask);
 	delete[](AA1);
 	delete[](AA2);
 
