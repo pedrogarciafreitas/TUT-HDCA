@@ -100,8 +100,8 @@ int main(int argc, char** argv) {
 
 	//C:/Local/astolap/Data/JPEG_PLENO/JPEG-PLENO-DATASETS/Fraunhofer_HDCA/ C:/Local/astolap/Data/JPEG_PLENO/TUT-HDCA_tmp_output/ C:/Local/astolap/Data/JPEG_PLENO/Kakadu/ 21 101
 
-	const char* input_dir = argv[1];
-	const char* output_dir = argv[2];
+	const char *input_dir = argv[1];
+	const char *output_dir = argv[2];
 
 	//const char *kdu_compress_path = "\"C:/Program Files (x86)/Kakadu/kdu_compress.exe\"";
 	//const char *kdu_expand_path = "\"C:/Program Files (x86)/Kakadu/kdu_expand.exe\"";
@@ -191,11 +191,7 @@ int main(int argc, char** argv) {
 
 			SAI->references = new int[SAI->n_references]();
 
-			int *ip = SAI->references;
-
-			for (int uu = 0; uu < SAI->n_references; uu++) {
-				fread(ip + uu, sizeof(int), 1, filept);
-			}
+			fread(SAI->references, sizeof(int), SAI->n_references, filept);
 
 		}
 
@@ -206,6 +202,14 @@ int main(int argc, char** argv) {
 
 	fclose(filept);
 
+	char path_out_LF_data[1024];
+	sprintf(path_out_LF_data, "%s%c%s", output_dir, '/', "output.LF");
+
+	FILE *output_LF_file;
+	output_LF_file = fopen(path_out_LF_data, "wb");
+	fwrite(&n_views_total, sizeof(int), 1 ,output_LF_file);
+	fwrite(&Nd, sizeof(int), 1,  output_LF_file);
+	fclose(output_LF_file);
 
 	for (int ii = 0; ii < n_views_total; ii++) {
 
@@ -382,17 +386,19 @@ int main(int argc, char** argv) {
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", 0);
 		}
 
+		char ppm_residual_path[512];
+
+		char jp2_residual_path_jp2[512];
+
+		char pgm_residual_depth_path[512];
+
+		char jp2_residual_depth_path_jp2[512];
+
 		/* get residual */
 		if (SAI->residual_rate_color > 0)
 		{
 
 			/* COLOR residual here */
-
-			FILE *residual_file;
-
-			char ppm_residual_path[512];
-
-			char jp2_residual_path_jp2[512];
 
 			sprintf(ppm_residual_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_residual.ppm");
 
@@ -403,22 +409,19 @@ int main(int argc, char** argv) {
 
 			decodeResidualJP2(SAI->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path, ncomp1, pow(2, 10) - 1, pow(2, 10) - 1);
 
-			if (depth_file_exist && SAI->residual_rate_depth > 0) { /* residual depth if needed */
+		}
 
-				char pgm_residual_depth_path[512];
+		if (depth_file_exist && SAI->residual_rate_depth > 0) { /* residual depth if needed */
 
-				char jp2_residual_depth_path_jp2[512];
+			sprintf(pgm_residual_depth_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_depth_residual.pgm");
 
-				sprintf(pgm_residual_depth_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_depth_residual.pgm");
+			sprintf(jp2_residual_depth_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_depth_residual.jp2");
 
-				sprintf(jp2_residual_depth_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_depth_residual.jp2");
+			encodeResidualJP2(SAI->nr, SAI->nc, original_depth_view, SAI->depth, pgm_residual_depth_path,
+				kdu_compress_path, jp2_residual_depth_path_jp2, SAI->residual_rate_depth, 1, 0);
 
-				encodeResidualJP2(SAI->nr, SAI->nc, original_depth_view, SAI->depth, pgm_residual_depth_path,
-					kdu_compress_path, jp2_residual_depth_path_jp2, SAI->residual_rate_depth, 1, 0);
+			decodeResidualJP2(SAI->depth, kdu_expand_path, jp2_residual_depth_path_jp2, pgm_residual_depth_path, ncomp1, 0, pow(2, 16) - 1);
 
-				decodeResidualJP2(SAI->depth, kdu_expand_path, jp2_residual_depth_path_jp2, pgm_residual_depth_path, ncomp1, 0, pow(2, 16) - 1);
-
-			}
 		}
 
 		/* medfilt depth */
@@ -449,7 +452,7 @@ int main(int argc, char** argv) {
 		delete[](original_depth_view);
 
 		FILE *output_results_file;
-		char output_results_filename[512];
+		char output_results_filename[1024];
 		sprintf(output_results_filename, "%s%s", output_dir, "results.txt");
 		if (ii < 1) {
 			output_results_file = fopen(output_results_filename, "w");
@@ -459,6 +462,79 @@ int main(int argc, char** argv) {
 		}
 		fprintf(output_results_file, "%s\n", output_results);
 		fclose(output_results_file);
+
+
+		/* write view configuration data to disk */
+		output_LF_file = fopen(path_out_LF_data, "ab");	
+
+		fwrite(&SAI->r, sizeof(int), 1, output_LF_file);
+		fwrite(&SAI->c, sizeof(int), 1,  output_LF_file);
+
+		fwrite(&SAI->nr, sizeof(int), 1, output_LF_file);
+		fwrite(&SAI->nc, sizeof(int), 1, output_LF_file);
+
+		fwrite(&SAI->x, sizeof(int), 1, output_LF_file);
+		fwrite(&SAI->y, sizeof(float), 1,  output_LF_file);
+
+		fwrite(&SAI->n_references, sizeof(int), 1, output_LF_file);
+		fwrite(&SAI->n_depth_references, sizeof(int), 1,  output_LF_file);
+
+		if (SAI->n_references > 0) {
+			fwrite(SAI->references, sizeof(int), SAI->n_references, output_LF_file);
+		}
+
+		fwrite(&SAI->NNt, sizeof(int), 1,  output_LF_file);
+		fwrite(&SAI->Ms, sizeof(int), 1,  output_LF_file);
+
+		fwrite(&SAI->stdd, sizeof(float),1, output_LF_file);
+
+		if (SAI->NB > 0) {
+			fwrite(SAI->merge_weights, sizeof(signed short),SAI->NB / 2, output_LF_file);
+		}
+
+		if (SAI->Ms > 0) {
+			fwrite(SAI->sparse_weights, sizeof(int32_t), SAI->Ms,  output_LF_file);
+			fwrite(SAI->sparse_mask, sizeof(unsigned char), SAI->Ms,  output_LF_file);
+		}
+
+		if (SAI->residual_rate_color > 0) {
+			int n_bytes_color_residual = aux_GetFileSize(jp2_residual_path_jp2);
+
+			unsigned char *jp2_residual = new unsigned char[n_bytes_color_residual]();
+			FILE *jp2_color_residual_file = fopen(jp2_residual_path_jp2, "rb");
+			fread(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, jp2_color_residual_file);
+			fclose(jp2_color_residual_file);
+
+			fwrite(&n_bytes_color_residual, sizeof(int), 1, output_LF_file);
+			fwrite(jp2_residual,  sizeof(unsigned char), n_bytes_color_residual, output_LF_file);
+
+			delete[](jp2_residual);
+		}
+		else {
+			int n_bytes_color_residual = 0;
+			fwrite(&n_bytes_color_residual, sizeof(int), 1,  output_LF_file);
+		}
+
+		if (depth_file_exist && SAI->residual_rate_depth > 0) {
+			int n_bytes_depth_residual = aux_GetFileSize(jp2_residual_depth_path_jp2);
+
+			unsigned char *jp2_depth_residual = new unsigned char[n_bytes_depth_residual]();
+			FILE *jp2_depth_residual_file = fopen(jp2_residual_depth_path_jp2, "rb");
+			fread(jp2_depth_residual, sizeof(unsigned char), n_bytes_depth_residual,  jp2_depth_residual_file);
+			fclose(jp2_depth_residual_file);
+
+			fwrite(&n_bytes_depth_residual, sizeof(int), 1,  output_LF_file);
+			fwrite(jp2_depth_residual, sizeof(unsigned char), n_bytes_depth_residual, output_LF_file);
+
+			delete[](jp2_depth_residual);
+		}
+		else {
+			int n_bytes_depth_residual = 0;
+			fwrite(&n_bytes_depth_residual, sizeof(int), 1,  output_LF_file);
+		}
+
+		fclose(output_LF_file);
+
 	}
 
 	for (int ii = 0; ii < n_views_total; ii++) 

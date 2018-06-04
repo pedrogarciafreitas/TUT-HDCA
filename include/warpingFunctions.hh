@@ -10,17 +10,15 @@ struct view{
 	unsigned short *color = NULL;
 	unsigned short *depth = NULL;
 
-	int r = NULL, c = NULL;
+	int r = NULL, c = NULL; // SAI subscript
 
-	int nr, nc;
+	int nr, nc; // image height, width
 
-	float y, x;
+	float y, x; // camera displacement
 
 	int n_references, n_depth_references;
 
 	int *references = NULL, *depth_references = NULL;
-
-	int NB;
 
 	signed short *merge_weights = NULL;
 	int32_t *sparse_weights = NULL;
@@ -28,19 +26,19 @@ struct view{
 	unsigned char *sparse_mask = NULL;
 
 	float *merge_weights_float = NULL;
-	//float *sparse_weights_float;
 
 	int *number_of_pixels_per_region = NULL;
 
-	bool *bmask = NULL;
+	bool *bmask = NULL; /* view mask for merging weights */
 	unsigned short *seg_vp = NULL; /* class segmentation, used for view merging weights */
+	int NB = 0;
 
 	float residual_rate_color;
 	float residual_rate_depth;
 
 	float stdd;
 
-	int NNt = 0, Ms = 0; //for sparse, NNt defines the neighborhood size [ -NNt:NNt,-NNt:NNt ], Ms is the filter order
+	int NNt = 0, Ms = 0; //for global sparse, NNt defines the neighborhood size [ -NNt:NNt,-NNt:NNt ], Ms is the filter order
 
 };
 
