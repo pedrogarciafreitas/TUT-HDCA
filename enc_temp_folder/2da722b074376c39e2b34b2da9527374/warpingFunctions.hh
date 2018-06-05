@@ -20,11 +20,7 @@ struct view{
 
 	int n_references = 0, n_depth_references = 0;
 
-	int *references = NULL, *depth_references = NULL; /* depth references not necessarily the same as color references
-													  we can have, for example, depth warping only from the externally obtained depth but we still
-													  warp color from neighbors that don't have depth provided. We don't want to propagate depth errors from
-													  badly warped depth views, thus we restrict depth warping to some high quality subset (usually meaning the 
-													  externally obtained high quality depth maps)*/
+	int *references = NULL, *depth_references = NULL;
 
 	signed short *merge_weights = NULL;
 	int32_t *sparse_weights = NULL;

@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 
 	char kdu_expand_path[256];
 
-	sprintf(kdu_expand_path, "%s%s", kakadu_dir, "kdu_expand.exe");
+	sprintf(kdu_expand_path, "%s%s", kakadu_dir, "kdu_expand");
 
 	FILE *input_LF;
 	input_LF = fopen(input_file, "rb");
@@ -52,11 +52,16 @@ int main(int argc, char** argv) {
 		f_status = fread(&SAI->y, sizeof(float), 1, input_LF);
 
 		f_status = fread(&SAI->n_references, sizeof(int), 1, input_LF);
-		f_status = fread(&SAI->n_depth_references, sizeof(int), 1, input_LF);
 
 		if (SAI->n_references > 0) {
 			SAI->references = new int[SAI->n_references]();
 			f_status = fread(SAI->references, sizeof(int), SAI->n_references, input_LF);
+		}
+
+		f_status = fread(&SAI->n_depth_references, sizeof(int), 1, input_LF);
+		if (SAI->n_depth_references > 0) {
+			SAI->depth_references = new int[SAI->n_depth_references]();
+			f_status = fread(SAI->depth_references, sizeof(int), SAI->n_depth_references, input_LF);
 		}
 
 		f_status = fread(&SAI->NNt, sizeof(int), 1, input_LF);
@@ -71,17 +76,57 @@ int main(int argc, char** argv) {
 		SAI->color = new unsigned short[SAI->nr*SAI->nc * 3]();
 		SAI->depth = new unsigned short[SAI->nr*SAI->nc]();
 
-		if (SAI->n_references > 0) {
-
+		/* forward warp depth */
+		if (SAI->n_depth_references > 0) {
 			/* currently we forward warp the depth from the N (for HDCA N = 5, lenslet maybe 1?) references */
-			unsigned short **warped_color_views_0_N = new unsigned short*[SAI->n_references]();
-			unsigned short **warped_depth_views_0_N = new unsigned short*[SAI->n_references]();
-			float **DispTargs_0_N = new float*[SAI->n_references]();
+			unsigned short **warped_color_views_0_N = new unsigned short*[SAI->n_depth_references]();
+			unsigned short **warped_depth_views_0_N = new unsigned short*[SAI->n_depth_references]();
+			float **DispTargs_0_N = new float*[SAI->n_depth_references]();
 
-			for (int ij = 0; ij < Nd; ij++)
+			for (int ij = 0; ij < SAI->n_depth_references; ij++)
 			{
-				warpView0_to_View1(LF + ij, SAI, warped_color_views_0_N[ij], warped_depth_views_0_N[ij], DispTargs_0_N[ij]);
+				view *ref_view = LF + SAI->depth_references[ij];
+				warpView0_to_View1(ref_view, SAI, warped_color_views_0_N[ij], warped_depth_views_0_N[ij], DispTargs_0_N[ij]);
 			}
+
+			/* merge depth with median*/
+
+			int startt = clock();
+
+#pragma omp parallel for
+			for (int ij = 0; ij < SAI->nr*SAI->nc; ij++) {
+				std::vector<unsigned short> depth_values;
+				for (int uu = 0; uu < SAI->n_depth_references; uu++) {
+					//for (int uu = 0; uu < SAI->n_references; uu++) {
+					unsigned short *pp = warped_depth_views_0_N[uu];
+					float *pf = DispTargs_0_N[uu];
+					if (*(pf + ij) > -1) {
+						depth_values.push_back(*(pp + ij));
+					}
+				}
+				if (depth_values.size() > 0)
+					SAI->depth[ij] = getMedian(depth_values);
+			}
+
+			std::cout << "time elapsed in depth merging\t" << (int)clock() - startt << "\n";
+
+			/* hole filling for depth */
+			holefilling(SAI->depth, 1, SAI->nr, SAI->nc, 0);
+
+			for (int ij = 0; ij < SAI->n_depth_references; ij++)
+			{
+				delete[](warped_color_views_0_N[ij]);
+				delete[](warped_depth_views_0_N[ij]);
+				delete[](DispTargs_0_N[ij]);
+			}
+
+			delete[](warped_color_views_0_N);
+			delete[](warped_depth_views_0_N);
+			delete[](DispTargs_0_N);
+		}
+
+		/* forward warp color */
+		if (SAI->n_references > 0) {
 
 			/* holds partial warped views for ii */
 			unsigned short **warped_color_views = new unsigned short*[SAI->n_references]();
@@ -91,10 +136,12 @@ int main(int argc, char** argv) {
 			for (int ij = 0; ij < SAI->n_references; ij++)
 			{
 
-				int uu = SAI->references[ij];
+				view *ref_view = LF + SAI->references[ij];
+
+				//int uu = SAI->references[ij];
 
 				/* FORWARD warp color AND depth */
-				warpView0_to_View1(LF + uu, SAI, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
+				warpView0_to_View1(ref_view, SAI, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
 
 				//char tmp_str[1024];
 
@@ -122,31 +169,7 @@ int main(int argc, char** argv) {
 
 			/* hole filling for color*/
 			holefilling(SAI->color, 3, SAI->nr, SAI->nc, 0);
-
-			/* merge depth with median*/
-
-			int startt = clock();
-
-			#pragma omp parallel for
-			for (int ij = 0; ij < SAI->nr*SAI->nc; ij++) {
-				std::vector<unsigned short> depth_values;
-				for (int uu = 0; uu < Nd; uu++) {
-					//for (int uu = 0; uu < SAI->n_references; uu++) {
-					unsigned short *pp = warped_depth_views_0_N[uu];
-					float *pf = DispTargs_0_N[uu];
-					if (*(pf + ij) > -1) {
-						depth_values.push_back(*(pp + ij));
-					}
-				}
-				if (depth_values.size() > 0)
-					SAI->depth[ij] = getMedian(depth_values);
-			}
-
-			std::cout << "time elapsed in depth merging\t" << (int)clock() - startt << "\n";
-
-			/* hole filling for depth */
-			holefilling(SAI->depth, 1, SAI->nr, SAI->nc, 0);
-
+			
 			/* clean */
 			for (int ij = 0; ij < SAI->n_references; ij++)
 			{
@@ -154,16 +177,6 @@ int main(int argc, char** argv) {
 				delete[](warped_depth_views[ij]);
 				delete[](DispTargs[ij]);
 			}
-			for (int ij = 0; ij < Nd; ij++)
-			{
-				delete[](warped_color_views_0_N[ij]);
-				delete[](warped_depth_views_0_N[ij]);
-				delete[](DispTargs_0_N[ij]);
-			}
-
-			delete[](warped_color_views_0_N);
-			delete[](warped_depth_views_0_N);
-			delete[](DispTargs_0_N);
 
 			delete[](warped_color_views);
 			delete[](warped_depth_views);
