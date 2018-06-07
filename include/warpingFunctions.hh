@@ -46,6 +46,8 @@ struct view{
 
 	int NNt = 0, Ms = 0; //for global sparse, NNt defines the neighborhood size [ -NNt:NNt,-NNt:NNt ], Ms is the filter order
 
+	char path_out_pgm[1024], path_out_ppm[1024];
+
 };
 
 float getPSNR(FILE *fileout, const char *path_out_ppm, const char *path_input_ppm, const char *difftest_call)
@@ -128,7 +130,7 @@ void applyGlobalSparseFilter(view *view0){
 		}
 	}
 
-	unsigned short *final_view_s = new unsigned short[nr*nc * 3]();
+	//unsigned short *final_view_s = new unsigned short[nr*nc * 3]();
 
 	for (int ii = 0; ii < nr*nc * 3; ii++){
 		if (final_view[ii] < 0)
@@ -139,6 +141,7 @@ void applyGlobalSparseFilter(view *view0){
 		pshort[ii] = (unsigned short)(final_view[ii]);
 	}
 
+	delete[](theta);
 	delete[](final_view);
 
 }
@@ -293,16 +296,6 @@ void getViewMergingLSWeights_N(view *view0, unsigned short **warpedColorViews, f
 	bool *bmask = (view0)->bmask;
 
 	unsigned short *seg_vp = (view0)->seg_vp;
-
-	//FILE *tmpf;
-	//tmpf = fopen("G:/HEVC_HDCA/Berlin_verification_model/TMP_CPP/segvp.short", "wb");
-	//fwrite(seg_vp, sizeof(unsigned short), 1080 * 1920, tmpf);
-	//fclose(tmpf);
-
-
-	///* debug */
-	////BUGAAA
-	//aux_write16PGMPPM("G:/HEVC_HDCA/Berlin_verification_model/TMP_CPP/seg_vp.pgm", nc, nr, 1, seg_vp);
 
 	/* go through all regions, collect regressors from references */
 	unsigned short **reference_view_pixels_in_classes = new unsigned short*[MMM * n_references]();

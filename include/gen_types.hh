@@ -130,6 +130,8 @@ bool aux_read16PGMPPM(const char* filename, int &width, int &height, int &ncomp,
 	if (nread != width*height * ncomp)
 	{
 		fprintf(stderr, "READ ERROR aux_read16ppm() %s\n", filename);
+		delete[](img);
+		delete[](Image16bit);
 		return false;
 	}
 
@@ -328,8 +330,8 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 	int startt = clock();
 
 	/* make ATA. this is slow. */
-	#pragma omp parallel for
 	for (int i1 = 0; i1 < MT; i1++) {
+#pragma omp parallel for shared(i1)
 		for (int j1 = 0; j1 < MT; j1++) {
 			for (int ii = 0; ii < N; ii++) {
 				*(PHI + i1 + j1*MT) += (*(AA + ii + i1*N))*(*(AA + ii + j1*N));
@@ -376,6 +378,7 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 	//std::cout << "------------------------------------------------\n";
 
 	/* make ATYd */
+#pragma omp parallel for
 	for (int i1 = 0; i1 < MT; i1++) {
 		for (int ii = 0; ii < N; ii++) {
 			*(PSI + i1) += (*(AA + ii + i1*N))*(*(Yd + ii));
@@ -384,6 +387,7 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 
 	/* YdTYd */
 	double yd2 = 0;
+#pragma omp parallel for
 	for (int ii = 0; ii < N; ii++)
 		yd2 += (*(Yd + ii))*(*(Yd + ii));
 

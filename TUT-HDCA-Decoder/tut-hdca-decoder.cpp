@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
 	int f_status;
 
 	f_status = fread(&n_views_total, sizeof(int), 1,input_LF);
-	f_status = fread(&Nd, sizeof(int), 1,input_LF);
+	//f_status = fread(&Nd, sizeof(int), 1,input_LF);
 
 	view *LF = new view[n_views_total]();
 
@@ -69,6 +69,8 @@ int main(int argc, char** argv) {
 
 		f_status = fread(&SAI->stdd, sizeof(float), 1, input_LF);
 
+		f_status = fread(&SAI->stdd, sizeof(float), 1, input_LF);
+
 		if (!(f_status > 0)) {
 			break;
 		}
@@ -86,7 +88,19 @@ int main(int argc, char** argv) {
 			for (int ij = 0; ij < SAI->n_depth_references; ij++)
 			{
 				view *ref_view = LF + SAI->depth_references[ij];
+
+				int tmp_w, tmp_r, tmp_ncomp;
+
+				aux_read16PGMPPM(ref_view->path_out_pgm, tmp_w, tmp_r, tmp_ncomp, ref_view->depth);
+				aux_read16PGMPPM(ref_view->path_out_ppm, tmp_w, tmp_r, tmp_ncomp, ref_view->color);
+
 				warpView0_to_View1(ref_view, SAI, warped_color_views_0_N[ij], warped_depth_views_0_N[ij], DispTargs_0_N[ij]);
+
+				delete[](ref_view->depth);
+				delete[](ref_view->color);
+
+				ref_view->depth = NULL;
+				ref_view->color = NULL;
 			}
 
 			/* merge depth with median*/
@@ -138,10 +152,21 @@ int main(int argc, char** argv) {
 
 				view *ref_view = LF + SAI->references[ij];
 
+				int tmp_w, tmp_r, tmp_ncomp;
+
+				aux_read16PGMPPM(ref_view->path_out_pgm, tmp_w, tmp_r, tmp_ncomp, ref_view->depth);
+				aux_read16PGMPPM(ref_view->path_out_ppm, tmp_w, tmp_r, tmp_ncomp, ref_view->color);
+
 				//int uu = SAI->references[ij];
 
 				/* FORWARD warp color AND depth */
 				warpView0_to_View1(ref_view, SAI, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
+
+				delete[](ref_view->depth);
+				delete[](ref_view->color);
+
+				ref_view->depth = NULL;
+				ref_view->color = NULL;
 
 				//char tmp_str[1024];
 
@@ -155,11 +180,12 @@ int main(int argc, char** argv) {
 
 			initViewW(SAI, DispTargs);
 
-			if (SAI->NB > 0) {
-				f_status = fread(SAI->merge_weights,  sizeof(signed short), SAI->NB / 2, input_LF);
+			if (!(SAI->stdd == 0)) {
+				if (SAI->NB > 0) {
+					f_status = fread(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, input_LF);
+				}
 			}
-
-			if (0){
+			else{
 				/* we don't use LS weights but something derived on geometric distance in view array*/
 				getGeomWeight(SAI, LF, SAI->stdd);
 			}
@@ -265,14 +291,26 @@ int main(int argc, char** argv) {
 		memcpy(SAI->depth, tmp_depth, sizeof(unsigned short)*SAI->nr*SAI->nc);
 		delete[](tmp_depth);
 
-		char path_out_ppm[1024];
-		sprintf(path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".ppm");
+		sprintf(SAI->path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".ppm");
+		sprintf(SAI->path_out_pgm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".pgm");
 
-		char path_out_pgm[1024];
-		sprintf(path_out_pgm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".pgm");
+		aux_write16PGMPPM(SAI->path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
+		aux_write16PGMPPM(SAI->path_out_pgm, SAI->nc, SAI->nr, 1, SAI->depth);
 
-		aux_write16PGMPPM(path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
-		aux_write16PGMPPM(path_out_pgm, SAI->nc, SAI->nr, 1, SAI->depth);
+		if (SAI->color != NULL) {
+			delete[](SAI->color);
+			SAI->color = NULL;
+		}
+
+		if (SAI->depth != NULL) {
+			delete[](SAI->depth);
+			SAI->depth = NULL;
+		}
+		
+		if (SAI->seg_vp != NULL) {
+			delete[](SAI->seg_vp);
+			SAI->seg_vp = NULL;
+		}
 
 	}
 
