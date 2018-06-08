@@ -138,8 +138,8 @@ int main(int argc, char** argv) {
 		fread(&xx, sizeof(int), 1, filept);
 		fread(&yy, sizeof(int), 1, filept);
 
-		SAI->y = float(yy) / 100000;
 		SAI->x = float(xx) / 100000;
+		SAI->y = float(yy) / 100000;
 
 		int rate_color, rate_depth, Ms, NNt;
 
@@ -510,15 +510,26 @@ int main(int argc, char** argv) {
 
 		fwrite(&SAI->stdd, sizeof(float), 1, output_LF_file);
 		
-		if (!(SAI->stdd == 0)) {
+		if (SAI->stdd == 0) {
 
 			if (SAI->NB > 0) {
+
+				/* for debug and studying, we write merging weights to standalone files also*/
+				
+				FILE *wfile;
+				char wfile_name[1024];
+				sprintf(wfile_name, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_merging_weights");
+				wfile = fopen(wfile_name, "wb");
+				fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, wfile);
+				fclose(wfile);
+
+
 				fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, output_LF_file);
 			}
 
 		}
 
-		if (SAI->Ms > 0) {
+		if (SAI->Ms > 0 && SAI->NNt>0) {
 			fwrite(SAI->sparse_weights, sizeof(int32_t), SAI->Ms, output_LF_file);
 			fwrite(SAI->sparse_mask, sizeof(unsigned char), SAI->Ms, output_LF_file);
 		}

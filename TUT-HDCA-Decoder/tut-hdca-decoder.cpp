@@ -69,8 +69,6 @@ int main(int argc, char** argv) {
 
 		f_status = fread(&SAI->stdd, sizeof(float), 1, input_LF);
 
-		f_status = fread(&SAI->stdd, sizeof(float), 1, input_LF);
-
 		if (!(f_status > 0)) {
 			break;
 		}
@@ -180,7 +178,7 @@ int main(int argc, char** argv) {
 
 			initViewW(SAI, DispTargs);
 
-			if (!(SAI->stdd == 0)) {
+			if (SAI->stdd == 0) {
 				if (SAI->NB > 0) {
 					f_status = fread(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, input_LF);
 				}
