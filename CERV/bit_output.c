@@ -12,7 +12,7 @@ static int bits_to_go2;		/* Number of bits still in buffer           */
 
 /* INITIALIZE FOR BIT OUTPUT. */
 
-start_outputing_bits()
+void start_outputing_bits()
 {   buffer = 0;					/* Buffer is empty to start */
     bits_to_go= 8;				/* with.                    */
 }
@@ -20,7 +20,7 @@ start_outputing_bits()
 
 /* OUTPUT A BIT. */
 
-output_bit(int bit,FILE* outputFile)
+void output_bit(int bit,FILE* outputFile)
 {   buffer >>= 1; if (bit) buffer |= 0x80;	/* Put bit in top of buffer.*/
     bits_to_go -= 1;
     if (bits_to_go==0) {			/* Output buffer if it is   */
@@ -33,19 +33,19 @@ output_bit(int bit,FILE* outputFile)
 
 /* FLUSH OUT THE LAST BITS. */
 
-done_outputing_bits(FILE* outputFile)
+void done_outputing_bits(FILE* outputFile)
 {   
 	//putc(buffer>>bits_to_go,stdout);
 	buffer = (buffer>>bits_to_go);
 	fwrite(&buffer,1,1,outputFile);
 }
-savePos()
+void savePos()
 {
 	buffer2 = buffer;
 	bits_to_go2 = bits_to_go;
 	saveReg();
 }
-loadPos()
+void loadPos()
 {
 	buffer = buffer2;
 	bits_to_go = bits_to_go2;

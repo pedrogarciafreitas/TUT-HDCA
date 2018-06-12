@@ -3,7 +3,7 @@
 
 /* SIZE OF ARITHMETIC CODE VALUES. */
 
-#define Code_value_bits 16		/* Number of bits in a code value   */
+#define Code_value_bits 16	//16	/* Number of bits in a code value   */
 typedef long code_value;		/* Type of an arithmetic code value */
 
 #define Top_value (((long)1<<Code_value_bits)-1)      /* Largest code value */

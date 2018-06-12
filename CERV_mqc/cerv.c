@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h> 
-
+//#include <conio.h>
 #include <math.h>
 #include <assert.h>
 
@@ -30,104 +30,110 @@ int **Cimg, **Himg;
 int NRREG;
 int *ordine;
 double  CLval[15], CLind[15], CLsw[15];
-int drc[17][4] = { { -1, -1, -1, -1 }, { -1, 1, -1, 1 }, { 0, -2, -2, 0 }, { 0, -4, 0, -2 }, { -2, 2, -3, -1 }, { -2, -2, -2, -2 }, { -2, 0, -3, 1 }, { -3, -1, -2, 2 }, { -3, 1, -1, 3 }, { -1, 3, -1, -3 }, { -1, -3, -4, 0 }, { -2, -4, -3, -3 }, { -2, 4, -3, 3 }, { -3, -3, -4, 2 }, { -3, 3, -4, -2 }, { -5, -1, -1, -5 }, { -5, 1, -1, 5 } };
+int drc[17][4] = { { -1, -1, -1, -1 },{ -1, 1, -1, 1 },{ 0, -2, -2, 0 },{ 0, -4, 0, -2 },{ -2, 2, -3, -1 },{ -2, -2, -2, -2 },{ -2, 0, -3, 1 },{ -3, -1, -2, 2 },{ -3, 1, -1, 3 },{ -1, 3, -1, -3 },{ -1, -3, -4, 0 },{ -2, -4, -3, -3 },{ -2, 4, -3, 3 },{ -3, -3, -4, 2 },{ -3, 3, -4, -2 },{ -5, -1, -1, -5 },{ -5, 1, -1, 5 } };
 int two_pow[17] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536 };
 
+// int drc[NCON-1][4] = { {-1,-1,-1, -1},{-1,1,-1,1},{0,-2,-2,0},{0,-3,0,-2},{-2,2,-3,-1},{-2,-2,-2,-2},{-2,0,-3,1},{-3,-1,-2,2},{-3,1,-1,3},{-1,3,-1,-3} }; //,{-1,-3,-4,0},{-2,-4,-3,-3},{-2,4,-3,3},{-3,-3,-4,2},{-3,3,-4,-2}  ,{-5,-1,-1,-5}   ,{-5,1,-1,5} };
+// int two_pow[NCON-1] = { 1,2,4,8,16,32,64,128,256,512} ; //,1024 ,2048,4096 ,8192,16384,32768  ,65536 };
+
+// int drc[NCON-1][4] = { {-1,-1,-1, -1},{-1,1,-1,1},{0,-2,-2,0},{0,-3,0,-2},{-2,2,-3,-1},{-2,-2,-2,-2},{-2,0,-3,1},{-3,-1,-2,2},{-3,1,-1,3},{-1,3,-1,-3} };
+// int two_pow[NCON-1] = { 1,2,4,8,16,32,64,128,256,512 };
+
 static const opj_mqc_state_t mqc_states[47 * 2] = {
-	{0x5601, 0, &mqc_states[2], &mqc_states[3]},
-	{0x5601, 1, &mqc_states[3], &mqc_states[2]},
-	{0x3401, 0, &mqc_states[4], &mqc_states[12]},
-	{0x3401, 1, &mqc_states[5], &mqc_states[13]},
-	{0x1801, 0, &mqc_states[6], &mqc_states[18]},
-	{0x1801, 1, &mqc_states[7], &mqc_states[19]},
-	{0x0ac1, 0, &mqc_states[8], &mqc_states[24]},
-	{0x0ac1, 1, &mqc_states[9], &mqc_states[25]},
-	{0x0521, 0, &mqc_states[10], &mqc_states[58]},
-	{0x0521, 1, &mqc_states[11], &mqc_states[59]},
-	{0x0221, 0, &mqc_states[76], &mqc_states[66]},
-	{0x0221, 1, &mqc_states[77], &mqc_states[67]},
-	{0x5601, 0, &mqc_states[14], &mqc_states[13]},
-	{0x5601, 1, &mqc_states[15], &mqc_states[12]},
-	{0x5401, 0, &mqc_states[16], &mqc_states[28]},
-	{0x5401, 1, &mqc_states[17], &mqc_states[29]},
-	{0x4801, 0, &mqc_states[18], &mqc_states[28]},
-	{0x4801, 1, &mqc_states[19], &mqc_states[29]},
-	{0x3801, 0, &mqc_states[20], &mqc_states[28]},
-	{0x3801, 1, &mqc_states[21], &mqc_states[29]},
-	{0x3001, 0, &mqc_states[22], &mqc_states[34]},
-	{0x3001, 1, &mqc_states[23], &mqc_states[35]},
-	{0x2401, 0, &mqc_states[24], &mqc_states[36]},
-	{0x2401, 1, &mqc_states[25], &mqc_states[37]},
-	{0x1c01, 0, &mqc_states[26], &mqc_states[40]},
-	{0x1c01, 1, &mqc_states[27], &mqc_states[41]},
-	{0x1601, 0, &mqc_states[58], &mqc_states[42]},
-	{0x1601, 1, &mqc_states[59], &mqc_states[43]},
-	{0x5601, 0, &mqc_states[30], &mqc_states[29]},
-	{0x5601, 1, &mqc_states[31], &mqc_states[28]},
-	{0x5401, 0, &mqc_states[32], &mqc_states[28]},
-	{0x5401, 1, &mqc_states[33], &mqc_states[29]},
-	{0x5101, 0, &mqc_states[34], &mqc_states[30]},
-	{0x5101, 1, &mqc_states[35], &mqc_states[31]},
-	{0x4801, 0, &mqc_states[36], &mqc_states[32]},
-	{0x4801, 1, &mqc_states[37], &mqc_states[33]},
-	{0x3801, 0, &mqc_states[38], &mqc_states[34]},
-	{0x3801, 1, &mqc_states[39], &mqc_states[35]},
-	{0x3401, 0, &mqc_states[40], &mqc_states[36]},
-	{0x3401, 1, &mqc_states[41], &mqc_states[37]},
-	{0x3001, 0, &mqc_states[42], &mqc_states[38]},
-	{0x3001, 1, &mqc_states[43], &mqc_states[39]},
-	{0x2801, 0, &mqc_states[44], &mqc_states[38]},
-	{0x2801, 1, &mqc_states[45], &mqc_states[39]},
-	{0x2401, 0, &mqc_states[46], &mqc_states[40]},
-	{0x2401, 1, &mqc_states[47], &mqc_states[41]},
-	{0x2201, 0, &mqc_states[48], &mqc_states[42]},
-	{0x2201, 1, &mqc_states[49], &mqc_states[43]},
-	{0x1c01, 0, &mqc_states[50], &mqc_states[44]},
-	{0x1c01, 1, &mqc_states[51], &mqc_states[45]},
-	{0x1801, 0, &mqc_states[52], &mqc_states[46]},
-	{0x1801, 1, &mqc_states[53], &mqc_states[47]},
-	{0x1601, 0, &mqc_states[54], &mqc_states[48]},
-	{0x1601, 1, &mqc_states[55], &mqc_states[49]},
-	{0x1401, 0, &mqc_states[56], &mqc_states[50]},
-	{0x1401, 1, &mqc_states[57], &mqc_states[51]},
-	{0x1201, 0, &mqc_states[58], &mqc_states[52]},
-	{0x1201, 1, &mqc_states[59], &mqc_states[53]},
-	{0x1101, 0, &mqc_states[60], &mqc_states[54]},
-	{0x1101, 1, &mqc_states[61], &mqc_states[55]},
-	{0x0ac1, 0, &mqc_states[62], &mqc_states[56]},
-	{0x0ac1, 1, &mqc_states[63], &mqc_states[57]},
-	{0x09c1, 0, &mqc_states[64], &mqc_states[58]},
-	{0x09c1, 1, &mqc_states[65], &mqc_states[59]},
-	{0x08a1, 0, &mqc_states[66], &mqc_states[60]},
-	{0x08a1, 1, &mqc_states[67], &mqc_states[61]},
-	{0x0521, 0, &mqc_states[68], &mqc_states[62]},
-	{0x0521, 1, &mqc_states[69], &mqc_states[63]},
-	{0x0441, 0, &mqc_states[70], &mqc_states[64]},
-	{0x0441, 1, &mqc_states[71], &mqc_states[65]},
-	{0x02a1, 0, &mqc_states[72], &mqc_states[66]},
-	{0x02a1, 1, &mqc_states[73], &mqc_states[67]},
-	{0x0221, 0, &mqc_states[74], &mqc_states[68]},
-	{0x0221, 1, &mqc_states[75], &mqc_states[69]},
-	{0x0141, 0, &mqc_states[76], &mqc_states[70]},
-	{0x0141, 1, &mqc_states[77], &mqc_states[71]},
-	{0x0111, 0, &mqc_states[78], &mqc_states[72]},
-	{0x0111, 1, &mqc_states[79], &mqc_states[73]},
-	{0x0085, 0, &mqc_states[80], &mqc_states[74]},
-	{0x0085, 1, &mqc_states[81], &mqc_states[75]},
-	{0x0049, 0, &mqc_states[82], &mqc_states[76]},
-	{0x0049, 1, &mqc_states[83], &mqc_states[77]},
-	{0x0025, 0, &mqc_states[84], &mqc_states[78]},
-	{0x0025, 1, &mqc_states[85], &mqc_states[79]},
-	{0x0015, 0, &mqc_states[86], &mqc_states[80]},
-	{0x0015, 1, &mqc_states[87], &mqc_states[81]},
-	{0x0009, 0, &mqc_states[88], &mqc_states[82]},
-	{0x0009, 1, &mqc_states[89], &mqc_states[83]},
-	{0x0005, 0, &mqc_states[90], &mqc_states[84]},
-	{0x0005, 1, &mqc_states[91], &mqc_states[85]},
-	{0x0001, 0, &mqc_states[90], &mqc_states[86]},
-	{0x0001, 1, &mqc_states[91], &mqc_states[87]},
-	{0x5601, 0, &mqc_states[92], &mqc_states[92]},
-	{0x5601, 1, &mqc_states[93], &mqc_states[93]},
+	{ 0x5601, 0, &mqc_states[2], &mqc_states[3] },
+	{ 0x5601, 1, &mqc_states[3], &mqc_states[2] },
+	{ 0x3401, 0, &mqc_states[4], &mqc_states[12] },
+	{ 0x3401, 1, &mqc_states[5], &mqc_states[13] },
+	{ 0x1801, 0, &mqc_states[6], &mqc_states[18] },
+	{ 0x1801, 1, &mqc_states[7], &mqc_states[19] },
+	{ 0x0ac1, 0, &mqc_states[8], &mqc_states[24] },
+	{ 0x0ac1, 1, &mqc_states[9], &mqc_states[25] },
+	{ 0x0521, 0, &mqc_states[10], &mqc_states[58] },
+	{ 0x0521, 1, &mqc_states[11], &mqc_states[59] },
+	{ 0x0221, 0, &mqc_states[76], &mqc_states[66] },
+	{ 0x0221, 1, &mqc_states[77], &mqc_states[67] },
+	{ 0x5601, 0, &mqc_states[14], &mqc_states[13] },
+	{ 0x5601, 1, &mqc_states[15], &mqc_states[12] },
+	{ 0x5401, 0, &mqc_states[16], &mqc_states[28] },
+	{ 0x5401, 1, &mqc_states[17], &mqc_states[29] },
+	{ 0x4801, 0, &mqc_states[18], &mqc_states[28] },
+	{ 0x4801, 1, &mqc_states[19], &mqc_states[29] },
+	{ 0x3801, 0, &mqc_states[20], &mqc_states[28] },
+	{ 0x3801, 1, &mqc_states[21], &mqc_states[29] },
+	{ 0x3001, 0, &mqc_states[22], &mqc_states[34] },
+	{ 0x3001, 1, &mqc_states[23], &mqc_states[35] },
+	{ 0x2401, 0, &mqc_states[24], &mqc_states[36] },
+	{ 0x2401, 1, &mqc_states[25], &mqc_states[37] },
+	{ 0x1c01, 0, &mqc_states[26], &mqc_states[40] },
+	{ 0x1c01, 1, &mqc_states[27], &mqc_states[41] },
+	{ 0x1601, 0, &mqc_states[58], &mqc_states[42] },
+	{ 0x1601, 1, &mqc_states[59], &mqc_states[43] },
+	{ 0x5601, 0, &mqc_states[30], &mqc_states[29] },
+	{ 0x5601, 1, &mqc_states[31], &mqc_states[28] },
+	{ 0x5401, 0, &mqc_states[32], &mqc_states[28] },
+	{ 0x5401, 1, &mqc_states[33], &mqc_states[29] },
+	{ 0x5101, 0, &mqc_states[34], &mqc_states[30] },
+	{ 0x5101, 1, &mqc_states[35], &mqc_states[31] },
+	{ 0x4801, 0, &mqc_states[36], &mqc_states[32] },
+	{ 0x4801, 1, &mqc_states[37], &mqc_states[33] },
+	{ 0x3801, 0, &mqc_states[38], &mqc_states[34] },
+	{ 0x3801, 1, &mqc_states[39], &mqc_states[35] },
+	{ 0x3401, 0, &mqc_states[40], &mqc_states[36] },
+	{ 0x3401, 1, &mqc_states[41], &mqc_states[37] },
+	{ 0x3001, 0, &mqc_states[42], &mqc_states[38] },
+	{ 0x3001, 1, &mqc_states[43], &mqc_states[39] },
+	{ 0x2801, 0, &mqc_states[44], &mqc_states[38] },
+	{ 0x2801, 1, &mqc_states[45], &mqc_states[39] },
+	{ 0x2401, 0, &mqc_states[46], &mqc_states[40] },
+	{ 0x2401, 1, &mqc_states[47], &mqc_states[41] },
+	{ 0x2201, 0, &mqc_states[48], &mqc_states[42] },
+	{ 0x2201, 1, &mqc_states[49], &mqc_states[43] },
+	{ 0x1c01, 0, &mqc_states[50], &mqc_states[44] },
+	{ 0x1c01, 1, &mqc_states[51], &mqc_states[45] },
+	{ 0x1801, 0, &mqc_states[52], &mqc_states[46] },
+	{ 0x1801, 1, &mqc_states[53], &mqc_states[47] },
+	{ 0x1601, 0, &mqc_states[54], &mqc_states[48] },
+	{ 0x1601, 1, &mqc_states[55], &mqc_states[49] },
+	{ 0x1401, 0, &mqc_states[56], &mqc_states[50] },
+	{ 0x1401, 1, &mqc_states[57], &mqc_states[51] },
+	{ 0x1201, 0, &mqc_states[58], &mqc_states[52] },
+	{ 0x1201, 1, &mqc_states[59], &mqc_states[53] },
+	{ 0x1101, 0, &mqc_states[60], &mqc_states[54] },
+	{ 0x1101, 1, &mqc_states[61], &mqc_states[55] },
+	{ 0x0ac1, 0, &mqc_states[62], &mqc_states[56] },
+	{ 0x0ac1, 1, &mqc_states[63], &mqc_states[57] },
+	{ 0x09c1, 0, &mqc_states[64], &mqc_states[58] },
+	{ 0x09c1, 1, &mqc_states[65], &mqc_states[59] },
+	{ 0x08a1, 0, &mqc_states[66], &mqc_states[60] },
+	{ 0x08a1, 1, &mqc_states[67], &mqc_states[61] },
+	{ 0x0521, 0, &mqc_states[68], &mqc_states[62] },
+	{ 0x0521, 1, &mqc_states[69], &mqc_states[63] },
+	{ 0x0441, 0, &mqc_states[70], &mqc_states[64] },
+	{ 0x0441, 1, &mqc_states[71], &mqc_states[65] },
+	{ 0x02a1, 0, &mqc_states[72], &mqc_states[66] },
+	{ 0x02a1, 1, &mqc_states[73], &mqc_states[67] },
+	{ 0x0221, 0, &mqc_states[74], &mqc_states[68] },
+	{ 0x0221, 1, &mqc_states[75], &mqc_states[69] },
+	{ 0x0141, 0, &mqc_states[76], &mqc_states[70] },
+	{ 0x0141, 1, &mqc_states[77], &mqc_states[71] },
+	{ 0x0111, 0, &mqc_states[78], &mqc_states[72] },
+	{ 0x0111, 1, &mqc_states[79], &mqc_states[73] },
+	{ 0x0085, 0, &mqc_states[80], &mqc_states[74] },
+	{ 0x0085, 1, &mqc_states[81], &mqc_states[75] },
+	{ 0x0049, 0, &mqc_states[82], &mqc_states[76] },
+	{ 0x0049, 1, &mqc_states[83], &mqc_states[77] },
+	{ 0x0025, 0, &mqc_states[84], &mqc_states[78] },
+	{ 0x0025, 1, &mqc_states[85], &mqc_states[79] },
+	{ 0x0015, 0, &mqc_states[86], &mqc_states[80] },
+	{ 0x0015, 1, &mqc_states[87], &mqc_states[81] },
+	{ 0x0009, 0, &mqc_states[88], &mqc_states[82] },
+	{ 0x0009, 1, &mqc_states[89], &mqc_states[83] },
+	{ 0x0005, 0, &mqc_states[90], &mqc_states[84] },
+	{ 0x0005, 1, &mqc_states[91], &mqc_states[85] },
+	{ 0x0001, 0, &mqc_states[90], &mqc_states[86] },
+	{ 0x0001, 1, &mqc_states[91], &mqc_states[87] },
+	{ 0x5601, 0, &mqc_states[92], &mqc_states[92] },
+	{ 0x5601, 1, &mqc_states[93], &mqc_states[93] },
 };
 
 
@@ -179,7 +185,6 @@ int** alocaMatrice(const int m, const int n)
 
 	return matrix;
 }
-
 int*** TripleAlocaMatrice(const int m, const int n, const int ell)
 {
 	int ***matrix, i, j, k;
@@ -197,7 +202,6 @@ int*** TripleAlocaMatrice(const int m, const int n, const int ell)
 	global_memory_counter = global_memory_counter + m*n * ell * sizeof(int);
 	return matrix;
 }
-
 double** DoubleAlocaMatrice(const int m, const int n)
 {
 	double **matrix;
@@ -370,14 +374,14 @@ void get_gSR_matrix(void) // get gSR and gr(odd,even) and gr(even,odd) from gr(o
 	for (ir = 0; ir < NR; ir++)
 		for (ic = 0; ic < NC; ic++)
 		{
-			if (ic > 0)
+			if (ic>0)
 				if (gr[2 * ir + 3][2 * (ic - 1) + 3] != gr[2 * ir + 3][2 * ic + 3])
 				{
 					gr[2 * ir + 3][2 * ic + 2] = 1;
 					gSR[ir][ic] = 1;
 				}
 
-			if (ir > 0)
+			if (ir>0)
 				if (gr[2 * (ir - 1) + 3][2 * ic + 3] != gr[2 * ir + 3][2 * ic + 3])
 				{
 					gr[2 * ir + 2][2 * ic + 3] = 1;
@@ -391,7 +395,6 @@ void get_gSR_matrix(void) // get gSR and gr(odd,even) and gr(even,odd) from gr(o
 		for (j = 0; j < NC; j++)
 			gr[3 + 2 * i][3 + 2 * j] = 0;
 }
-
 void get_gSR_from_gr_matrix(void) // get gSR FROM gr(odd,even) and gr(even,odd); Reset gr(odd,odd)
 {
 	int ic, ir;
@@ -400,13 +403,13 @@ void get_gSR_from_gr_matrix(void) // get gSR FROM gr(odd,even) and gr(even,odd);
 	for (ir = 0; ir < NR; ir++)
 		for (ic = 0; ic < NC; ic++)
 		{
-			if (ic > 0)
+			if (ic>0)
 				if (gr[2 * ir + 3][2 * ic + 2] == 1)
 				{
 					gSR[ir][ic] = 1;
 				}
 
-			if (ir > 0)
+			if (ir>0)
 				if (gr[2 * ir + 2][2 * ic + 3] == 1)
 				{
 					gSR[ir][ic] += 2;
@@ -431,6 +434,7 @@ int lengthBin(int v)
 	}
 	return i;
 }
+
 
 
 int int_cmp(const void *a, const void *b)
@@ -465,9 +469,9 @@ void decodeContour2(int method)
 	FILE *filept1;
 
 	ns = 2;
-	My_no_of_symbols = ns;
-	My_no_of_rows = NS_NCON * 2; // 1 + 3*(1 + 4 + 4^2 + 4^3 + 4^4)
-	MODEL = method;
+	//My_no_of_symbols = ns;
+	//My_no_of_rows = NS_NCON * 2; // 1 + 3*(1 + 4 + 4^2 + 4^3 + 4^4)
+	//MODEL = method;
 
 
 
@@ -480,13 +484,40 @@ void decodeContour2(int method)
 	for (i = 1; i <= NCON; i++)
 		putere[i] = putere[i - 1] * ns;
 
+	//start_model();
+	//cum_freq[0] = 1001;
+	//cum_freq[1] = 501;
+	//cum_freq[2] = 1;
+
+	//start_model2();
+
+	//filept1 = fopen("temp.mqc","rb");
+
+	//bp = (OPJ_BYTE*)opj_calloc(100000,sizeof(OPJ_BYTE));
+
+	////scanf(&stopit);
+
+	//nBITSTREAM = 0;
+	//while( (fread((bp+nBITSTREAM),sizeof(OPJ_BYTE),1,filept1))>0){
+	//	//bpp = 0;
+	//	//bp[0] = bpp;
+	//	//*(bp+nBITSTREAM) = bpp;
+
+	//	//if(nBITSTREAM<10)
+	//	//printf("bp[%d] = %d\n",nBITSTREAM,bp[nBITSTREAM]);
+
+	//	nBITSTREAM++;
+	//	
+	//}
+	//fclose(filept1);
+
 	fread(&n_bytes_bs, sizeof(OPJ_UINT32), 1, outputFile);
 
 	bp = (OPJ_BYTE*)opj_calloc(n_bytes_bs, sizeof(OPJ_BYTE));
 
 	fread(bp, sizeof(OPJ_BYTE), n_bytes_bs, outputFile);
 
-	printf("nBITSTREAM %d\n", nBITSTREAM);
+//	printf("nBITSTREAM %d\n", nBITSTREAM);
 
 	mqc = (opj_mqc_t*)opj_malloc(sizeof(opj_mqc_t));
 
@@ -521,14 +552,20 @@ void decodeContour2(int method)
 			if (ToknowT[i][ell] == 1)
 			{
 				context = symbol;
-
+				//// symbol = decode_symbol(cum_freq, outputFile)-1;
+				//symbol = decode_symbol(cum_freq2[context], outputFile);
+				//update_model2(symbol, context);
+				//symbol = symbol - 1;
 
 				opj_mqc_setcurctx(mqc, context);
 				opj_mqc_decode(dopj, mqc);
 
 				symbol = dopj;
 
-
+				//if( symbol == dopj ){
+				//	printf("symbol = %d dopj = %d , nBITSTREAM=%dERROR\n",symbol,dopj,nBITSTREAM);
+				//	//scanf(&stopit);
+				//}
 
 				BITSTREAM[nBITSTREAM] = symbol;
 				nBITSTREAM = nBITSTREAM + 1;
@@ -550,7 +587,25 @@ void decodeContour2(int method)
 	free(mqc);
 	free(bp);
 
+	// exit(0);
+	// for(i=0;i<nBITSTREAM;i++)
+	// printf("%d \n",BITSTREAM[i]);
 
+
+
+	// Now decode gr
+	// start_model2();
+
+	// initializeaza
+	//for (i = 0; i < My_no_of_rows; i++)
+	//{
+	//	for (j = 0; j <= My_no_of_symbols; j++)
+	//	{
+	//		freq2[i][j] = 1;
+	//		cum_freq2[i][j] = NS - j;  // cum_freq2[i][j] = My_no_of_symbols-j;
+	//	}
+	//	freq2[i][0] = 0;
+	//}
 
 	gr = alocaMatrice(2 * NR + 4, 2 * NC + 4);
 
@@ -558,7 +613,24 @@ void decodeContour2(int method)
 		for (ic2 = 0; ic2 <= (2 * NC + 1); ic2++)
 			gr[ir2][ic2] = 0;
 
+	// put to zero the horiz. edges above the first line
 
+	//	for (j=0; j<NC; j++)
+	//		gr[2][2+2*j] = 1;
+
+
+
+	/*filept1 = fopen("temp1.mqc","rb");*/
+
+	//bp = (OPJ_BYTE*)opj_calloc(10000000,sizeof(OPJ_BYTE));
+
+	//nBITSTREAM = 0;
+	//while( (fread((bp+nBITSTREAM),sizeof(OPJ_BYTE),1,filept1))>0){
+
+	//	nBITSTREAM++;
+	//	
+	//}
+	//fclose(filept1);
 
 
 
@@ -610,7 +682,7 @@ void decodeContour2(int method)
 			else
 			{
 				stopit = 0;
-				for (icon = 1; icon < NCON; icon++)
+				for (icon = 1; icon<NCON; icon++)
 				{
 					if (SplitT1[Cgr][icon - 1] == 0)
 					{
@@ -629,12 +701,12 @@ void decodeContour2(int method)
 								Cgr = Cgr + 1;
 					}
 				}
-				if (Cgr > NS_NCON - 1)
+				if (Cgr>NS_NCON - 1)
 					printf("Error context:  [%d] \n", Cgr);
 				context = Cgr;
 			}
 
-			if ((ver == 1) && (nCgr3 == 3) && (Cgr3 < 2) && (ir2 > 3))
+			if ((ver == 1) && (nCgr3 == 3) && (Cgr3 < 2) && (ir2>3))
 			{	// Deterministic cases
 				if (Cgr3 == 0)
 					gr[ir2][ic2] = 0;
@@ -644,7 +716,8 @@ void decodeContour2(int method)
 			}
 			else
 			{
-
+				//symbol = decode_symbol(cum_freq2[context], outputFile);
+				//update_model2(symbol, context);
 
 				opj_mqc_setcurctx(mqc, context);
 				opj_mqc_decode(dopj, mqc);
@@ -664,7 +737,7 @@ void decodeContour2(int method)
 
 	// Now decode gSR
 	get_gSR_from_gr_matrix();
-	free_model();
+
 	free(putere);
 	free(BITSTREAM);
 
@@ -683,12 +756,19 @@ void encodeContour2(int method)
 {
 	int i, j, ell, k, ic, ir, ns, context, context0, symbol, s;
 	int* putere;
-
+	//	int Ncounts[NS_NCON][NS];   // [index][crt_symb]
+	//	int Dist[NS_NCON][NS][NCON];   // [index][crt_symb][depth]
+	//	char SplitT[NS_NCON][NCON],SplitT1[NS_NCON][NCON];   // [index][depth]
+	//	char ToknowT[NS_NCON][NCON],ToknowT1[NS_NCON][NCON];   // [index][depth]
+	//	double CL[NS_NCON][NCON], CLprop[NS_NCON][NCON];  // [index][depth]
+	//	double slog2n[100000],slog2deln[100000];
 	double delta, CLchildren, CLTot, AddCost;
 	int contexti[20];  // for safety reason
 	int nBITSTREAM, nsb; //  BITSTREAM[NS_NCON],
 	int* BITSTREAM = (int*)calloc(NS_NCON, sizeof(int));
-
+	//
+	// LargetsCount = number_rows*number_columns +10= NR*NC+10 = 8294410 for 4K images
+	//
 
 	double* slog2n = (double*)calloc(LargetsCount, sizeof(double));
 	double* slog2deln = (double*)calloc(LargetsCount, sizeof(double));
@@ -748,9 +828,9 @@ void encodeContour2(int method)
 			Ncounts[i][ell] = 0;
 	}
 
-	My_no_of_symbols = ns;
-	My_no_of_rows = NS_NCON * 2; // 1 + 3*(1 + 4 + 4^2 + 4^3 + 4^4)
-	MODEL = method;
+	//My_no_of_symbols = ns;
+	//My_no_of_rows = NS_NCON * 2; // 1 + 3*(1 + 4 + 4^2 + 4^3 + 4^4)
+	//MODEL = method;
 
 	// Colect the counts for encoding the whole gr image
 	nnCgr3 = 0;
@@ -779,7 +859,7 @@ void encodeContour2(int method)
 			}
 			else
 			{
-				for (icon = 1; icon < NCON; icon++)
+				for (icon = 1; icon<NCON; icon++)
 				{
 					Cgr = 2 * Cgr;
 					if ((ir2 + drc[icon - 1][ver2] >= 0) && (ic2 + drc[icon - 1][ver2 + 1] >= 0) && (ic2 + drc[icon - 1][ver2 + 1] <= 2 * NC + 1))
@@ -793,10 +873,10 @@ void encodeContour2(int method)
 							Cgr = Cgr + 1;
 					}
 				}
-				if (Cgr > NS_NCON - 1)
+				if (Cgr>NS_NCON - 1)
 					printf("Error context:  [%d] \n", Cgr);
 				context = Cgr;
-				if ((ver == 1) && (nCgr3 == 3) && (Cgr3 < 2) && (ir2 > 3))
+				if ((ver == 1) && (nCgr3 == 3) && (Cgr3 < 2) && (ir2>3))
 				{	// Deterministic cases
 					//if(Cgr3==0)
 					//	gr[ir2][ic2] = 0;
@@ -890,6 +970,12 @@ void encodeContour2(int method)
 		AddCost = 1; // the cost for specifying the type of nodes is one
 	}
 
+	//for (j=0; j<NCON; j++)
+	//{
+	//	for (i=0; i<putere[NCON-1]; i++)
+	//		fwrite(&CL[i][j], sizeof(double), 1, C4Matlab);
+	//}
+
 	CLTot = 0;
 	for (j = 0; j < ns; j++)
 		CLTot = CLTot + CLprop[j][0];
@@ -911,7 +997,9 @@ void encodeContour2(int method)
 		//printf("%d\n",iopj);
 	}
 
+	//exit(0);
 
+	//opj_mqc_resetstates(mqc);
 
 
 
@@ -919,7 +1007,45 @@ void encodeContour2(int method)
 
 
 
+	/*for(iopj = 0; iopj < 100; iopj++){
+	dopj = iopj%2;
+	opj_mqc_setcurctx(mqc, 0);
+	opj_mqc_encode(mqc, dopj);
+	}
 
+	opj_mqc_flush(mqc);
+
+	for(iopj=0;iopj<50;iopj++)
+	printf("ii %d = %d\n",iopj,*(bp+iopj+1));
+
+	free(mqc);
+
+	mqc = (opj_mqc_t*) opj_malloc(sizeof(opj_mqc_t));
+
+	bp_dec = (OPJ_BYTE*)opj_calloc(1000,sizeof(OPJ_BYTE));
+
+	opj_mqc_resetstates(mqc);
+
+	opj_mqc_init_dec( mqc, bp, 50, 20 );
+
+	for(iopj=0;iopj<50;iopj++){
+	opj_mqc_setcurctx(mqc, 0);
+	opj_mqc_decode(dopj,mqc);
+	printf("ii %d = %d\n",iopj,dopj);
+	}
+
+
+
+	exit(0);*/
+
+	// Encode in BITSTREAM the structure of the tree
+
+	//start_model();
+	//cum_freq[0] = 1001;
+	//cum_freq[1] = 501;
+	//cum_freq[2] = 1;
+
+	//start_model2();
 
 	// Initialize ToknowT
 	for (ell = 0; ell < NCON; ell++)   // current depth level in the tree
@@ -950,7 +1076,9 @@ void encodeContour2(int method)
 					opj_mqc_setcurctx(mqc, context);
 					opj_mqc_encode(mqc, symbol - 1);
 
-
+					// encode_symbol(symbol, cum_freq, outputFile);
+					//encode_symbol(symbol, cum_freq2[context], outputFile);
+					//update_model2(symbol, context);
 					for (k = 0; k < ns; k++)
 						ToknowT[i*ns + k][ell + 1] = 1;
 				}
@@ -959,12 +1087,13 @@ void encodeContour2(int method)
 					BITSTREAM[nBITSTREAM] = 0;
 					context = symbol - 1;
 					symbol = 1;
-
+					// encode_symbol(symbol, cum_freq, outputFile);
 
 					opj_mqc_setcurctx(mqc, context);
 					opj_mqc_encode(mqc, symbol - 1);
 
-
+					//encode_symbol(symbol, cum_freq2[context], outputFile);
+					//update_model2(symbol, context);
 				}
 				nBITSTREAM = nBITSTREAM + 1;
 			}
@@ -981,7 +1110,12 @@ void encodeContour2(int method)
 	printf(" \n");
 
 
+	//for(i=0;i<dopj;i++)
+	//printf("bp[%d]=%d\n",i,bp[i]);
 
+	//filept1 = fopen("temp.mqc","wb");
+	/*fwrite(bp,sizeof(OPJ_BYTE),dopj,filept1);*/
+	//fclose(filept1);
 
 	fwrite(&dopj, sizeof(OPJ_UINT32), 1, outputFile);
 	fwrite(bp, sizeof(OPJ_BYTE), dopj, outputFile);
@@ -989,7 +1123,20 @@ void encodeContour2(int method)
 	free(mqc);
 	free(bp);
 
+	//exit(0);
 
+	/*opj_mqc_resetstates(mqc);
+
+	opj_mqc_init_dec( mqc, bp, 50, 20 );
+
+	for(iopj=0;iopj<50;iopj++){
+	opj_mqc_setcurctx(mqc, 0);
+	opj_mqc_decode(dopj,mqc);
+	printf("ii %d = %d\n",iopj,dopj);
+	}*/
+
+
+	//printf("nBITSTREAM [%d]  \n",nBITSTREAM);
 
 	// Decode from BITSTREAM the structure of the tree
 	// Initialize ToknowT and SplitT1
@@ -1028,6 +1175,22 @@ void encodeContour2(int method)
 			}
 	}
 
+
+
+	//nerr= 0;
+	//for(ell=0; ell<4; ell++)   // current depth level in the tree
+	//	for (i=0; i<putere[ell]; i++) // current context
+	//		if(SplitT1[i][ell] != SplitT[i][ell])
+	//		{
+	//			nerr = nerr +1;
+	//			printf("context:  [%d] depth [%d] True  [%d]  Reconstr  [%d]  \n",i,ell,SplitT[i][ell],SplitT1[i][ell] );
+	//		}
+	//printf("Number of errors:  [%d] nBITSTREAM [%d]  \n",nerr,nBITSTREAM);
+
+
+	// for(i=0;i<nBITSTREAM;i++)
+	//	printf("%d \n",BITSTREAM[i]);
+
 	mqc = (opj_mqc_t*)opj_malloc(sizeof(opj_mqc_t));
 
 	bp = (OPJ_BYTE*)opj_calloc(10000000, sizeof(OPJ_BYTE));
@@ -1039,6 +1202,18 @@ void encodeContour2(int method)
 	}
 
 	opj_mqc_init_enc(mqc, bp);
+
+	// start_model2();
+	// initializeaza
+	//for (i = 0; i < My_no_of_rows; i++)
+	//{
+	//	for (j = 0; j <= My_no_of_symbols; j++)
+	//	{
+	//		freq2[i][j] = 1;
+	//		cum_freq2[i][j] = NS - j;  // cum_freq2[i][j] = My_no_of_symbols-j;
+	//	}
+	//	freq2[i][0] = 0;
+	//}
 
 	nnCgr3 = 0;
 	CLTot = 0.;
@@ -1067,7 +1242,7 @@ void encodeContour2(int method)
 			else
 			{
 				stopit = 0;
-				for (icon = 1; icon < NCON; icon++)
+				for (icon = 1; icon<NCON; icon++)
 				{
 					if (SplitT1[Cgr][icon - 1] == 0)
 					{
@@ -1086,19 +1261,24 @@ void encodeContour2(int method)
 								Cgr = Cgr + 1;
 					}
 				}
-				if (Cgr > NS_NCON - 1)
+				if (Cgr>NS_NCON - 1)
 					printf("Error context:  [%d] \n", Cgr);
 				context = Cgr;
 			}
 
-			if ((ver == 1) && (nCgr3 == 3) && (Cgr3 < 2) && (ir2 > 3))
+			if ((ver == 1) && (nCgr3 == 3) && (Cgr3 < 2) && (ir2>3))
 			{	// Deterministic cases
-
+				//if(Cgr3==0)
+				//	gr[ir2][ic2] = 0;
+				//else
+				//	gr[ir2][ic2] = 1;
 				nnCgr3 = nnCgr3 + 1;
 			}
 			else
 			{
-
+				//encode_symbol(symbol, cum_freq2[context], outputFile);
+				//CLTot = CLTot - log((double)(cum_freq2[context][symbol - 1] - cum_freq2[context][symbol]) / cum_freq2[context][0]) / log(2);
+				//update_model2(symbol, context);
 
 				opj_mqc_setcurctx(mqc, context);
 				opj_mqc_encode(mqc, symbol - 1);
@@ -1112,6 +1292,9 @@ void encodeContour2(int method)
 
 	dopj = opj_mqc_numbytes(mqc);
 
+	//filept1 = fopen("temp1.mqc","wb");
+	//fwrite(bp,sizeof(OPJ_BYTE),dopj,filept1);
+	//fclose(filept1);
 
 	fwrite(&dopj, sizeof(OPJ_UINT32), 1, outputFile);
 	fwrite(bp, sizeof(OPJ_BYTE), dopj, outputFile);
@@ -1119,6 +1302,13 @@ void encodeContour2(int method)
 	free(mqc);
 	free(bp);
 
+
+	//printf("nnCgr3 [%d] \n",nnCgr3);
+	//printf("Code length Real: [%.3f] \n",CLTot);
+
+	// scanf(&dummy);
+
+	//free_model();
 
 	free(BITSTREAM);
 	free(slog2deln);
@@ -1149,572 +1339,6 @@ void encodeContour2(int method)
 }
 
 
-double TreatSegment(int istart, int iend, int known, int val, int* excluded, int nex, int ir, double CL, int ENCODEIT, int* valregions)
-{
-	double CL1;
-	int i, j, k, context, ref;
-	int* uex;
-	int* of_interest;
-	int nuex;
-	double center[40000];
-	int icenter[40000], card_center[40000], ncen;
-	int isemptyindex, possible, possible_value, index_poss, i1, i2, unique;
-	int classified, n_groups;
-	double CL10;
-	int ip;
-	int contextp;
-	int nbest, ibest, ncou;
-	int index_poss_cr, valr, symbol;
-
-	CL1 = CL;
-	if (known > 0)
-	{	// no need to encode anything
-		for (i = istart; i <= iend; i++)
-		{
-			Himg[ir][i] = known;
-			valregions[Cimg[ir][i]] = Himg[ir][i];
-		}
-		return CL1;
-	}
-
-
-	if (valregions[Cimg[ir][istart]] > 0)
-	{	// no need to encode anything
-		if ((valregions[Cimg[ir][istart]] != val) && (ENCODEIT == 1)) {
-			printf(" Errors  [%d] [%d]  \n", valregions[Cimg[ir][istart]], val);
-		}
-		for (i = istart; i <= iend; i++)
-		{
-			Himg[ir][i] = valregions[Cimg[ir][istart]];
-			valregions[Cimg[ir][i]] = Himg[ir][i];
-		}
-		return CL1;
-	}
-
-	uex = alocaVector(NC + 1);   // unique values in excluded
-	of_interest = alocaVector(2 * MAX_NICE + 1);  // displacements of interests
-	of_interest[0] = 0;
-	for (i = 1; i < MAX_NICE; i++)
-	{
-		of_interest[2 * i] = -i;
-		of_interest[2 * i + 1] = i;
-	}
-
-
-	//  We need to encode: Here the simplest case: no neighbors
-
-	//	if(ir==4)
-	//		scanf(&i);
-	if (nex == 0)  // 0 known neighbors: Encode and exit
-	{
-		if (ENCODEIT == 1)
-		{
-			//printf("case1\n");
-			context = 0;
-
-			for (i = istart; i <= iend; i++)
-			{
-				Himg[ir][i] = val;
-				valregions[Cimg[ir][i]] = Himg[ir][i];
-			}
-			free(uex);
-			free(of_interest);
-			return CL1;
-		}
-		else  // DECODE = 1
-		{
-			context = 0;
-			//valr = decode_symbol(cum_freq30[context], outputFile);
-			//update_model3(valr, context);
-			for (i = istart; i <= iend; i++)
-			{
-				Himg[ir][i] = valr;
-				valregions[Cimg[ir][i]] = Himg[ir][i];
-			}
-			free(uex);
-			free(of_interest);
-			return CL1;
-		}
-	}
-
-
-	// We have some neighbors: Find the distinct neighbours and put them in uex
-	nuex = 1;
-	uex[0] = excluded[0];
-	for (i = 1; i < nex; i++)
-	{
-		unique = 1;
-		for (j = 0; j < nuex; j++)
-			if (uex[j] == excluded[i])
-			{
-				unique = 0;
-				break;
-			}
-		if (unique == 1)
-		{
-			nuex = nuex + 1;
-			uex[nuex - 1] = excluded[i];
-		}
-	}
-
-	// the main separation to cases depending on number of distinct neighbors
-	switch (nuex)	// depending on how many distinct values
-	{
-	case 1:
-	{
-		if (ENCODEIT == 1)
-		{
-			//printf("case2\n");
-			// regions with 1 distinct neighbour
-			context = 0;
-			isemptyindex = 1;
-			for (j = 1; j < 2 * MAX_NICE + 1; j++)
-			{
-				possible_value = uex[0] + of_interest[j];
-				if (possible_value == val)
-				{
-					index_poss = j - 1;
-					isemptyindex = 0;
-				}
-			}
-		}
-		else // if(DECODE == 1)
-		{
-			context = 0;
-
-			isemptyindex = symbol - 1;
-			// decode first isemptyindex
-			if (isemptyindex == 0)
-			{
-				//symbol = decode_symbol(cum_freq30[context + 5], outputFile);
-				//update_model3(symbol, context + 5);
-				index_poss = symbol - 1;
-				valr = uex[0] + of_interest[index_poss + 1];
-			}
-			else
-			{
-				// decode val
-				context = 0;
-				//valr = decode_symbol(cum_freq30[context], outputFile);
-				//update_model3(valr, context);
-			}
-		}
-	}
-	break;
-	case 2:
-	{  // regions with 2 distinct neighbours close to each other
-		if (abs(uex[0] - uex[1]) < MAX_NICE)
-		{
-			if (ENCODEIT == 1)
-			{
-				//printf("case3\n");
-				context = 1;
-				ref = (uex[0] + uex[1]) / 2;
-				isemptyindex = 1;
-				index_poss = 0;
-				for (j = 0; j < 2 * MAX_NICE + 1; j++)
-				{
-					possible_value = ref + of_interest[j];
-					if ((possible_value != uex[0]) & (possible_value != uex[1]))
-						if (possible_value == val)
-						{
-							isemptyindex = 0;
-							break;
-						}
-						else
-						{
-							index_poss = index_poss + 1;
-						}
-				}
-			}
-			else  //  if(DECODE == 1)
-			{
-				context = 1;
-
-				isemptyindex = symbol - 1;
-				// decode first isemptyindex
-				if (isemptyindex == 0)
-				{
-
-					index_poss = symbol - 1;
-					ref = (uex[0] + uex[1]) / 2;
-					index_poss_cr = 0;
-					for (j = 0; j < 2 * MAX_NICE + 1; j++)
-					{
-						possible_value = ref + of_interest[j];
-						if ((possible_value != uex[0]) & (possible_value != uex[1]))
-							if (index_poss_cr == index_poss)
-							{
-								valr = possible_value;
-								break;
-							}
-							else
-							{
-								index_poss_cr = index_poss_cr + 1;
-							}
-					}
-				}
-				else
-				{ // Decode val
-					context = 0;
-					//valr = decode_symbol(cum_freq30[context], outputFile);
-					//update_model3(valr, context);
-				}
-			}
-		}
-		else
-		{	// regions with 2 distinct neighbours far apart
-			if (ENCODEIT == 1)
-			{
-				//printf("case4\n");
-				context = 2;
-				isemptyindex = 1;
-				for (j = 1; j < MAX_NICE; j++)
-				{
-					possible_value = uex[0] + of_interest[j];
-					if (possible_value == val)
-					{
-						index_poss = 2 * (j - 1);
-						isemptyindex = 0;
-						break;
-					}
-					possible_value = uex[1] + of_interest[j];
-					if (possible_value == val)
-					{
-						index_poss = 2 * (j - 1) + 1;
-						isemptyindex = 0;
-						break;
-					}
-				}
-			}
-			else    // if(DECODE == 1)
-			{
-				context = 2;
-
-				isemptyindex = symbol - 1;
-				// decode first isemptyindex
-				if (isemptyindex == 0)
-				{
-					//symbol = decode_symbol(cum_freq30[context + 5], outputFile);
-					//update_model3(symbol, context + 5);
-					index_poss = symbol - 1;
-					for (j = 1; j < MAX_NICE; j++)
-					{
-						possible_value = uex[0] + of_interest[j];
-						if (index_poss == 2 * (j - 1))
-						{
-							valr = possible_value;
-							break;
-						}
-						possible_value = uex[1] + of_interest[j];
-						if (index_poss == 2 * (j - 1) + 1)
-						{
-							valr = possible_value;
-							break;
-						}
-					}
-				}
-				else
-				{ // decode val
-					context = 0;
-					//valr = decode_symbol(cum_freq30[context], outputFile);
-					//update_model3(valr, context);
-				}
-			}
-		}
-	}
-	break;
-	default:
-	{
-		if (0)
-		{
-			// find  the median  of uex
-			nbest = nuex; ibest = 0;
-			for (i = 0; i < nuex; i++)
-			{ // candidate median is uex[i]
-				ncou = 0;
-				for (j = 0; j < nuex; j++)
-					if (uex[j] < uex[i])
-						ncou = ncou + 1;
-				if (abs(ncou - (nuex / 2)) < nbest)
-				{
-					nbest = abs(ncou - (nuex / 2));
-					ibest = i;
-				}
-			}
-			ref = uex[ibest];
-
-			n_groups = 1;
-		}
-		else
-		{
-
-			// more than 2 neighbors; Partition them into distinct groups, around the points in "centers"
-			icenter[0] = uex[0];
-			center[0] = (double)uex[0];
-			card_center[0] = 1;
-			ncen = 1;
-			for (i = 1; i < nuex; i++)
-			{
-				classified = 0;
-				for (j = 0; j < ncen; j++)
-				{
-					if (abs(uex[i] - icenter[j]) < MAX_NICE)
-					{
-						card_center[j] = card_center[j] + 1;
-						center[j] = (uex[i] + (card_center[j] - 1)*center[j]) / card_center[j];
-						icenter[j] = (int)floor(center[j] + 0.5);
-						classified = 1;
-						break;
-					}
-				}   // end of for(i=1; i<nuex; i++)
-				if (classified == 0)
-				{
-					ncen = ncen + 1;
-					center[ncen - 1] = (double)uex[i];
-					icenter[ncen - 1] = uex[i];
-					card_center[ncen - 1] = 1;
-				}
-			}   // for(i=1; i<nuex; i++)
-			n_groups = 0;
-			// select the two most populated regions
-			if (ncen == 1)
-			{
-				n_groups = 1;
-				i1 = 0;    // index of (the only one and best) center
-				ref = icenter[i1];
-			}
-			else
-			{
-				if (ncen == 2)
-				{
-					n_groups = 2;
-					i1 = 0; i2 = 1;
-				}
-				else   // else of if(ncen== 2
-				{
-					n_groups = 2;
-					i1 = 0;
-					for (i = 1; i < ncen; i++)
-						if (card_center[i1] < card_center[i])
-							i1 = i;
-					if (i1 != 0)
-						i2 = 0;
-					else
-						i2 = 1;
-
-					for (i = 0; i < ncen; i++)
-						if ((card_center[i2] < card_center[i]) & (i != i1))
-							i2 = i;
-				}  // end of if(ncen == 2
-			}   //  end of  if(ncen == 1)
-		}
-		if (n_groups == 2)
-		{
-			if (abs(icenter[i1] - icenter[i2]) > MAX_NICE)
-			{	// regions with 2 neighbours far apart
-				context = 4;
-				if (ENCODEIT == 1)
-				{
-					isemptyindex = 1;
-					index_poss = 0;
-					for (j = 0; j < MAX_NICE; j++)
-					{
-						possible_value = icenter[i1] + of_interest[j];
-						possible = 1;
-						for (k = 0; k < nuex; k++)
-							if (possible_value == uex[k])
-								possible = 0;
-						if (possible)
-						{
-							if (possible_value == val)
-							{
-								isemptyindex = 0;
-								break;
-							}
-							else
-							{
-								index_poss = index_poss + 1;
-							}
-						}
-						possible_value = icenter[i2] + of_interest[j];
-						possible = 1;
-						for (k = 0; k < nuex; k++)
-							if (possible_value == uex[k])
-								possible = 0;
-						if (possible)
-						{
-							if (possible_value == val)
-							{
-								isemptyindex = 0;
-								break;
-							}
-							else
-							{
-								index_poss = index_poss + 1;
-							}
-						}
-					}   // end of for(j=1; j<MAX_NICE; j++)
-				}
-				else    ///if(DECODE == 1)
-				{	// decode first isemptyindex
-
-					isemptyindex = symbol - 1;
-					if (isemptyindex == 0)
-					{
-						/*	symbol = decode_symbol(cum_freq30[context + 5], outputFile);
-							update_model3(symbol, context + 5);
-				*/			index_poss = symbol - 1;
-					index_poss_cr = 0;
-					for (j = 0; j < MAX_NICE; j++)
-					{
-						possible_value = icenter[i1] + of_interest[j];
-						possible = 1;
-						for (k = 0; k < nuex; k++)
-							if (possible_value == uex[k])
-								possible = 0;
-						if (possible)
-						{
-							if (index_poss_cr == index_poss)
-							{
-								valr = possible_value;
-								isemptyindex = 0;
-								break;
-							}
-							else
-							{
-								index_poss_cr = index_poss_cr + 1;
-							}
-						}
-						possible_value = icenter[i2] + of_interest[j];
-						possible = 1;
-						for (k = 0; k < nuex; k++)
-							if (possible_value == uex[k])
-								possible = 0;
-						if (possible)
-						{
-							if (index_poss_cr == index_poss)
-							{
-								valr = possible_value;
-								isemptyindex = 0;
-								break;
-							}
-							else
-							{
-								index_poss_cr = index_poss_cr + 1;
-							}
-						}
-					}   // end of for(j=1; j<MAX_NICE; j++)
-					}
-					else
-					{	// decode val
-						context = 0;
-						//valr = decode_symbol(cum_freq30[context], outputFile);
-						//update_model3(valr, context);
-					}
-				}
-			}
-			else // if(abs(icenter[i1]-icenter[i2]) > MAX_NICE)
-			{   // two regions close to each other  
-				n_groups = 1;
-				ref = (icenter[i1] + icenter[i2]) / 2;
-			}
-		}   // end of if(n_groups == 2)
-		if (n_groups == 1)
-		{
-			context = 3;
-			if (ENCODEIT == 1)
-			{
-				isemptyindex = 1;
-				index_poss = 0;
-				for (j = 0; j < 2 * MAX_NICE + 1; j++)
-				{
-					possible_value = ref + of_interest[j];
-					possible = 1;
-					for (k = 0; k < nuex; k++)
-						if (possible_value == uex[k])
-							possible = 0;
-					if (possible == 1)
-						if (possible_value == val)
-						{
-							isemptyindex = 0;
-							break;
-						}
-						else
-						{
-							index_poss = index_poss + 1;
-						}
-				}  // end of for(j=1; j<2*MAX_NICE+1; j++)
-			}
-			else    //  if(DECODE == 1)
-			{	// first decode isemptyindex
-
-				isemptyindex = symbol - 1;
-				if (isemptyindex == 0)
-				{  // decode index_poss
-
-					index_poss = symbol - 1;
-					index_poss_cr = 0;
-					for (j = 0; j < 2 * MAX_NICE + 1; j++)
-					{
-						possible_value = ref + of_interest[j];
-						possible = 1;
-						for (k = 0; k < nuex; k++)
-							if (possible_value == uex[k])
-								possible = 0;
-						if (possible == 1)
-							if (index_poss == index_poss_cr)
-							{
-								valr = possible_value;
-								break;
-							}
-							else
-							{
-								index_poss_cr = index_poss_cr + 1;
-							}
-					}  // end of for(j=1; j<2*MAX_NICE+1; j++)
-				}
-				else
-				{	//decode val
-					context = 0;
-
-				}
-			}
-		}  // end of if(n_groups == 1)
-	}  // end of default
-	break;
-	}		// end switch
-
-
-	if (ENCODEIT == 1)
-	{
-		if (isemptyindex == 1)
-		{	// encode the value
-			//printf("start if0\n");
-			context = 0;
-
-		}
-		for (i = istart; i <= iend; i++)
-		{
-			Himg[ir][i] = val;
-			valregions[Cimg[ir][i]] = Himg[ir][i];
-		}
-		//printf("end if2\n");
-	}
-	else  // DECODE =1
-	{
-		for (i = istart; i <= iend; i++)
-		{
-			Himg[ir][i] = valr;
-			valregions[Cimg[ir][i]] = Himg[ir][i];
-		}
-	}
-
-	free(uex);
-	free(of_interest);
-
-	return CL1;
-}
 
 
 int RegTreatSegment(int istart, int iend, int newregindex, int* sameregs, int nsame, int ir, int* minlabels, int* usamereg)
@@ -1726,9 +1350,8 @@ int RegTreatSegment(int istart, int iend, int newregindex, int* sameregs, int ns
 	{	// no need to update anything, just mark a new region
 		newregindex = newregindex + 1;
 		minlabels[newregindex] = newregindex;
-		for (i = istart; i <= iend; i++) {
+		for (i = istart; i <= iend; i++)
 			Cimg[ir][i] = newregindex;
-		}
 		return newregindex;
 	}
 
@@ -1738,13 +1361,12 @@ int RegTreatSegment(int istart, int iend, int newregindex, int* sameregs, int ns
 	for (i = 1; i < nsame; i++)
 	{
 		unique = 1;
-		for (j = 0; j < nusr; j++) {
+		for (j = 0; j < nusr; j++)
 			if (usamereg[j] == sameregs[i])
 			{
 				unique = 0;
 				break;
 			}
-		}
 		if (unique == 1)
 		{
 			nusr = nusr + 1;
@@ -1754,20 +1376,17 @@ int RegTreatSegment(int istart, int iend, int newregindex, int* sameregs, int ns
 
 	// find the minimum of the representatives of sameregs
 	minusame = minlabels[usamereg[0]];
-	for (j = 0; j < nusr; j++) {
+	for (j = 0; j < nusr; j++)
 		if (minlabels[usamereg[j]] < minusame)
 		{
 			minusame = minlabels[usamereg[j]];
 		}
-	}
 	// Update the minimum label for all
-	for (j = 0; j < nusr; j++) {
+	for (j = 0; j < nusr; j++)
 		minlabels[usamereg[j]] = minusame;
-	}
 
-	for (i = istart; i <= iend; i++) {
+	for (i = istart; i <= iend; i++)
 		Cimg[ir][i] = minusame;
-	}
 	return newregindex;
 }
 
@@ -1785,9 +1404,8 @@ int MarkRegions()
 
 
 	minlabels = alocaVector(NR*NC + 10);
-	for (i = 0; i < NR*NC + 10; i++) {
+	for (i = 0; i < NR*NC + 10; i++)
 		minlabels[i] = i;
-	}
 	finallabels = alocaVector(NR*NC + 10);
 	sameregs = alocaVector(NC + 10);
 	usamereg = alocaVector(NC + 10);   // unique values in sameregs
@@ -1797,9 +1415,8 @@ int MarkRegions()
 		// Inspect the current row only once
 		// Prepare for the first segment
 		istart = 0;
-		for (i = 0; i < NC + 2; i++) {
+		for (i = 0; i < NC + 2; i++)
 			sameregs[i] = 0;
-		}
 		nsame = 0;
 		for (ic = 0; ic < NC; ic++)   // ic=1; ... ???????????
 		{
@@ -1855,9 +1472,8 @@ int MarkRegions()
 					break;
 				}
 			}
-			if (labeli1 != labeli) {
+			if (labeli1 != labeli)
 				change = 1;
-			}
 			minlabels[i] = labeli;
 		}
 	}
@@ -1875,14 +1491,20 @@ int MarkRegions()
 			labeli = minlabels[Cimg[ir][ic]];
 			Cimg[ir][ic] = finallabels[labeli];
 		}
-
+	//for (j=0;j<NC;j++)
+	//	for (i=0;i<NR;i++)
+	//	{
+	//		fwrite(&Cimg[i][j], sizeof(int), 1, C6Matlab);
+	//	}
+	//printf("nreg: [%d] \n",nreg);
 	free(minlabels);
 	free(finallabels);
 	free(sameregs);
 	free(usamereg);
-
+	//return newregindex;
 	return nreg;
 }
+
 
 void cerv_encode(int** iimg, int NRi, int NCi, char* compImageNamei) {
 	int i, j;
@@ -1907,9 +1529,20 @@ void cerv_encode(int** iimg, int NRi, int NCi, char* compImageNamei) {
 
 	openFiles(2); // encode	
 
-	// read input data
+				  // read input data
 	readData();
+	//	for (i=0; i<NR; i++)
+	//		for (j=0; j<NC; j++)
+	//			img[i][j] = iimg[i][j];
+	//
+	//	// gr(4:2:(2*nr+2), 4:2:(2*nc+2)) = gray2;
+	//	for (i=0; i<NR; i++)
+	//		for (j=0; j<NC; j++)
+	//			gr[3+2*i][3+2*j] = iimg[i][j];
 
+
+	//fscanf(Matlab2C, "%d", &NR);
+	//fscanf(Matlab2C, "%d", &NC);
 
 	gSR = alocaMatrice(NR, NC);
 	img = alocaMatrice(NR, NC);
@@ -1920,18 +1553,14 @@ void cerv_encode(int** iimg, int NRi, int NCi, char* compImageNamei) {
 
 	gr = alocaMatrice(NRgr, NCgr);
 
-	for (i = 0; i < NR; i++) {
-		for (j = 0; j < NC; j++) {
+	for (i = 0; i < NR; i++)
+		for (j = 0; j < NC; j++)
 			img[i][j] = iimg[i][j];
-		}
-	}
 
 	// gr(4:2:(2*nr+2), 4:2:(2*nc+2)) = gray2;
-	for (i = 0; i < NR; i++) {
-		for (j = 0; j < NC; j++) {
+	for (i = 0; i < NR; i++)
+		for (j = 0; j < NC; j++)
 			gr[3 + 2 * i][3 + 2 * j] = img[i][j];
-		}
-	}
 
 	// get gSR image
 	get_gSR_matrix();
@@ -1942,7 +1571,25 @@ void cerv_encode(int** iimg, int NRi, int NCi, char* compImageNamei) {
 	End1 = clock() * CLK_TCK;
 	sec = (float)(End1 - Begin1) / 1000000;
 	printf("Timp de executie MarkRegions: [%.3f] secunde\n", sec);
+	//Begin1 = clock() * CLK_TCK;
+	//Himg = getRegions(img, NR, NC);
+	//End1 = clock() * CLK_TCK;
+	//sec =(float)(End1-Begin1)/1000000;
+	//printf("Timp de executie GetRegions: [%.3f] secunde\n",sec);
+	// start encoding
+	//start_outputing_bits();
+	//start_encoding();
 
+
+	// send length and width
+	//nrBM = lengthBin(NR);
+	//nrBN = lengthBin(NC);
+	//biti = (nrBM > nrBN) ? nrBM : nrBN;
+	//DATA[0] = biti;
+	//encode(1, 16, DATA, NULL);
+	//DATA[0] = NR;
+	//DATA[1] = NC;
+	//encode(2, ((1 << biti) - 1), DATA, NULL);
 
 	fwrite(&NR, sizeof(int), 1, outputFile);
 	fwrite(&NC, sizeof(int), 1, outputFile);
@@ -1955,11 +1602,9 @@ void cerv_encode(int** iimg, int NRi, int NCi, char* compImageNamei) {
 
 	depth_values = malloc(sizeof(int)*(newregindex + 1));
 
-	for (i = 0; i < NR; i++) {
-		for (j = 0; j < NC; j++) {
+	for (i = 0; i < NR; i++)
+		for (j = 0; j < NC; j++)
 			depth_values[Cimg[i][j]] = iimg[i][j];
-		}
-	}
 
 	fwrite(&newregindex, sizeof(int), 1, outputFile);
 	fwrite(depth_values, sizeof(int), newregindex, outputFile);
@@ -1967,6 +1612,14 @@ void cerv_encode(int** iimg, int NRi, int NCi, char* compImageNamei) {
 	free(depth_values);
 
 
+
+
+	//done_encoding(outputFile);
+	//done_outputing_bits(outputFile);
+	// scanf(&i);
+
+	//*/
+	//fprintf(resultFile, "0");
 	closeFiles();
 
 
@@ -2016,10 +1669,22 @@ void cerv_decode(int** iimg, int NRi, int NCi, char* compImageNamei) {
 
 	openFiles(1);
 	openFiles(3); // decode
+				  //printf("decoding\n");
+				  //start_inputing_bits();
+				  //start_decoding(outputFile);
+				  //printf("decoding\n");
+
+
+				  // read m n
+				  //decode(1, 16, DATA, 0);
+				  //biti = DATA[0];
+				  //decode(2, ((1 << biti) - 1), DATA, 0);
 
 	fread(&NR, sizeof(int), 1, outputFile);
 	fread(&NC, sizeof(int), 1, outputFile);
 
+	// NR = DATA[0];
+	// NC = DATA[1];
 
 	printf("NR NC %d %d\n", NR, NC);
 
@@ -2042,23 +1707,29 @@ void cerv_decode(int** iimg, int NRi, int NCi, char* compImageNamei) {
 
 	fread(depth_values, sizeof(int), newregindex, outputFile);
 
-	for (i = 0; i < NR; i++) {
-		for (j = 0; j < NC; j++) {
+	for (i = 0; i < NR; i++)
+		for (j = 0; j < NC; j++)
 			iimg[i][j] = depth_values[Cimg[i][j]];
-		}
-	}
 
 	free(depth_values);
 
+
+	/* Cimg contains labels  */
+	//for (j = 0; j < NC; j++)
+	//	for (i = 0; i < NR; i++)
+	//	{
+	//	iimg[i][j] = Cimg[i][j];
+	//	}
+
 	printf("%d\n", global_memory_counter);
+
 
 	closeFiles();
 
 	if (Himg != NULL)
 	{
-		for (i = 0; i < NR; i++) {
-			free(Himg[i]);
-		}
+		for (i = 0; i < NR; i++)
+			free(Himg[i]); //KAATUU?
 		free(Himg);
 	}
 
@@ -2066,9 +1737,8 @@ void cerv_decode(int** iimg, int NRi, int NCi, char* compImageNamei) {
 
 	if (gSR != NULL)
 	{
-		for (i = 0; i < NR; i++) {
-			free(gSR[i]);
-		}
+		for (i = 0; i < NR; i++)
+			free(gSR[i]); //KAATUU?
 		free(gSR);
 	}
 

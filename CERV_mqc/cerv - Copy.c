@@ -486,7 +486,7 @@ void decodeContour2(int method)
 
 	fread(bp, sizeof(OPJ_BYTE), n_bytes_bs, outputFile);
 
-	printf("nBITSTREAM %d\n", nBITSTREAM);
+//	printf("nBITSTREAM %d\n", nBITSTREAM);
 
 	mqc = (opj_mqc_t*)opj_malloc(sizeof(opj_mqc_t));
 
@@ -664,7 +664,7 @@ void decodeContour2(int method)
 
 	// Now decode gSR
 	get_gSR_from_gr_matrix();
-	free_model();
+	//free_model();
 	free(putere);
 	free(BITSTREAM);
 

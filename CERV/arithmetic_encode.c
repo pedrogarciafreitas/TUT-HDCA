@@ -30,7 +30,7 @@ void loadReg(void)
 
 /* START ENCODING A STREAM OF SYMBOLS. */
 
-start_encoding()
+void start_encoding()
 {   low = 0;					/* Full code range.         */
     high = Top_value;
     bits_to_follow = 0;				/* No bits to follow next.  */
@@ -39,10 +39,10 @@ start_encoding()
 
 /* ENCODE A SYMBOL. */
 
-encode_symbol(symbol, cum_freq, outputFile)
-    int symbol;			/* Symbol to encode                         */
-    int cum_freq[];		/* Cumulative symbol frequencies            */
-	FILE* outputFile;
+void encode_symbol(int symbol, int cum_freq[], FILE* outputFile)
+ //   int symbol;			/* Symbol to encode                         */
+ //   int cum_freq[];		/* Cumulative symbol frequencies            */
+	//FILE* outputFile;
 {   long range;			/* Size of the current code region          */
     range = (long)(high-low)+1;
     high = low +				/* Narrow the code region   */
@@ -73,7 +73,7 @@ encode_symbol(symbol, cum_freq, outputFile)
 
 /* FINISH ENCODING THE STREAM. */
 
-done_encoding(FILE* outputFile)
+void done_encoding(FILE* outputFile)
 {   bits_to_follow += 1;			/* Output two bits that     */
     if (low<First_qtr) 
 		bit_plus_follow(0, outputFile);	/* select the quarter that  */

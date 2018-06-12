@@ -18,6 +18,15 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cerv.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\Programs\openjpeg-2.3.0\src\lib\openjp2\mqc.c" />
+    <ClCompile Include="..\..\..\..\Programs\openjpeg-2.3.0\src\lib\openjp2\opj_malloc.c" />
+    <ClCompile Include="cerv.c" />
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DC0C65D9-EA0D-45CF-B74C-F43459F78DF6}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -32,7 +41,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -45,7 +54,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -89,6 +98,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>C:\Local\astolap\Programs\openjpeg-2.3.0\src\lib\openjp2;C:\Local\astolap\Programs\openjpeg-2.3.0\VS_build\src\lib\openjp2</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -122,6 +132,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>C:\Local\astolap\Programs\openjpeg-2.3.0\src\lib\openjp2;C:\Local\astolap\Programs\openjpeg-2.3.0\VS_build\src\lib\openjp2</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -130,23 +141,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="adaptive_model.c" />
-    <ClCompile Include="arithmetic_decode.c" />
-    <ClCompile Include="arithmetic_encode.c" />
-    <ClCompile Include="bit_input.c" />
-    <ClCompile Include="bit_output.c" />
-    <ClCompile Include="cerv.c" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="arithmetic_coding.h" />
-    <ClInclude Include="bit_input.h" />
-    <ClInclude Include="cerv.h" />
-    <ClInclude Include="model.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
