@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
 				ref_view->color = NULL;
 			}
 
-			/* merge depth with median*/
+			/* merge depth using median*/
 
 			int startt = clock();
 

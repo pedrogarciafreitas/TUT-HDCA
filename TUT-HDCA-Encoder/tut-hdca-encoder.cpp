@@ -109,8 +109,6 @@ int main(int argc, char** argv) {
 	sprintf(kdu_compress_path, "%s%s", kakadu_dir, "kdu_compress");
 	sprintf(kdu_expand_path, "%s%s", kakadu_dir, "kdu_expand");
 
-	//FiveRefHierarchy_2_disk(hiearchy_file);
-
 	const char *difftest_call = "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/ScriptJan2018/ScriptSolution/difftest_ng.exe --toycbcr --psnr ";
 	const char *difftest_call_pgm = "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/ScriptJan2018/ScriptSolution/difftest_ng.exe --psnr ";
 
@@ -120,9 +118,6 @@ int main(int argc, char** argv) {
 
 	int n_views_total;
 	fread(&n_views_total, sizeof(int), 1, filept);
-
-	//int Nd; // defines how many of the reference views are used for warping of the depth, for HDCA Nd = 5, for lenslet Nd maybe just 1
-	//fread(&Nd, sizeof(int), 1, filept);
 
 	view *LF = new view[n_views_total]();
 
@@ -148,8 +143,6 @@ int main(int argc, char** argv) {
 
 		SAI->residual_rate_color = ((float)rate_color) / 100000;
 		SAI->residual_rate_depth = ((float)rate_depth) / 100000;
-
-		//fread(&SAI->mind, sizeof(int), 1, filept);
 
 		fread(&SAI->Ms, sizeof(int), 1, filept);
 		fread(&SAI->NNt, sizeof(int), 1, filept);
@@ -184,10 +177,10 @@ int main(int argc, char** argv) {
 	char path_out_LF_data[1024];
 	sprintf(path_out_LF_data, "%s%c%s", output_dir, '/', "output.LF");
 
+	/* our bitstream starts here */
 	FILE *output_LF_file;
 	output_LF_file = fopen(path_out_LF_data, "wb");
 	fwrite(&n_views_total, sizeof(int), 1, output_LF_file);
-	//fwrite(&Nd, sizeof(int), 1,  output_LF_file);
 	fclose(output_LF_file);
 
 	for (int ii = 0; ii < n_views_total; ii++) {
@@ -210,12 +203,6 @@ int main(int argc, char** argv) {
 		char path_input_depth_pgm[1024];
 		sprintf(path_input_depth_pgm, "%s%c%03d_%03d%s", input_dir, '/', SAI->c, SAI->r, ".pgm");
 		bool depth_file_exist = aux_read16PGMPPM(path_input_depth_pgm, nc1, nr1, ncomp1, original_depth_view);
-
-		//char path_out_ppm[1024];
-		//sprintf(path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".ppm");
-
-		//char path_out_pgm[1024];
-		//sprintf(path_out_pgm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".pgm");
 
 		sprintf(SAI->path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".ppm");
 		sprintf(SAI->path_out_pgm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".pgm");
@@ -248,7 +235,7 @@ int main(int argc, char** argv) {
 				ref_view->color = NULL;
 			}
 
-			/* merge depth with median*/
+			/* merge depth using median*/
 
 			int startt = clock();
 

@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 #include "openjpeg.h"
-#include "mqc.h"
+#include "mqc.h" /* in mqc.h we need to replace jp2 default to #define MQC_NUMCTXS 562144 */
 #include "opj_malloc.h"
 
 #ifdef __cplusplus
@@ -1298,28 +1298,6 @@ void CERV::clear_allocations() {
 	}
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
