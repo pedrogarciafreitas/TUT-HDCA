@@ -11,8 +11,6 @@ extern "C" {
 #include "mqc.h"
 #include "opj_malloc.h"
 
-	//void cerv_encode(int** img, int NR, int NC, char* filename);
-	//void cerv_decode(int** img, int NR, int NC, char* filename);
 #ifdef __cplusplus
 }
 #endif
@@ -142,17 +140,15 @@ class CERV
 
 	int *Labels = NULL;
 
-	
-
 	OPJ_BYTE *bp;
 
 	void encodeContour();
 	void decodeContour();
 
-	int** alocaMatrice(const int m, const int n);
-	double** DoubleAlocaMatrice(const int m, const int n);
-	int*** TripleAlocaMatrice(const int m, const int n, const int ell);
-	int* alocaVector(const int m);
+	int** allocateMatrix(const int m, const int n);
+	double** DoubleallocateMatrix(const int m, const int n);
+	int*** TripleallocateMatrix(const int m, const int n, const int ell);
+	int* allocateVector(const int m);
 
 	int MarkRegions();
 
@@ -184,15 +180,17 @@ public:
 	~CERV()
 	{
 
+		clear_allocations();
+
 		if (segmentation != NULL) {
 			delete[](segmentation);
 		}
 
 		if (depth_values != NULL) {
-			free(depth_values);
+			delete[](depth_values);
 		}
 
-		clear_allocations();
+		
 	}
 
 };
@@ -207,9 +205,9 @@ void CERV::encode(int* Labels, int NRi, int NCi)
 	NR = NRi;
 	NC = NCi;
 
-	gSR = alocaMatrice(NR, NC);
-	img = alocaMatrice(NR, NC);
-	Cimg = alocaMatrice(NR, NC);
+	gSR = allocateMatrix(NR, NC);
+	img = allocateMatrix(NR, NC);
+	Cimg = allocateMatrix(NR, NC);
 
 	int minL = 65536; int maxL = 0;
 	for (int i = 0; i < NR; ++i) {
@@ -226,7 +224,7 @@ void CERV::encode(int* Labels, int NRi, int NCi)
 	NRgr = 2 * NR + 4;
 	NCgr = 2 * NC + 4;
 
-	gr = alocaMatrice(NRgr, NCgr);
+	gr = allocateMatrix(NRgr, NCgr);
 
 	for (i = 0; i < NR; i++)
 		for (j = 0; j < NC; j++)
@@ -243,45 +241,13 @@ void CERV::encode(int* Labels, int NRi, int NCi)
 
 	printf("done encodeContour2\n");
 
-	depth_values = (int*)malloc(sizeof(int)*(newregindex + 1));
+	//depth_values = (int*)malloc(sizeof(int)*(newregindex + 1));
+
+	depth_values = new int[newregindex + 1]();
 
 	for (i = 0; i < NR; i++)
 		for (j = 0; j < NC; j++)
 			depth_values[Cimg[i][j]] = img[i][j];
-
-	//fwrite(&newregindex, sizeof(int), 1, outputFile);
-	//fwrite(depth_values, sizeof(int), newregindex, outputFile);
-
-	/*free(depth_values);*/
-
-
-	//if (Himg != NULL)
-	//{
-	//	for (i = 0; i < NR; i++)
-	//		free(Himg[i]);
-	//	free(Himg);
-	//}
-
-	//if (Cimg != NULL)
-	//{
-	//	for (i = 0; i < NR; i++)
-	//		free(Cimg[i]);
-	//	free(Cimg);
-	//}
-
-	//if (gSR != NULL)
-	//{
-	//	for (i = 0; i < NR; i++)
-	//		free(gSR[i]);
-	//	free(gSR);
-	//}
-
-	//if (img != NULL)
-	//{
-	//	for (i = 0; i < NR; i++)
-	//		free(img[i]);
-	//	free(img);
-	//}
 
 }
 
@@ -296,18 +262,23 @@ void CERV::decode(unsigned char* bitstream, int* n_bytes_in, int *depth_values_i
 	NR = NRi;
 	NC = NCi;
 
-	gSR = alocaMatrice(NR, NC);
+	gSR = allocateMatrix(NR, NC);
 	img = NULL;
 
-	Himg = alocaMatrice(NR, NC);
-	Cimg = alocaMatrice(NR, NC);
+	Himg = allocateMatrix(NR, NC);
+	Cimg = allocateMatrix(NR, NC);
 
 	decodeContour();
 
 	newregindex = MarkRegions();
-	depth_values = depth_values_in;
 
-	img = alocaMatrice(NR, NC);
+	depth_values = new int[newregindex + 1]();
+
+	for (int ii = 0; ii < newregindex + 1; ii++) {
+		*(depth_values+ii) = *(depth_values_in+ii);
+	}
+
+	img = allocateMatrix(NR, NC);
 
 	for (int i = 0; i < NR; i++)
 		for (int j = 0; j < NC; j++)
@@ -343,7 +314,7 @@ int CERV::getBitstreamLength()
 	return mqc_bytes.size();
 }
 
-int** CERV::alocaMatrice(const int m, const int n)
+int** CERV::allocateMatrix(const int m, const int n)
 {
 	int **matrix, i, j;
 	matrix = (int**)malloc(m * sizeof(int*));
@@ -353,14 +324,14 @@ int** CERV::alocaMatrice(const int m, const int n)
 		for (j = 0; j < n; j++)
 			matrix[i][j] = 0;
 	}
-	//printf("alocamatrice,  matrix=%d, m=%d, n=%d\n", matrix, m, n);
+	//printf("allocateMatrix,  matrix=%d, m=%d, n=%d\n", matrix, m, n);
 
 	global_memory_counter = global_memory_counter + m*n * sizeof(int);
 
 	return matrix;
 }
 
-double** CERV::DoubleAlocaMatrice(const int m, const int n)
+double** CERV::DoubleallocateMatrix(const int m, const int n)
 {
 	double **matrix;
 	int i, j;
@@ -376,7 +347,7 @@ double** CERV::DoubleAlocaMatrice(const int m, const int n)
 	return matrix;
 }
 
-int*** CERV::TripleAlocaMatrice(const int m, const int n, const int ell)
+int*** CERV::TripleallocateMatrix(const int m, const int n, const int ell)
 {
 	int ***matrix, i, j, k;
 	matrix = (int***)malloc(m * sizeof(int**));
@@ -394,7 +365,7 @@ int*** CERV::TripleAlocaMatrice(const int m, const int n, const int ell)
 	return matrix;
 }
 
-int* CERV::alocaVector(const int m)
+int* CERV::allocateVector(const int m)
 {
 	int *vector, i;
 	vector = (int*)malloc(m * sizeof(int));
@@ -437,21 +408,21 @@ void CERV::encodeContour()
 	FILE *filept1;
 
 	/*these take a lot of memory*/
-	Ncounts = alocaMatrice(NS_NCON, NS);
-	SplitT = alocaMatrice(NS_NCON, NCON);
-	SplitT1 = alocaMatrice(NS_NCON, NCON);
-	ToknowT = alocaMatrice(NS_NCON, NCON);
-	ToknowT1 = alocaMatrice(NS_NCON, NCON);
-	CL = DoubleAlocaMatrice(NS_NCON, NCON);
-	CLprop = DoubleAlocaMatrice(NS_NCON, NCON);
-	Dist = TripleAlocaMatrice(NS_NCON, NS, NCON);
+	Ncounts = allocateMatrix(NS_NCON, NS);
+	SplitT = allocateMatrix(NS_NCON, NCON);
+	SplitT1 = allocateMatrix(NS_NCON, NCON);
+	ToknowT = allocateMatrix(NS_NCON, NCON);
+	ToknowT1 = allocateMatrix(NS_NCON, NCON);
+	CL = DoubleallocateMatrix(NS_NCON, NCON);
+	CLprop = DoubleallocateMatrix(NS_NCON, NCON);
+	Dist = TripleallocateMatrix(NS_NCON, NS, NCON);
 
 	nsb = 2;
 	ns = 2;
 	delta = 0.5;
 
 	// construct auxiliary vectors putere, slog2n, slog2deln (for speed only)
-	putere = alocaVector(NCON + 2);
+	putere = allocateVector(NCON + 2);
 	putere[0] = ns;
 	for (i = 1; i <= NCON + 1; i++)
 		putere[i] = putere[i - 1] * ns;
@@ -887,10 +858,10 @@ FILE *filept1;
 
 ns = 2;
 
-SplitT1 = alocaMatrice(NS_NCON, NCON);
-ToknowT = alocaMatrice(NS_NCON, NCON);
+SplitT1 = allocateMatrix(NS_NCON, NCON);
+ToknowT = allocateMatrix(NS_NCON, NCON);
 
-putere = alocaVector(NCON + 1);
+putere = allocateVector(NCON + 1);
 putere[0] = ns;
 for (i = 1; i <= NCON; i++)
 putere[i] = putere[i - 1] * ns;
@@ -955,7 +926,10 @@ printf(" nBITSTREAM [%d]  \n", nBITSTREAM);
 opq_mqc_finish_dec(mqc);
 free(mqc);
 
-gr = alocaMatrice(2 * NR + 4, 2 * NC + 4);
+gr = allocateMatrix(2 * NR + 4, 2 * NC + 4);
+
+NRgr = 2 * NR + 4;
+NCgr = 2 * NC + 4;
 
 for (ir2 = 0; ir2 <= (2 * NR + 1); ir2++)
 for (ic2 = 0; ic2 <= (2 * NC + 1); ic2++)
@@ -1080,12 +1054,12 @@ int CERV::MarkRegions()
 	int change, labeli, labeli1;
 
 
-	minlabels = alocaVector(NR*NC + 10);
+	minlabels = allocateVector(NR*NC + 10);
 	for (i = 0; i < NR*NC + 10; i++)
 		minlabels[i] = i;
-	finallabels = alocaVector(NR*NC + 10);
-	sameregs = alocaVector(NC + 10);
-	usamereg = alocaVector(NC + 10);   // unique values in sameregs
+	finallabels = allocateVector(NR*NC + 10);
+	sameregs = allocateVector(NC + 10);
+	usamereg = allocateVector(NC + 10);   // unique values in sameregs
 	newregindex = 0;
 	for (ir = 0; ir < NR; ir++)
 	{

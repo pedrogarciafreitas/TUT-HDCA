@@ -1,8 +1,5 @@
 #include <iostream>
 #include <stdio.h>
-#include <vector>
-#include <algorithm>
-//#include <ctime>
 
 #include "cerv.h"
 
@@ -48,50 +45,11 @@ int main(const int argc, char** argv) {
 	fwrite(Labels_out, sizeof(int), nr*nc, filept);
 	fclose(filept);
 
+	delete[](Labels);
+	delete[](Labels_out);
+
 	delete cerv_decoder;
 	delete cerv_coder;
-
-	//cerv_encode(SEGM2D, nr, nc, argv[2]);
-
-	//printf("Finished encode %d %d\n", minL, maxL);
-
-	//int *SEGMFINAL = new int[nr*nc]();
-
-	//for (int i = 0; i < nr; ++i) {
-	//	for (int j = 0; j < nc; ++j) {
-	//		SEGM2D[i][j] = 0;
-	//	}
-	//}
-
-	//if(1)
-	//{
-	//	cerv_decode(SEGM2D, nr, nc, argv[2]);
-
-	//	int number_of_regions = 0;
-
-	//	for (int i = 0; i < nr; ++i) {
-	//		for (int j = 0; j < nc; ++j) {
-	//			SEGMFINAL[i + j*nr] = SEGM2D[i][j];
-	//			if (SEGMFINAL[i + j*nr] > number_of_regions)
-	//				number_of_regions++;
-	//		}
-	//	}
-
-	//	number_of_regions = number_of_regions + 1; //account for 0
-
-
-
-	//	printf("%d\n", number_of_regions);
-
-	//	filept = fopen(argv[3], "wb");
-	//	fwrite(&nr, sizeof(int), 1, filept);
-	//	fwrite(&nc, sizeof(int), 1, filept);
-	//	fwrite(SEGMFINAL, sizeof(int), nr*nc, filept);
-	//	fclose(filept);
-	//}
-
-	//delete[](Labels);
-	//delete[](SEGMFINAL);
 
 	return 0;
 
