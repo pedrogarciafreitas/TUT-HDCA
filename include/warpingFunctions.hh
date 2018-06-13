@@ -10,6 +10,8 @@ struct view{
 	unsigned short *color = NULL;
 	unsigned short *depth = NULL;
 
+	int *segmentation = NULL;
+
 	int r = NULL, c = NULL; // SAI subscript
 
 	int nr, nc; // image height, width
@@ -46,6 +48,11 @@ struct view{
 
 	int NNt = 0, Ms = 0; //for global sparse, NNt defines the neighborhood size [ -NNt:NNt,-NNt:NNt ], Ms is the filter order
 
+	int has_segmentation = 0;
+
+	int ****region_displacements; /* region displacement vectors [iar][iac][iR][xy], e.g., [13][13][25][2], for 13x13 angular views with 25 regions for segmentation */
+
+	char path_input_pgm[1024], path_input_ppm[1024], path_input_seg[1024];
 	char path_out_pgm[1024], path_out_ppm[1024];
 
 };

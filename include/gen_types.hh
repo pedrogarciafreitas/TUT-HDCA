@@ -42,6 +42,7 @@ int system_1(char *str) {
 
 }
 
+
 template <class T>
 T getMedian(std::vector<T> scores)
 {

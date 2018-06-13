@@ -119,7 +119,9 @@ int main(int argc, char** argv) {
 	int n_views_total;
 	fread(&n_views_total, sizeof(int), 1, filept);
 
-	view *LF = new view[n_views_total]();
+	view *LF = new view[n_views_total](); /* one dimensional view vector */
+
+	int maxR = 0, maxC = 0;
 
 	for (int ii = 0; ii < n_views_total; ii++) {
 
@@ -127,6 +129,10 @@ int main(int argc, char** argv) {
 
 		fread(&(SAI->r), sizeof(int), 1, filept);
 		fread(&(SAI->c), sizeof(int), 1, filept);
+
+		/* find largest row and column */
+		maxR = (SAI->r > maxR) ? SAI->r + 1 : maxR;
+		maxC = (SAI->c > maxC) ? SAI->c + 1 : maxC;
 
 		int xx = 0, yy = 0;
 
@@ -170,9 +176,208 @@ int main(int argc, char** argv) {
 			fread(SAI->depth_references, sizeof(int), SAI->n_depth_references, filept);
 
 		}
+
+		fread(&SAI->has_segmentation, sizeof(int), 1, filept); // new,13.06.18
+
+		sprintf(SAI->path_input_ppm, "%s%c%03d_%03d%s", input_dir, '/', SAI->c, SAI->r, ".ppm");
+		sprintf(SAI->path_input_pgm, "%s%c%03d_%03d%s", input_dir, '/', SAI->c, SAI->r, ".pgm");
+
+		sprintf(SAI->path_input_seg, "%s%c%03d_%03d%s", input_dir, '/', SAI->c, SAI->r, "_segmentation.pgm");
+
+		sprintf(SAI->path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".ppm");
+		sprintf(SAI->path_out_pgm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".pgm");
+
+	}
+	fclose(filept);
+
+
+	/* 2D array format for views, useful in some cases */
+	view ***LF_mat = new view**[maxR]();
+	for (int ii = 0; ii < maxC; ii++) {
+		LF_mat[ii] = new view*[maxC]();
 	}
 
-	fclose(filept);
+	for (int r = 0; r < maxR; r++) {
+		for (int c = 0; c < maxC; c++) {
+			LF_mat[r][c] = NULL;
+		}
+	}
+
+	for (int ii = 0; ii < n_views_total; ii++) {
+		view *SAI = LF + ii;
+		LF_mat[SAI->r][SAI->c] = SAI;
+	}
+
+	/* get motion vectors/displacements/warping tables for segmentations */
+	for (int ii = 0; ii < n_views_total; ii++)
+	{
+		view *SAI = LF + ii;
+
+		if (SAI->has_segmentation > 0) {
+
+			unsigned short *temp_segmentation;
+			int ncomp1; //nc_temp and nr_temp should equal SAI->nr,SAI->nc
+
+			if (!aux_read16PGMPPM(SAI->path_input_seg, SAI->nc, SAI->nr, ncomp1, temp_segmentation)) {
+				printf("Error reading segmentation %s\nExiting...\n", SAI->path_input_seg);
+				exit(0);
+			}
+
+			SAI->segmentation = new int[SAI->nr*SAI->nc]();
+
+			int maxL = 0;
+
+			for (int jj = 0; jj < SAI->nr*SAI->nc; jj++) {
+				*(SAI->segmentation + jj) = (int)*(temp_segmentation + jj);
+
+				maxL = *(SAI->segmentation + jj) > maxL ? *(SAI->segmentation + jj) : maxL;
+
+			}
+
+			/* initialize region displacement table */
+			SAI->region_displacements = new int***[maxR]();
+			for (int iar = 0; iar < maxR; iar++) {
+				SAI->region_displacements[iar] = new int**[maxC]();
+				for (int iac = 0; iac < maxC; iac++) {
+					SAI->region_displacements[iar][iac] = new int*[maxL + 1]();
+					for (int iR = 0; iR <= maxL; iR++) {
+						SAI->region_displacements[iar][iac][iR] = new int[2]();
+					}
+				}
+			}
+
+			delete[](temp_segmentation);
+
+			/* motion vectors for all regions against all views */
+
+			unsigned short *im0;
+
+			aux_read16PGMPPM(SAI->path_input_ppm, SAI->nc, SAI->nr, ncomp1, im0);
+
+			for (int jj = 0; jj < n_views_total; jj++) {
+
+				view *SAI1 = LF + jj;
+
+				if (jj != ii) {
+
+					unsigned short *im1;
+					aux_read16PGMPPM(SAI1->path_input_ppm, SAI1->nc, SAI1->nr, ncomp1, im1);
+
+					int search_radius = 10; // search -search_radius:search_radius in both x,y
+
+					float ***match_score = new float**[maxL + 1]();
+					for (int ik = 0; ik <= maxL; ik++) {
+						match_score[ik] = new float*[search_radius * 2 + 1]();
+						for (int isr = 0; isr < search_radius * 2 + 1; isr++) {
+							match_score[ik][isr] = new float[search_radius * 2 + 1]();
+						}
+					}
+
+					int ***counts = new int**[maxL + 1]();
+					for (int ik = 0; ik <= maxL; ik++) {
+						counts[ik] = new int*[search_radius * 2 + 1]();
+						for (int isr = 0; isr < search_radius * 2 + 1; isr++) {
+							counts[ik][isr] = new int[search_radius * 2 + 1]();
+						}
+					}
+
+					int *segp = SAI->segmentation;
+
+					for (int ijk = 0; ijk < SAI->nr*SAI->nc; ijk++) {
+						for (int ik = 0; ik <= maxL; ik++) {
+							if (*(segp + ijk) == ik) {
+#pragma omp parallel for
+								for (int isr = -search_radius; isr <= search_radius; isr++) {
+									for (int isc = -search_radius; isc <= search_radius; isc++) {
+
+										int iy = ijk % SAI->nr; //row
+										int ix = (ijk - iy) / SAI->nr; //col
+
+										int iy1 = iy + isr;
+										int ix1 = ix + isc;
+
+										if (iy1 >= 0 && iy1 < SAI->nr && ix1 >= 0 && ix1 < SAI->nc) {
+
+											int ijk1 = ix1*SAI->nr + iy1;
+
+											for (int ic = 0; ic < 3; ic++) {
+												int offc = ic*SAI->nr*SAI->nc;
+												match_score[ik][isr + search_radius][isc + search_radius] += abs(((float)*(im0 + ijk + offc) - (float)*(im1 + ijk1 + offc)));
+											}
+
+											//printf("%f\n", match_score[ik][isr + search_radius][isc + search_radius]);
+
+											counts[ik][isr + search_radius][isc + search_radius]++;
+
+											//printf("%d\n", counts[ik][isr + search_radius][isc + search_radius]);
+
+										}
+									}
+								}
+							}
+						}
+					}
+
+
+
+					delete[](im1);
+
+					/* find best matching displacement */
+					for (int ik = 0; ik <= maxL; ik++) {
+						float lowest_score = FLT_MAX;
+						for (int isr = 0; isr < search_radius * 2 + 1; isr++) {
+							for (int isc = 0; isc < search_radius * 2 + 1; isc++) {
+
+								int nk = counts[ik][isr][isc];
+
+								if (nk > 0) {
+
+									float clow = match_score[ik][isr][isc] / (float)nk;
+
+									//printf("%f\n", clow);
+
+									if (clow < lowest_score) {
+										SAI->region_displacements[SAI1->r][SAI1->c][ik][0] = isr - search_radius;
+										SAI->region_displacements[SAI1->r][SAI1->c][ik][1] = isc - search_radius;
+										lowest_score = clow;
+									}
+
+								}
+							}
+						}
+					}
+
+					for (int iR = 0; iR <= maxL; iR++) {
+						printf("SAI->region_displacements[%d][%d][%d][0] = %d\t", SAI1->r, SAI1->c, iR, SAI->region_displacements[SAI1->r][SAI1->c][iR][0]);
+						printf("SAI->region_displacements[%d][%d][%d][1] = %d\n", SAI1->r, SAI1->c, iR, SAI->region_displacements[SAI1->r][SAI1->c][iR][1]);
+					}
+
+
+					//char dummy;
+					//std::cin >> dummy;
+
+					for (int ik = 0; ik <= maxL; ik++) {
+						for (int isr = 0; isr < search_radius * 2 + 1; isr++) {
+							delete[](match_score[ik][isr]);
+							delete[](counts[ik][isr]);
+						}
+						delete[](match_score[ik]);
+						delete[](counts[ik]);
+					}
+					delete[](match_score);
+					delete[](counts);
+
+				}
+				else {
+					/* nothing to do, region displacements are zero*/
+				}
+
+			}
+
+			delete[](im0);
+
+		}
+	}
 
 	char path_out_LF_data[1024];
 	sprintf(path_out_LF_data, "%s%c%s", output_dir, '/', "output.LF");
@@ -194,18 +399,10 @@ int main(int argc, char** argv) {
 		unsigned short *original_color_view = NULL;
 		unsigned short *original_depth_view = NULL;
 
-		char path_input_ppm[1024];
-		sprintf(path_input_ppm, "%s%c%03d_%03d%s", input_dir, '/', SAI->c, SAI->r, ".ppm");
-
 		int nc1, nr1, ncomp1;
-		aux_read16PGMPPM(path_input_ppm, SAI->nc, SAI->nr, ncomp1, original_color_view);
+		aux_read16PGMPPM(SAI->path_input_ppm, SAI->nc, SAI->nr, ncomp1, original_color_view);
 
-		char path_input_depth_pgm[1024];
-		sprintf(path_input_depth_pgm, "%s%c%03d_%03d%s", input_dir, '/', SAI->c, SAI->r, ".pgm");
-		bool depth_file_exist = aux_read16PGMPPM(path_input_depth_pgm, nc1, nr1, ncomp1, original_depth_view);
-
-		sprintf(SAI->path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".ppm");
-		sprintf(SAI->path_out_pgm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".pgm");
+		bool depth_file_exist = aux_read16PGMPPM(SAI->path_input_pgm, nc1, nr1, ncomp1, original_depth_view);
 
 		SAI->color = new unsigned short[SAI->nr*SAI->nc * 3]();
 		SAI->depth = new unsigned short[SAI->nr*SAI->nc]();
@@ -289,8 +486,6 @@ int main(int argc, char** argv) {
 				aux_read16PGMPPM(ref_view->path_out_pgm, tmp_w, tmp_r, tmp_ncomp, ref_view->depth);
 				aux_read16PGMPPM(ref_view->path_out_ppm, tmp_w, tmp_r, tmp_ncomp, ref_view->color);
 
-				//int uu = SAI->references[ij];
-
 				/* FORWARD warp color AND depth */
 				warpView0_to_View1(ref_view, SAI, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
 
@@ -318,7 +513,7 @@ int main(int argc, char** argv) {
 			initViewW(SAI, DispTargs);
 
 			/* get LS weights */
-			if (SAI->stdd==0) {
+			if (SAI->stdd == 0) {
 				getViewMergingLSWeights_N(SAI, warped_color_views, DispTargs, original_color_view);
 			}
 			else {
@@ -361,7 +556,7 @@ int main(int argc, char** argv) {
 		if (SAI->n_references > 0) {
 
 			aux_write16PGMPPM(SAI->path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
-			psnr_result = getPSNR(NULL, SAI->path_out_ppm, path_input_ppm, difftest_call);
+			psnr_result = getPSNR(NULL, SAI->path_out_ppm, SAI->path_input_ppm, difftest_call);
 
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 
@@ -382,7 +577,7 @@ int main(int argc, char** argv) {
 			applyGlobalSparseFilter(SAI);
 
 			aux_write16PGMPPM(SAI->path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
-			psnr_result = getPSNR(NULL, SAI->path_out_ppm, path_input_ppm, difftest_call);
+			psnr_result = getPSNR(NULL, SAI->path_out_ppm, SAI->path_input_ppm, difftest_call);
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 
 		}
@@ -441,7 +636,7 @@ int main(int argc, char** argv) {
 		aux_write16PGMPPM(SAI->path_out_pgm, SAI->nc, SAI->nr, 1, SAI->depth);
 
 		if (depth_file_exist) {
-			psnr_result = getPSNR(NULL, SAI->path_out_pgm, path_input_depth_pgm, difftest_call_pgm);
+			psnr_result = getPSNR(NULL, SAI->path_out_pgm, SAI->path_input_pgm, difftest_call_pgm);
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 		}
 		else {
@@ -449,7 +644,7 @@ int main(int argc, char** argv) {
 		}
 
 
-		psnr_result = getPSNR(NULL, SAI->path_out_ppm, path_input_ppm, difftest_call);
+		psnr_result = getPSNR(NULL, SAI->path_out_ppm, SAI->path_input_ppm, difftest_call);
 
 		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 
@@ -496,13 +691,13 @@ int main(int argc, char** argv) {
 		fwrite(&SAI->Ms, sizeof(int), 1, output_LF_file);
 
 		fwrite(&SAI->stdd, sizeof(float), 1, output_LF_file);
-		
+
 		if (SAI->stdd == 0) {
 
 			if (SAI->NB > 0) {
 
 				/* for debug and studying, we write merging weights to standalone files also*/
-				
+
 				FILE *wfile;
 				char wfile_name[1024];
 				sprintf(wfile_name, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_merging_weights");
@@ -516,7 +711,7 @@ int main(int argc, char** argv) {
 
 		}
 
-		if (SAI->Ms > 0 && SAI->NNt>0) {
+		if (SAI->Ms > 0 && SAI->NNt > 0) {
 			fwrite(SAI->sparse_weights, sizeof(int32_t), SAI->Ms, output_LF_file);
 			fwrite(SAI->sparse_mask, sizeof(unsigned char), SAI->Ms, output_LF_file);
 		}
@@ -575,6 +770,11 @@ int main(int argc, char** argv) {
 			SAI->seg_vp = NULL;
 		}
 
+		if (SAI->segmentation != NULL) {
+			delete[](SAI->segmentation);
+			SAI->segmentation = NULL;
+		}
+
 	}
 
 	for (int ii = 0; ii < n_views_total; ii++)
@@ -602,10 +802,17 @@ int main(int argc, char** argv) {
 			delete[](SAI->seg_vp);
 		if (SAI->sparse_mask != NULL)
 			delete[](SAI->sparse_mask);
+		if (SAI->segmentation != NULL)
+			delete[](SAI->segmentation);
 
 	}
 
 	delete[](LF);
+
+	for (int ii = 0; ii < maxC; ii++) {
+		delete[](LF_mat[ii]);
+	}
+	delete[](LF_mat);
 
 	exit(0);
 }
