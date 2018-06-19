@@ -12,7 +12,7 @@
 #include "../include/warpingFunctions.hh"
 
 
-void FiveRefHierarchy_2_disk(const char *hiearchy_file)
+void FiveRefHierarchy_2_disk(const char *config_file)
 {
 	const int ref_cols[] = { 2, 98, 2, 98, 50 };
 	const int ref_rows[] = { 0, 0, 20, 20, 10 };
@@ -26,7 +26,7 @@ void FiveRefHierarchy_2_disk(const char *hiearchy_file)
 		}
 	}
 
-	FILE *filept = fopen(hiearchy_file, "wb");
+	FILE *filept = fopen(config_file, "wb");
 
 	int val = 33 * 11;
 
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
 	const char *input_dir = argv[1];
 	const char *output_dir = argv[2];
 	const char *kakadu_dir = argv[3];
-	const char *hiearchy_file = argv[4];
+	const char *config_file = argv[4];
 
 	char kdu_compress_path[1024];
 	char kdu_expand_path[1024];
@@ -114,10 +114,10 @@ int main(int argc, char** argv) {
 
 	FILE *filept;
 
-	filept = fopen(hiearchy_file, "rb");
+	filept = fopen(config_file, "rb");
 
 	int n_views_total;
-	fread(&n_views_total, sizeof(int), 1, filept);
+	fread(&n_views_total, sizeof(int), 1, filept); /*reading*/
 
 	view *LF = new view[n_views_total](); /* one dimensional view vector */
 
@@ -127,57 +127,63 @@ int main(int argc, char** argv) {
 
 		view *SAI = LF + ii;
 
-		fread(&(SAI->r), sizeof(int), 1, filept);
-		fread(&(SAI->c), sizeof(int), 1, filept);
+		SAI->i_order = ii;
 
-		/* find largest row and column */
-		maxR = (SAI->r > maxR) ? SAI->r + 1 : maxR;
-		maxC = (SAI->c > maxC) ? SAI->c + 1 : maxC;
+		fread(&(SAI->r), sizeof(int), 1, filept); /*reading*/
+		fread(&(SAI->c), sizeof(int), 1, filept); /*reading*/
+
+		/* find number of rows and cols */
+		maxR = (SAI->r+1 > maxR) ? SAI->r + 1 : maxR;
+		maxC = (SAI->c+1 > maxC) ? SAI->c + 1 : maxC;
 
 		int xx = 0, yy = 0;
 
-		fread(&xx, sizeof(int), 1, filept);
-		fread(&yy, sizeof(int), 1, filept);
+		fread(&xx, sizeof(int), 1, filept); /*reading*/
+		fread(&yy, sizeof(int), 1, filept); /*reading*/
 
 		SAI->x = float(xx) / 100000;
 		SAI->y = float(yy) / 100000;
 
 		int rate_color, rate_depth, Ms, NNt;
 
-		fread(&rate_color, sizeof(int), 1, filept);
-		fread(&rate_depth, sizeof(int), 1, filept);
+		fread(&rate_color, sizeof(int), 1, filept); /*reading*/
+		fread(&rate_depth, sizeof(int), 1, filept); /*reading*/
 
 		SAI->residual_rate_color = ((float)rate_color) / 100000;
 		SAI->residual_rate_depth = ((float)rate_depth) / 100000;
 
-		fread(&SAI->Ms, sizeof(int), 1, filept);
-		fread(&SAI->NNt, sizeof(int), 1, filept);
+		fread(&SAI->Ms, sizeof(int), 1, filept); /*reading*/
+		fread(&SAI->NNt, sizeof(int), 1, filept); /*reading*/
 
 		int stdd = 0;
 
-		fread(&stdd, sizeof(int), 1, filept);
+		fread(&stdd, sizeof(int), 1, filept); /*reading*/
 		SAI->stdd = ((float)stdd) / 100000;
 
-		fread(&(SAI->n_references), sizeof(int), 1, filept);
+		fread(&SAI->min_inv_d, sizeof(int), 1, filept); /*reading, if we have negative inverse depth,
+												   for example in lenslet, we need to subtract min_inv_d
+												   from the inverse depth maps*/
+
+		fread(&(SAI->n_references), sizeof(int), 1, filept); /*reading*/
 
 		if (SAI->n_references > 0) {
 
 			SAI->references = new int[SAI->n_references]();
 
-			fread(SAI->references, sizeof(int), SAI->n_references, filept);
+			fread(SAI->references, sizeof(int), SAI->n_references, filept); /*reading*/
 
 		}
 
-		fread(&(SAI->n_depth_references), sizeof(int), 1, filept);
+		fread(&(SAI->n_depth_references), sizeof(int), 1, filept); /*reading*/
 		if (SAI->n_depth_references > 0) {
 
 			SAI->depth_references = new int[SAI->n_depth_references]();
 
-			fread(SAI->depth_references, sizeof(int), SAI->n_depth_references, filept);
+			fread(SAI->depth_references, sizeof(int), SAI->n_depth_references, filept); /*reading*/
 
 		}
 
-		fread(&SAI->has_segmentation, sizeof(int), 1, filept); // new,13.06.18
+		fread(&SAI->has_segmentation, sizeof(int), 1, filept); // new,13.06.18 /*reading*/
 
 		sprintf(SAI->path_input_ppm, "%s%c%03d_%03d%s", input_dir, '/', SAI->c, SAI->r, ".ppm");
 		sprintf(SAI->path_input_pgm, "%s%c%03d_%03d%s", input_dir, '/', SAI->c, SAI->r, ".pgm");
@@ -193,7 +199,7 @@ int main(int argc, char** argv) {
 
 	/* 2D array format for views, useful in some cases */
 	view ***LF_mat = new view**[maxR]();
-	for (int ii = 0; ii < maxC; ii++) {
+	for (int ii = 0; ii < maxR; ii++) {
 		LF_mat[ii] = new view*[maxC]();
 	}
 
@@ -213,7 +219,7 @@ int main(int argc, char** argv) {
 	{
 		view *SAI = LF + ii;
 
-		if (SAI->has_segmentation > 0) {
+		if (SAI->has_segmentation > 0) { /* displacement/disparity search is only applied to views which have a segmentation */
 
 			unsigned short *temp_segmentation;
 			int ncomp1; //nc_temp and nr_temp should equal SAI->nr,SAI->nc
@@ -223,16 +229,18 @@ int main(int argc, char** argv) {
 				exit(0);
 			}
 
-			SAI->segmentation = new int[SAI->nr*SAI->nc]();
+			SAI->segmentation = new unsigned short[SAI->nr*SAI->nc]();
 
 			int maxL = 0;
 
 			for (int jj = 0; jj < SAI->nr*SAI->nc; jj++) {
-				*(SAI->segmentation + jj) = (int)*(temp_segmentation + jj);
+				*(SAI->segmentation + jj) = (unsigned short)*(temp_segmentation + jj);
 
 				maxL = *(SAI->segmentation + jj) > maxL ? *(SAI->segmentation + jj) : maxL;
 
 			}
+
+			SAI->maxL = maxL;
 
 			/* initialize region displacement table */
 			SAI->region_displacements = new int***[maxR]();
@@ -281,7 +289,7 @@ int main(int argc, char** argv) {
 						}
 					}
 
-					int *segp = SAI->segmentation;
+					unsigned short *segp = SAI->segmentation;
 
 					for (int ijk = 0; ijk < SAI->nr*SAI->nc; ijk++) {
 						for (int ik = 0; ik <= maxL; ik++) {
@@ -347,10 +355,147 @@ int main(int argc, char** argv) {
 						}
 					}
 
+					/* Fill in missing depth values. This step needs to be done sequentially since we propagate the missing values from side-view to side-view. */
+					/*% find as reference the already solved view closest to the center that
+					% is a neighbor of the current view*/
+
+					int closest_jj = 0;
+					float smallest_distance = FLT_MAX;
+
+					for (int dy = -1; dy <= 1; dy++) {
+						for (int dx = -1; dx <= 1; dx++) {
+
+							view *SAI_f = LF_mat[SAI->r + dy][SAI->c + dx];
+
+							if (SAI_f->i_order < jj) {
+
+								float dist = sqrt((SAI_f->r - SAI->r)*(SAI_f->r - SAI->r) + 
+									(SAI_f->c- SAI->c)*(SAI_f->c - SAI->c));
+
+								if (dist < smallest_distance) {
+									smallest_distance = dist;
+									closest_jj = SAI_f->i_order;
+								}
+
+							}
+
+						}
+					}
+
+
 					for (int iR = 0; iR <= maxL; iR++) {
 						printf("SAI->region_displacements[%d][%d][%d][0] = %d\t", SAI1->r, SAI1->c, iR, SAI->region_displacements[SAI1->r][SAI1->c][iR][0]);
 						printf("SAI->region_displacements[%d][%d][%d][1] = %d\n", SAI1->r, SAI1->c, iR, SAI->region_displacements[SAI1->r][SAI1->c][iR][1]);
 					}
+
+
+					unsigned short *seg_warped;
+					unsigned short *color_seg_warped;
+
+					seg_warped = new unsigned short[SAI->nr*SAI->nc]();
+					color_seg_warped = new unsigned short[SAI->nr*SAI->nc * 3]();
+
+					for (int ijk = 0; ijk < SAI->nr*SAI->nc; ijk++) {
+						for (int ik = 0; ik <= maxL; ik++) {
+							if (*(segp + ijk) == ik) {
+								int iy = ijk % SAI->nr; //row
+								int ix = (ijk - iy) / SAI->nr; //col
+
+								int iy1 = iy + SAI->region_displacements[SAI1->r][SAI1->c][ik][0];
+								int ix1 = ix + SAI->region_displacements[SAI1->r][SAI1->c][ik][1];
+
+								if (iy1 >= 0 && iy1 < SAI->nr && ix1 >= 0 && ix1 < SAI->nc) {
+
+									int ijk1 = ix1*SAI->nr + iy1;
+
+									if (*(seg_warped + ijk1) == 0) {
+
+										for (int ic = 0; ic < 3; ic++) {
+											int offc = ic*SAI->nr*SAI->nc;
+											if (ic < 1) {
+												*(seg_warped + ijk1 + offc) = ik;
+											}
+											*(color_seg_warped + ijk1 + offc) = *(im0 + ijk + offc);
+										}
+
+									}
+								}
+							}
+						}
+					}
+
+					/* now use the chosen view closest_jj and use 3x3 pixel neighborhood to fill in missing depth with the maximum */
+					if (closest_jj > 0) {
+						view *SAI_f = LF + closest_jj;
+
+						unsigned short *seg_f = SAI_f->segmentation;
+
+						for (int ijk = 0; ijk < SAI->nr*SAI->nc; ijk++) {
+
+							if (*(seg_warped + ijk) == 0) {
+
+								int iy = ijk % SAI->nr; //row
+								int ix = (ijk - iy) / SAI->nr; //col
+
+								unsigned short largest_depth = 0;
+
+								for (int dy = -1; dy <= 1; dy++) {
+									for (int dx = -1; dx <= 1; dx++) {
+
+										int iy1 = iy + dy;
+										int ix1 = ix + dx;
+
+										if (iy1 >= 0 && iy1 < SAI->nr && ix1 >= 0 && ix1 < SAI->nc) {
+
+											unsigned short dval = *(seg_f + ijk + dx*SAI->nr + dy);
+
+											if (dval > largest_depth) {
+												largest_depth = dval;
+											}
+
+										}
+									}
+								}
+
+								*(seg_warped + ijk) = largest_depth;
+
+							}
+						}
+					}
+
+					unsigned short *DM_ROW_tmp = new unsigned short[SAI->nr*SAI->nc]();
+					unsigned short *DM_COL_tmp = new unsigned short[SAI->nr*SAI->nc]();
+
+					/* make row and column disparity maps, save to disk */
+					for (int ijk = 0; ijk < SAI->nr*SAI->nc; ijk++) {
+						int ik = *(seg_warped + ijk);
+						DM_ROW_tmp[ijk] = (unsigned short)SAI->region_displacements[SAI1->r][SAI1->c][ik][0] + 20;
+						DM_COL_tmp[ijk] = (unsigned short)SAI->region_displacements[SAI1->r][SAI1->c][ik][1] + 20;
+					}
+
+					char tempchar[1024];
+					sprintf(tempchar, "%s%03d_%03d%s%03d_%03d%s", output_dir, (SAI)->c, (SAI)->r, "_segmentation_warped_to_", SAI1->c, SAI1->r, ".pgm");
+					aux_write16PGMPPM(tempchar, SAI->nc, SAI->nr, 1, seg_warped);
+
+					memset(tempchar, 0x00, 1024 * sizeof(char));
+					sprintf(tempchar, "%s%03d_%03d%s%03d_%03d%s", output_dir, (SAI)->c, (SAI)->r, "_color_warped_to_", SAI1->c, SAI1->r, ".ppm");
+					aux_write16PGMPPM(tempchar, SAI->nc, SAI->nr, 3, color_seg_warped);
+
+					memset(tempchar, 0x00, 1024 * sizeof(char));
+					sprintf(tempchar, "%s%03d_%03d%s%03d_%03d%s", output_dir, (SAI)->c, (SAI)->r, "_warped_to_", SAI1->c, SAI1->r, "_DM_ROW.pgm");
+					aux_write16PGMPPM(tempchar, SAI->nc, SAI->nr, 1, DM_ROW_tmp);
+
+					memset(tempchar, 0x00, 1024 * sizeof(char));
+					sprintf(tempchar, "%s%03d_%03d%s%03d_%03d%s", output_dir, (SAI)->c, (SAI)->r, "_warped_to_", SAI1->c, SAI1->r, "_DM_COL.pgm");
+					aux_write16PGMPPM(tempchar, SAI->nc, SAI->nr, 1, DM_COL_tmp);
+
+					SAI1->segmentation = seg_warped;
+
+					delete[](DM_ROW_tmp);
+					delete[](DM_COL_tmp);
+
+					//delete[](seg_warped); //!!!!!!!!!!!!!!!!!!!!!!!!!!!!! we need to clean this still
+					delete[](color_seg_warped);
 
 
 					//char dummy;
@@ -369,7 +514,7 @@ int main(int argc, char** argv) {
 
 				}
 				else {
-					/* nothing to do, region displacements are zero*/
+					/* nothing to do, for each region displacements are zero*/
 				}
 
 			}
@@ -378,6 +523,7 @@ int main(int argc, char** argv) {
 
 		}
 	}
+
 
 	char path_out_LF_data[1024];
 	sprintf(path_out_LF_data, "%s%c%s", output_dir, '/', "output.LF");
@@ -486,6 +632,33 @@ int main(int argc, char** argv) {
 				aux_read16PGMPPM(ref_view->path_out_pgm, tmp_w, tmp_r, tmp_ncomp, ref_view->depth);
 				aux_read16PGMPPM(ref_view->path_out_ppm, tmp_w, tmp_r, tmp_ncomp, ref_view->color);
 
+//				/* lets test with segmentation and displacement vectors */
+//				ref_view->DM_COL = new float[ref_view->nr*ref_view->nc]();
+//				ref_view->DM_ROW = new float[ref_view->nr*ref_view->nc]();
+//
+//				unsigned short *segp = ref_view->segmentation;
+//
+//#pragma omp parallel for
+//				for (int ijk = 0; ijk < ref_view->nr*ref_view->nc; ijk++) {
+//					for (int ik = 0; ik <= ref_view->maxL; ik++) {
+//						if (*(segp + ijk) == ik) {
+//							int iy = ijk % ref_view->nr; //row
+//							int ix = (ijk - iy) / ref_view->nr; //col
+//
+//							int iy1 = iy - ref_view->region_displacements[ref_view->r][ref_view->c][ik][0] 
+//								+ ref_view->region_displacements[SAI->r][SAI->c][ik][0];
+//							int ix1 = ix + ref_view->region_displacements[ref_view->r][ref_view->c][ik][1]
+//								+ ref_view->region_displacements[SAI->r][SAI->c][ik][1];
+//
+//							if (iy1 >= 0 && iy1 < ref_view->nr && ix1 >= 0 && ix1 < ref_view->nc) {
+//
+//								int ijk1 = ix1*ref_view->nr + iy1;
+//
+//							}
+//						}
+//					}
+//				}
+
 				/* FORWARD warp color AND depth */
 				warpView0_to_View1(ref_view, SAI, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
 
@@ -500,12 +673,14 @@ int main(int argc, char** argv) {
 				sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (ref_view)->c, (ref_view)->r, "_warped_to_", SAI->c, SAI->r, ".ppm");
 				aux_write16PGMPPM(tmp_str, SAI->nc, SAI->nr, 3, warped_color_views[ij]);
 
+				/*memset(tmp_str, 0x00, sizeof(char) * 1024);*/
 				sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (ref_view)->c, (ref_view)->r, "_warped_to_", SAI->c, SAI->r, ".pgm");
 				aux_write16PGMPPM(tmp_str, SAI->nc, SAI->nr, 1, warped_depth_views[ij]);
 
 				//FILE *tmpf;
-				//tmpf = fopen("G:/HEVC_HDCA/Berlin_verification_model/TMP_CPP/disptarg.float", "wb");
-				//fwrite(DispTargs[ij], sizeof(float), 1080 * 1920, tmpf);
+				//sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (ref_view)->c, (ref_view)->r, "_warped_to_", SAI->c, SAI->r, "_DispTarg.float");
+				//tmpf = fopen(tmp_str, "wb");
+				//fwrite(DispTargs[ij], sizeof(float), SAI->nr * SAI->nc, tmpf);
 				//fclose(tmpf);
 
 			}
@@ -518,7 +693,7 @@ int main(int argc, char** argv) {
 			}
 			else {
 				/* we don't use LS weights but something derived on geometric distance in view array*/
-				getGeomWeight(SAI, LF, 10.0);
+				getGeomWeight(SAI, LF, SAI->stdd);
 			}
 
 			/* merge color */
@@ -611,7 +786,15 @@ int main(int argc, char** argv) {
 
 		}
 
-		if (depth_file_exist && SAI->residual_rate_depth > 0) { /* residual depth if needed */
+		/* medfilt depth */
+		unsigned short *tmp_depth = new unsigned short[SAI->nr*SAI->nc]();
+		int startt = clock();
+		medfilt2D(SAI->depth, tmp_depth, 3, SAI->nr, SAI->nc);
+		std::cout << "time elapsed in depth median filtering\t" << (int)clock() - startt << "\n";
+		memcpy(SAI->depth, tmp_depth, sizeof(unsigned short)*SAI->nr*SAI->nc);
+		delete[](tmp_depth);
+
+		if (SAI->residual_rate_depth > 0 && depth_file_exist) { /* residual depth if needed */
 
 			sprintf(pgm_residual_depth_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_depth_residual.pgm");
 
@@ -624,18 +807,13 @@ int main(int argc, char** argv) {
 
 		}
 
-		/* medfilt depth */
-		unsigned short *tmp_depth = new unsigned short[SAI->nr*SAI->nc]();
-		int startt = clock();
-		medfilt2D(SAI->depth, tmp_depth, 3, SAI->nr, SAI->nc);
-		std::cout << "time elapsed in depth median filtering\t" << (int)clock() - startt << "\n";
-		memcpy(SAI->depth, tmp_depth, sizeof(unsigned short)*SAI->nr*SAI->nc);
-		delete[](tmp_depth);
+
 
 		aux_write16PGMPPM(SAI->path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
 		aux_write16PGMPPM(SAI->path_out_pgm, SAI->nc, SAI->nr, 1, SAI->depth);
 
-		if (depth_file_exist) {
+		if (SAI->residual_rate_depth > 0 && depth_file_exist) 
+		{
 			psnr_result = getPSNR(NULL, SAI->path_out_pgm, SAI->path_input_pgm, difftest_call_pgm);
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 		}
@@ -696,7 +874,7 @@ int main(int argc, char** argv) {
 
 			if (SAI->NB > 0) {
 
-				/* for debug and studying, we write merging weights to standalone files also*/
+				/* for debuggin we output temporary file also and studying, we write merging weights to standalone files also*/
 
 				FILE *wfile;
 				char wfile_name[1024];
@@ -705,7 +883,7 @@ int main(int argc, char** argv) {
 				fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, wfile);
 				fclose(wfile);
 
-
+				/* bitstream */
 				fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, output_LF_file);
 			}
 
@@ -734,7 +912,7 @@ int main(int argc, char** argv) {
 			fwrite(&n_bytes_color_residual, sizeof(int), 1, output_LF_file);
 		}
 
-		if (depth_file_exist && SAI->residual_rate_depth > 0) {
+		if (SAI->residual_rate_depth > 0 && depth_file_exist) {
 			int n_bytes_depth_residual = aux_GetFileSize(jp2_residual_depth_path_jp2);
 
 			unsigned char *jp2_depth_residual = new unsigned char[n_bytes_depth_residual]();

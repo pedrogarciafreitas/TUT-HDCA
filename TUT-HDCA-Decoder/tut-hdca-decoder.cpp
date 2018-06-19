@@ -281,13 +281,13 @@ int main(int argc, char** argv) {
 
 		}
 
-		/* medfilt depth */
-		unsigned short *tmp_depth = new unsigned short[SAI->nr*SAI->nc]();
-		int startt = clock();
-		medfilt2D(SAI->depth, tmp_depth, 3, SAI->nr, SAI->nc);
-		std::cout << "time elapsed in depth median filtering\t" << (int)clock() - startt << "\n";
-		memcpy(SAI->depth, tmp_depth, sizeof(unsigned short)*SAI->nr*SAI->nc);
-		delete[](tmp_depth);
+		///* medfilt depth */
+		//unsigned short *tmp_depth = new unsigned short[SAI->nr*SAI->nc]();
+		//int startt = clock();
+		//medfilt2D(SAI->depth, tmp_depth, 3, SAI->nr, SAI->nc);
+		//std::cout << "time elapsed in depth median filtering\t" << (int)clock() - startt << "\n";
+		//memcpy(SAI->depth, tmp_depth, sizeof(unsigned short)*SAI->nr*SAI->nc);
+		//delete[](tmp_depth);
 
 		sprintf(SAI->path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".ppm");
 		sprintf(SAI->path_out_pgm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".pgm");
@@ -317,7 +317,7 @@ int main(int argc, char** argv) {
 	for (int ii = 0; ii < n_views_total; ii++)
 	{
 
-		printf("ii=%d\n", ii);
+		//printf("ii=%d\n", ii);
 
 		view *SAI = LF + ii;
 

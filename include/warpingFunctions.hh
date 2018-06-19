@@ -10,7 +10,7 @@ struct view{
 	unsigned short *color = NULL;
 	unsigned short *depth = NULL;
 
-	int *segmentation = NULL;
+	unsigned short *segmentation = NULL;
 
 	int r = NULL, c = NULL; // SAI subscript
 
@@ -18,7 +18,7 @@ struct view{
 
 	float y, x; // camera displacement
 
-	int mind = 0; //disparity minimum, needed when sign converted
+	int min_inv_d = 0; // needed only if inverse depth has negative values, [0,max]-mind = [-mind,max-mind]
 
 	int n_references = 0, n_depth_references = 0;
 
@@ -49,11 +49,16 @@ struct view{
 	int NNt = 0, Ms = 0; //for global sparse, NNt defines the neighborhood size [ -NNt:NNt,-NNt:NNt ], Ms is the filter order
 
 	int has_segmentation = 0;
+	int maxL = 0; // number of regions in segmentation
 
-	int ****region_displacements; /* region displacement vectors [iar][iac][iR][xy], e.g., [13][13][25][2], for 13x13 angular views with 25 regions for segmentation */
+	int ****region_displacements = NULL; /* region displacement vectors [iar][iac][iR][xy], e.g., [13][13][25][2], for 13x13 angular views with 25 regions for segmentation */
 
 	char path_input_pgm[1024], path_input_ppm[1024], path_input_seg[1024];
 	char path_out_pgm[1024], path_out_ppm[1024];
+
+	float *DM_ROW = NULL, *DM_COL = NULL; /* for lenslet with region displacement vectors */
+
+	int i_order = 0; /* view position in encoding configuration */
 
 };
 
@@ -100,7 +105,7 @@ void applyGlobalSparseFilter(view *view0){
 
 	for (int ii = 0; ii < Ms; ii++){
 		if (Regr0[ii] > 0){
-			theta[Regr0[ii] - 1] = ((float)theta0[ii]) / pow(2, 20);
+			theta[Regr0[ii] - 1] = ((float)theta0[ii]) / pow(2, BIT_DEPTH_SPARSE);
 			//std::cout << theta[Regr0[ii] - 1] << "\t";
 		}
 	}
@@ -215,7 +220,7 @@ void getGlobalSparseFilter(view *view0, unsigned short *original_color_view)
 
 	for (int ii = 0; ii < Ms; ii++){
 		*(Regr0 + ii) = ((unsigned char)*(PredRegr0 + ii) + 1);
-		*(theta0 + ii) = (int32_t)round(*(PredTheta0 + ii) * pow(2, 20));
+		*(theta0 + ii) = (int32_t)round(*(PredTheta0 + ii) * pow(2, BIT_DEPTH_SPARSE));
 	}
 }
 
@@ -419,7 +424,7 @@ void getViewMergingLSWeights_N(view *view0, unsigned short **warpedColorViews, f
 		}
 
 		for (int ii = 0; ii < M; ii++){
-			thetas[ij + MMM * iks[PredRegr0[ii]]] = (signed short)floor(*(PredTheta0 + ii)*pow(2, 14)+0.5);
+			thetas[ij + MMM * iks[PredRegr0[ii]]] = (signed short)floor(*(PredTheta0 + ii)*pow(2, BIT_DEPTH_MERGE)+0.5);
 		}
 
 		delete[](iks);
@@ -550,7 +555,7 @@ void getGeomWeight(view *view0, view *LF, float stdd) {
 	for (int ik = 0; ik < (view0)->n_references; ik++) {
 		for (int ij = 0; ij < MMM; ij++) {
 			if (bmask[ij + ik * MMM]) {
-				LScoeffs[in] = (signed short)floor(thetas[ij + MMM * ik] * pow(2, 14) + 0.5);
+				LScoeffs[in] = (signed short)floor(thetas[ij + MMM * ik] * pow(2, BIT_DEPTH_MERGE) + 0.5);
 				in++;
 			}
 		}
@@ -571,7 +576,7 @@ void mergeWarped_N(unsigned short **warpedColorViews, float **DispTargs, view *v
 
 	for (int ii = 0; ii < MMM * (view0)->n_references; ii++){
 		if (bmask[ii]){
-			(view0)->merge_weights_float[ii] = ((float)(view0)->merge_weights[uu++]) / pow(2.0, 14.0);
+			(view0)->merge_weights_float[ii] = ((float)(view0)->merge_weights[uu++]) / pow(2, BIT_DEPTH_MERGE);
 			//std::cout << (view0)->merge_weights_float[ii] << "\n";
 		}
 		else{
@@ -642,17 +647,24 @@ void warpView0_to_View1(view *view0, view *view1, unsigned short *&warpedColor, 
 	for (int ij = 0; ij < view0->nr*view0->nc; ij++)
 	{
 
-		float disp = ((float)DD1[ij] - view0->mind) / pow(2,D_DEPTH);
+
+		float disp = ((float)DD1[ij] - (float)view0->min_inv_d) / pow(2, D_DEPTH);
 		float DM_COL = disp*ddx;
 		float DM_ROW = -disp*ddy;
-
 		float disp0 = abs(DM_COL) + abs(DM_ROW);
+
+		//if (view0->DM_ROW != NULL && view0->DM_COL != NULL)
+		//{
+		//	DM_COL = view0->DM_COL[ij];
+		//	DM_ROW = view0->DM_ROW[ij];
+		//	disp0 = 1 / (abs(DM_COL) + abs(DM_ROW)); /*for lenslet large disparity means further away ... */
+		//}
 
 		int ix = ij % view0->nr; //row
 		int iy = (ij - ix) / view0->nr; //col
 
-		int iynew = iy + (int)floor(DM_COL+0.5);
-		int ixnew = ix + (int)floor(DM_ROW+0.5);
+		int iynew = iy + (int)floor(DM_COL + 0.5);
+		int ixnew = ix + (int)floor(DM_ROW + 0.5);
 
 		if (iynew >= 0 && iynew < view0->nc && ixnew >= 0 && ixnew < view0->nr){
 			int indnew = ixnew + iynew*view0->nr;
