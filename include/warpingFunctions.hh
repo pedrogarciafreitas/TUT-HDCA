@@ -4,6 +4,16 @@
 #define WARPING_FUN_HH
 
 #include <cmath>
+#include "float.h"
+
+#ifdef _WIN32 || _WIN64 
+#define _popen _popen
+#endif
+#ifdef __unix__
+#define _popen popen
+#endif
+
+#endif
 
 struct view{
 

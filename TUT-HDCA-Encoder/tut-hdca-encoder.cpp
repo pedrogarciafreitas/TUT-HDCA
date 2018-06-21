@@ -701,6 +701,22 @@ int main(int argc, char** argv) {
 
 			//aux_write16PGMPPM(path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
 
+			//if (ii > 0) {
+
+			//	int tmp_w, tmp_r, tmp_ncomp;
+
+			//	aux_read16PGMPPM(LF->path_out_ppm, tmp_w, tmp_r, tmp_ncomp, LF->color);
+
+			//	unsigned short *cf = LF->color;//center
+			//	for (int ijk = 0; ijk < SAI->nr*SAI->nc * 3; ijk++) {
+			//		if (*(SAI->color + ijk) == 0) {
+			//			*(SAI->color + ijk) = *(cf + ijk);
+			//		}
+			//	}
+			//	delete[](LF->color);
+			//}
+
+
 			/* hole filling for color*/
 			holefilling(SAI->color, 3, SAI->nr, SAI->nc, 0);
 
