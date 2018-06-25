@@ -61,6 +61,8 @@ struct view{
 
 	int i_order; /* view position in encoding configuration */
 
+	bool use_median; //use median merging or not
+
 };
 
 void initView(view* view)
@@ -99,6 +101,7 @@ void initView(view* view)
 
 	view->i_order = 0;
 
+	view->use_median = false;
 
 }
 
@@ -511,6 +514,29 @@ void getViewMergingLSWeights_N(view *view0, unsigned short **warpedColorViews, f
 
 }
 
+double getRGB_PSNR(unsigned short *im0, unsigned short* im1, int NR, int NC, int NCOMP) 
+{
+
+	double se = 0;
+
+	double maxval = 0;
+
+	for (int ii = 0; ii < NR*NC*NCOMP; ii++) 
+	
+	{
+		double dx = (double)(*(im0 + ii)) - (double)(*(im1 + ii));
+
+		maxval = *(im1 + ii) > maxval ? *(im1 + ii) : maxval;
+
+		se += dx*dx;
+	}
+
+	double mse = se / NR / NC / NCOMP;
+
+	return 10 * log10( (maxval*maxval) / mse);
+
+}
+
 void initSegVp(view *view0, float **DispTargs) {
 
 	int nr = view0->nr;
@@ -536,8 +562,6 @@ void initSegVp(view *view0, float **DispTargs) {
 		}
 
 		seg_vp[ii] = ci;
-
-
 
 		number_of_pixels_per_region[ci]++;
 
@@ -566,23 +590,25 @@ void initViewW(view *view0, float **DispTargs) {
 
 }
 
-void getGeomWeight(view *view0, view *LF, float stdd) {
+void getGeomWeight(view *view0, view *LF) {
+
+	float stdd = view0->stdd;
 
 	int MMM = pow(2, (view0)->n_references);
 
-	float *thetas = new float[view0->NB]();
+	double *thetas = new double[view0->NB]();
 
 	bool *bmask = (view0)->bmask;
 
 	for (int ii = 0; ii < MMM; ii++) {
-		float sumw = 0;
+		double sumw = 0;
 
 		for (int ij = 0; ij < (view0)->n_references; ij++) {
 			view *view1 = LF + (view0)->references[ij];
-			float vdistance = (view0->x - view1->x)*(view0->x - view1->x) + (view0->y - view1->y)*(view0->y - view1->y);
+			double vdistance = (view0->x - view1->x)*(view0->x - view1->x) + (view0->y - view1->y)*(view0->y - view1->y);
 			if (bmask[ii + ij * MMM]) {
 				thetas[ii + ij * MMM] = exp(-(vdistance) / (2 * stdd*stdd));
-				sumw += thetas[ii + ij * MMM];
+				sumw = sumw + thetas[ii + ij * MMM];
 			}
 		}
 		for (int ij = 0; ij < (view0)->n_references; ij++)
@@ -600,9 +626,41 @@ void getGeomWeight(view *view0, view *LF, float stdd) {
 			}
 		}
 	}
+
 	delete[](thetas);
 
-	//view0->stdd = stdd;
+}
+
+void mergeMedian_N(unsigned short **warpedColorViews, float **DispTargs, view *view0, const int ncomponents) {
+
+	unsigned short *AA2 = new unsigned short[view0->nr*view0->nc*ncomponents]();
+
+#pragma omp parallel for
+	for (int ii = 0; ii < view0->nr*view0->nc; ii++) {
+		for (int icomp = 0; icomp < ncomponents; icomp++) {
+			std::vector< unsigned short > vals;
+			for (int ik = 0; ik < view0->n_references; ik++) {
+
+				float *pf = DispTargs[ik];
+				unsigned short *ps = warpedColorViews[ik];
+
+				if (*(pf + ii) > -1) {
+
+					vals.push_back(*(ps + ii + icomp*view0->nr*view0->nc));
+
+				}
+
+			}
+
+			if (vals.size() > 0) {
+				*(AA2 + ii + icomp*view0->nr*view0->nc) = getMedian(vals);
+			}
+		}
+	}
+
+	memcpy(view0->color, AA2, sizeof(unsigned short)*view0->nr*view0->nc * 3);
+	delete[](AA2);
+
 }
 
 void mergeWarped_N(unsigned short **warpedColorViews, float **DispTargs, view *view0, const int ncomponents)
@@ -616,8 +674,9 @@ void mergeWarped_N(unsigned short **warpedColorViews, float **DispTargs, view *v
 
 	for (int ii = 0; ii < MMM * (view0)->n_references; ii++){
 		if (bmask[ii]){
-			(view0)->merge_weights_float[ii] = ((float)(view0)->merge_weights[uu++]) / pow(2, BIT_DEPTH_MERGE);
-			std::cout << (view0)->merge_weights_float[ii] << "\n";
+			(view0)->merge_weights_float[ii] = ((float)(view0)->merge_weights[uu++]) / (float)pow(2, BIT_DEPTH_MERGE);
+			//std::cout << (view0)->merge_weights_float[ii] << "\t";
+			//printf("%f\t", (view0)->merge_weights_float[ii]);
 		}
 		else{
 			(view0)->merge_weights_float[ii] = 0.0;

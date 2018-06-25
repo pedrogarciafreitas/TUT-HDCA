@@ -668,20 +668,60 @@ int main(int argc, char** argv) {
 			/* get LS weights */
 			if (SAI->stdd == 0) {
 				getViewMergingLSWeights_N(SAI, warped_color_views, DispTargs, original_color_view);
+				/* merge color with prediction */
+				mergeWarped_N(warped_color_views, DispTargs, SAI, 3);
+				/* hole filling for color*/
+				holefilling(SAI->color, 3, SAI->nr, SAI->nc, 0);
 			}
 			else {
-				/* we don't use LS weights but something derived on geometric distance in view array*/
-				getGeomWeight(SAI, LF, SAI->stdd);
+				/* get baseline with median, we then study whether weighting improves */
+				/* merge color with median */
+				int startt = clock();
+				mergeMedian_N(warped_color_views, DispTargs, SAI, 3);
+				std::cout << "time elapsed in color median merging\t" << (int)clock() - startt << "\n";
+				holefilling(SAI->color, 3, SAI->nr, SAI->nc, 0);
+
+				double psnr_med = getRGB_PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3);
+				
+				unsigned short *tmp_m = new unsigned short[SAI->nr*SAI->nc*3]();
+				memcpy(tmp_m, SAI->color, sizeof(unsigned short)*SAI->nr*SAI->nc * 3);
+
+				double psnr_w = 0;
+				float stdi = 0;
+
+				//double stds[] = { 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85 };
+				for (float stds = 5; stds<250; stds=stds+5){
+					SAI->stdd = stds;
+					/* we don't use LS weights but something derived on geometric distance in view array*/
+					getGeomWeight(SAI, LF);
+					/* merge color with prediction */
+					mergeWarped_N(warped_color_views, DispTargs, SAI, 3);
+					/* hole filling for color*/
+					holefilling(SAI->color, 3, SAI->nr, SAI->nc, 0);
+					double tpsnr = getRGB_PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3);
+
+					if (tpsnr > psnr_w) {
+						psnr_w = tpsnr;
+						stdi = SAI->stdd;
+					}
+
+				}
+
+				SAI->stdd = stdi;
+
+				printf("PSNR RGB median:%f\tPSNR RGB weights:%f\t SAI->std: %f\n", psnr_med, psnr_w,SAI->stdd);
+
+				if (psnr_w < psnr_med) {
+					delete[](SAI->color);
+					SAI->color = tmp_m;
+					SAI->use_median = true;
+				}
+				else {
+					delete[](tmp_m);
+				}
 			}
 
-			/* merge color */
-			mergeWarped_N(warped_color_views, DispTargs, SAI, 3);
-
 			//aux_write16PGMPPM(path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
-
-
-			/* hole filling for color*/
-			holefilling(SAI->color, 3, SAI->nr, SAI->nc, 0);
 
 			//char tmp_str[1024];
 			//sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (LF + 0)->c, (LF + 0)->r, "_warped_to_", SAI->c, SAI->r, "_inpainted.ppm");
@@ -711,7 +751,7 @@ int main(int argc, char** argv) {
 
 			aux_write16PGMPPM(SAI->path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
 			psnr_result = getPSNR(NULL, SAI->path_out_ppm, SAI->path_input_ppm, difftest_call);
-
+		
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 
 		}
@@ -740,13 +780,13 @@ int main(int argc, char** argv) {
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", 0);
 		}
 
-		char ppm_residual_path[512];
+		char ppm_residual_path[1024];
 
-		char jp2_residual_path_jp2[512];
+		char jp2_residual_path_jp2[1024];
 
-		char pgm_residual_depth_path[512];
+		char pgm_residual_depth_path[1024];
 
-		char jp2_residual_depth_path_jp2[512];
+		char jp2_residual_depth_path_jp2[1024];
 
 		/* get residual */
 		if (SAI->residual_rate_color > 0)
@@ -765,14 +805,6 @@ int main(int argc, char** argv) {
 
 		}
 
-		/* medfilt depth */
-		unsigned short *tmp_depth = new unsigned short[SAI->nr*SAI->nc]();
-		int startt = clock();
-		medfilt2D(SAI->depth, tmp_depth, 3, SAI->nr, SAI->nc);
-		std::cout << "time elapsed in depth median filtering\t" << (int)clock() - startt << "\n";
-		memcpy(SAI->depth, tmp_depth, sizeof(unsigned short)*SAI->nr*SAI->nc);
-		delete[](tmp_depth);
-
 		if (SAI->residual_rate_depth > 0 && depth_file_exist) { /* residual depth if needed */
 
 			sprintf(pgm_residual_depth_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_depth_residual.pgm");
@@ -786,7 +818,13 @@ int main(int argc, char** argv) {
 
 		}
 
-
+		/* medfilt depth */
+		//unsigned short *tmp_depth = new unsigned short[SAI->nr*SAI->nc]();
+		//int startt = clock();
+		//medfilt2D(SAI->depth, tmp_depth, 3, SAI->nr, SAI->nc);
+		//std::cout << "time elapsed in depth median filtering\t" << (int)clock() - startt << "\n";
+		//memcpy(SAI->depth, tmp_depth, sizeof(unsigned short)*SAI->nr*SAI->nc);
+		//delete[](tmp_depth);
 
 		aux_write16PGMPPM(SAI->path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
 		aux_write16PGMPPM(SAI->path_out_pgm, SAI->nc, SAI->nr, 1, SAI->depth);
@@ -821,22 +859,22 @@ int main(int argc, char** argv) {
 		fclose(output_results_file);
 
 
-		/* write view configuration data to disk */
+		/* write view configuration data to bitstream */
 		output_LF_file = fopen(path_out_LF_data, "ab");
 
-		fwrite(&SAI->r, sizeof(int), 1, output_LF_file);
-		fwrite(&SAI->c, sizeof(int), 1, output_LF_file);
+		fwrite(&SAI->r, sizeof(int), 1, output_LF_file); //uint16 here?
+		fwrite(&SAI->c, sizeof(int), 1, output_LF_file); //uint16 here?
 
-		fwrite(&SAI->nr, sizeof(int), 1, output_LF_file);
-		fwrite(&SAI->nc, sizeof(int), 1, output_LF_file);
+		fwrite(&SAI->nr, sizeof(int), 1, output_LF_file); // needed only once per LF
+		fwrite(&SAI->nc, sizeof(int), 1, output_LF_file); // 
 
-		fwrite(&SAI->x, sizeof(int), 1, output_LF_file);
+		fwrite(&SAI->x, sizeof(float), 1, output_LF_file);
 		fwrite(&SAI->y, sizeof(float), 1, output_LF_file);
 
-		fwrite(&SAI->n_references, sizeof(int), 1, output_LF_file);
+		fwrite(&SAI->n_references, sizeof(int), 1, output_LF_file); //uint16 here?
 
 		if (SAI->n_references > 0) {
-			fwrite(SAI->references, sizeof(int), SAI->n_references, output_LF_file);
+			fwrite(SAI->references, sizeof(int), SAI->n_references, output_LF_file); //uint16 here?
 		}
 
 		fwrite(&SAI->n_depth_references, sizeof(int), 1, output_LF_file);
@@ -844,28 +882,33 @@ int main(int argc, char** argv) {
 			fwrite(SAI->depth_references, sizeof(int), SAI->n_depth_references, output_LF_file);
 		}
 
-		fwrite(&SAI->NNt, sizeof(int), 1, output_LF_file);
-		fwrite(&SAI->Ms, sizeof(int), 1, output_LF_file);
+		fwrite(&SAI->NNt, sizeof(int), 1, output_LF_file); //char here?
+		fwrite(&SAI->Ms, sizeof(int), 1, output_LF_file); //char here?
 
-		fwrite(&SAI->stdd, sizeof(float), 1, output_LF_file);
+		fwrite(&SAI->use_median, sizeof(bool), 1, output_LF_file); //median predictor, no need for any weights
 
-		if (SAI->stdd == 0) {
+		if (!SAI->use_median) {
 
-			if (SAI->NB > 0) {
+			fwrite(&SAI->stdd, sizeof(float), 1, output_LF_file);
 
-				/* for debuggin we output temporary file also and studying, we write merging weights to standalone files also*/
+			if (SAI->stdd == 0) {
 
-				FILE *wfile;
-				char wfile_name[1024];
-				sprintf(wfile_name, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_merging_weights");
-				wfile = fopen(wfile_name, "wb");
-				fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, wfile);
-				fclose(wfile);
+				if (SAI->NB > 0) {
 
-				/* bitstream */
-				fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, output_LF_file);
+					/* for debuggin we output temporary file also and studying, we write merging weights to standalone files also*/
+
+					FILE *wfile;
+					char wfile_name[1024];
+					sprintf(wfile_name, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_merging_weights");
+					wfile = fopen(wfile_name, "wb");
+					fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, wfile);
+					fclose(wfile);
+
+					/* bitstream */
+					fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, output_LF_file);
+				}
+
 			}
-
 		}
 
 		if (SAI->Ms > 0 && SAI->NNt > 0) {
@@ -964,12 +1007,13 @@ int main(int argc, char** argv) {
 
 	}
 
-	delete[](LF);
-
-	for (int ii = 0; ii < maxC; ii++) {
+	
+	for (int ii = 0; ii < maxR; ii++) {
 		delete[](LF_mat[ii]);
 	}
 	delete[](LF_mat);
+
+	delete[](LF);
 
 	exit(0);
 }
