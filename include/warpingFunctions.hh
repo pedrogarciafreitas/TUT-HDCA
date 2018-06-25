@@ -6,71 +6,101 @@
 #include <cmath>
 #include "float.h"
 
-#ifdef _WIN32 || _WIN64 
-#define _popen _popen
-#endif
-#ifdef __unix__
-#define _popen popen
-#endif
-
-#endif
-
 struct view{
 
-	unsigned short *color = NULL;
-	unsigned short *depth = NULL;
+	unsigned short *color;
+	unsigned short *depth;
 
-	unsigned short *segmentation = NULL;
+	unsigned short *segmentation;
 
-	int r = NULL, c = NULL; // SAI subscript
+	int r, c; // SAI subscript
 
 	int nr, nc; // image height, width
 
 	float y, x; // camera displacement
 
-	int min_inv_d = 0; // needed only if inverse depth has negative values, [0,max]-mind = [-mind,max-mind]
+	int min_inv_d; // needed only if inverse depth has negative values, [0,max]-mind = [-mind,max-mind]
 
-	int n_references = 0, n_depth_references = 0;
+	int n_references, n_depth_references;
 
-	int *references = NULL, *depth_references = NULL; /* depth references not necessarily the same as color references
+	int *references, *depth_references; /* depth references not necessarily the same as color references
 													  we can have, for example, depth warping only from the externally obtained depth but we still
 													  warp color from neighbors that don't have depth provided. We don't want to propagate depth errors from
 													  badly warped depth views, thus we restrict depth warping to some high quality subset (usually meaning the 
 													  externally obtained high quality depth maps)*/
 
-	signed short *merge_weights = NULL;
-	int32_t *sparse_weights = NULL;
+	signed short *merge_weights;
+	int32_t *sparse_weights;
 
-	unsigned char *sparse_mask = NULL;
+	unsigned char *sparse_mask;
 
-	float *merge_weights_float = NULL;
+	float *merge_weights_float;
 
-	int *number_of_pixels_per_region = NULL;
+	int *number_of_pixels_per_region;
 
-	bool *bmask = NULL; /* view mask for merging weights */
-	unsigned short *seg_vp = NULL; /* class segmentation, used for view merging weights */
-	int NB = 0;
+	bool *bmask; /* view mask for merging weights */
+	unsigned short *seg_vp; /* class segmentation, used for view merging weights */
+	int NB;
 
 	float residual_rate_color;
 	float residual_rate_depth;
 
 	float stdd;
 
-	int NNt = 0, Ms = 0; //for global sparse, NNt defines the neighborhood size [ -NNt:NNt,-NNt:NNt ], Ms is the filter order
+	int NNt, Ms; //for global sparse, NNt defines the neighborhood size [ -NNt:NNt,-NNt:NNt ], Ms is the filter order
 
-	int has_segmentation = 0;
-	int maxL = 0; // number of regions in segmentation
+	int has_segmentation;
+	int maxL; // number of regions in segmentation
 
-	int ****region_displacements = NULL; /* region displacement vectors [iar][iac][iR][xy], e.g., [13][13][25][2], for 13x13 angular views with 25 regions for segmentation */
+	int ****region_displacements; /* region displacement vectors [iar][iac][iR][xy], e.g., [13][13][25][2], for 13x13 angular views with 25 regions for segmentation */
 
 	char path_input_pgm[1024], path_input_ppm[1024], path_input_seg[1024];
 	char path_out_pgm[1024], path_out_ppm[1024];
 
-	float *DM_ROW = NULL, *DM_COL = NULL; /* for lenslet with region displacement vectors */
+	float *DM_ROW, *DM_COL; /* for lenslet with region displacement vectors */
 
-	int i_order = 0; /* view position in encoding configuration */
+	int i_order; /* view position in encoding configuration */
 
 };
+
+void initView(view* view)
+{
+
+	view->color = NULL;
+	view->depth = NULL;
+	view->segmentation = NULL;
+
+	view->r = 0;
+	view->c = 0;
+
+	view->min_inv_d = 0;
+	view->n_references = 0;
+
+	view->references = NULL;
+	view->depth_references = NULL;
+
+	view->merge_weights = NULL;
+	view->sparse_weights = NULL;
+	view->sparse_mask = NULL;
+	view->merge_weights_float = NULL;
+	view->number_of_pixels_per_region = NULL;
+
+	view->bmask = NULL;
+	view->seg_vp = NULL;
+
+	view->NNt = 0;
+	view->Ms = 0;
+
+	view->has_segmentation = 0;
+	view->maxL = 0;
+
+	view->DM_ROW = NULL;
+	view->DM_COL = NULL;
+
+	view->i_order = 0;
+
+
+}
 
 float getPSNR(FILE *fileout, const char *path_out_ppm, const char *path_input_ppm, const char *difftest_call)
 {
@@ -572,7 +602,7 @@ void getGeomWeight(view *view0, view *LF, float stdd) {
 	}
 	delete[](thetas);
 
-	view0->stdd = stdd;
+	//view0->stdd = stdd;
 }
 
 void mergeWarped_N(unsigned short **warpedColorViews, float **DispTargs, view *view0, const int ncomponents)
@@ -587,7 +617,7 @@ void mergeWarped_N(unsigned short **warpedColorViews, float **DispTargs, view *v
 	for (int ii = 0; ii < MMM * (view0)->n_references; ii++){
 		if (bmask[ii]){
 			(view0)->merge_weights_float[ii] = ((float)(view0)->merge_weights[uu++]) / pow(2, BIT_DEPTH_MERGE);
-			//std::cout << (view0)->merge_weights_float[ii] << "\n";
+			std::cout << (view0)->merge_weights_float[ii] << "\n";
 		}
 		else{
 			(view0)->merge_weights_float[ii] = 0.0;

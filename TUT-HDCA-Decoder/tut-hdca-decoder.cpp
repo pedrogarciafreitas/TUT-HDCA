@@ -40,6 +40,8 @@ int main(int argc, char** argv) {
 
 		view *SAI = LF+ii;
 
+		initView(SAI);
+
 		ii++;
 
 		f_status = fread(&SAI->r, sizeof(int), 1, input_LF);

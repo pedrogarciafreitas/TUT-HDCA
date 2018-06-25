@@ -112,6 +112,9 @@ int main(int argc, char** argv) {
 	const char *difftest_call = "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/ScriptJan2018/ScriptSolution/difftest_ng.exe --toycbcr --psnr ";
 	const char *difftest_call_pgm = "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/ScriptJan2018/ScriptSolution/difftest_ng.exe --psnr ";
 
+	//const char *difftest_call = "D:/JPEG_VM_01/DevelopmentC/Pekka/difftest_ng.exe --toycbcr --psnr ";
+	//const char *difftest_call_pgm = "D:/JPEG_VM_01/DevelopmentC/Pekka/difftest_ng.exe --psnr ";
+
 	FILE *filept;
 
 	filept = fopen(config_file, "rb");
@@ -126,6 +129,8 @@ int main(int argc, char** argv) {
 	for (int ii = 0; ii < n_views_total; ii++) {
 
 		view *SAI = LF + ii;
+
+		initView(SAI);
 
 		SAI->i_order = ii;
 
@@ -632,33 +637,6 @@ int main(int argc, char** argv) {
 				aux_read16PGMPPM(ref_view->path_out_pgm, tmp_w, tmp_r, tmp_ncomp, ref_view->depth);
 				aux_read16PGMPPM(ref_view->path_out_ppm, tmp_w, tmp_r, tmp_ncomp, ref_view->color);
 
-//				/* lets test with segmentation and displacement vectors */
-//				ref_view->DM_COL = new float[ref_view->nr*ref_view->nc]();
-//				ref_view->DM_ROW = new float[ref_view->nr*ref_view->nc]();
-//
-//				unsigned short *segp = ref_view->segmentation;
-//
-//#pragma omp parallel for
-//				for (int ijk = 0; ijk < ref_view->nr*ref_view->nc; ijk++) {
-//					for (int ik = 0; ik <= ref_view->maxL; ik++) {
-//						if (*(segp + ijk) == ik) {
-//							int iy = ijk % ref_view->nr; //row
-//							int ix = (ijk - iy) / ref_view->nr; //col
-//
-//							int iy1 = iy - ref_view->region_displacements[ref_view->r][ref_view->c][ik][0] 
-//								+ ref_view->region_displacements[SAI->r][SAI->c][ik][0];
-//							int ix1 = ix + ref_view->region_displacements[ref_view->r][ref_view->c][ik][1]
-//								+ ref_view->region_displacements[SAI->r][SAI->c][ik][1];
-//
-//							if (iy1 >= 0 && iy1 < ref_view->nr && ix1 >= 0 && ix1 < ref_view->nc) {
-//
-//								int ijk1 = ix1*ref_view->nr + iy1;
-//
-//							}
-//						}
-//					}
-//				}
-
 				/* FORWARD warp color AND depth */
 				warpView0_to_View1(ref_view, SAI, warped_color_views[ij], warped_depth_views[ij], DispTargs[ij]);
 
@@ -700,21 +678,6 @@ int main(int argc, char** argv) {
 			mergeWarped_N(warped_color_views, DispTargs, SAI, 3);
 
 			//aux_write16PGMPPM(path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
-
-			//if (ii > 0) {
-
-			//	int tmp_w, tmp_r, tmp_ncomp;
-
-			//	aux_read16PGMPPM(LF->path_out_ppm, tmp_w, tmp_r, tmp_ncomp, LF->color);
-
-			//	unsigned short *cf = LF->color;//center
-			//	for (int ijk = 0; ijk < SAI->nr*SAI->nc * 3; ijk++) {
-			//		if (*(SAI->color + ijk) == 0) {
-			//			*(SAI->color + ijk) = *(cf + ijk);
-			//		}
-			//	}
-			//	delete[](LF->color);
-			//}
 
 
 			/* hole filling for color*/
