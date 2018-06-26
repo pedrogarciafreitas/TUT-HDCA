@@ -57,6 +57,10 @@ struct view{
 	char path_input_pgm[1024], path_input_ppm[1024], path_input_seg[1024];
 	char path_out_pgm[1024], path_out_ppm[1024];
 
+	//char path_input_Y_pgm[1024], path_out_Y_pgm[1024];
+	//char path_input_Cb_pgm[1024], path_out_Cb_pgm[1024];
+	//char path_input_Cr_pgm[1024], path_out_Cr_pgm[1024];
+
 	float *DM_ROW, *DM_COL; /* for lenslet with region displacement vectors */
 
 	int i_order; /* view position in encoding configuration */

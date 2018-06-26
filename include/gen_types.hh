@@ -44,6 +44,17 @@ int system_1(char *str) {
 
 }
 
+double clip(double in, const double min, const double max) {
+
+	if (in > max) {
+		return max;
+	}
+	if (in < min) {
+		return min;
+	}
+	return in;
+}
+
 
 template <class T>
 T getMedian(std::vector<T> scores)
@@ -280,6 +291,275 @@ void decodeResidualJP2(unsigned short *ps, const char *kdu_expand_path, const ch
 
 		delete[](jp2_residual);
 	}
+}
+
+void RGB2YCbCr(unsigned short *rgb, unsigned short *ycbcr, const int nr, const int nc,const int N) 
+{
+
+	/* N-bit RGB 444 -> YCbCr 444 conversion */
+
+	double M[] = { 0.2126, -0.1146,   0.5000,
+		0.7152, -0.3854, -0.4542,
+		0.0722,    0.5000, -0.0458 };
+
+	double *rgbD = new double[nr*nc * 3]();
+	double *ycbcrD = new double[nr*nc * 3]();
+
+	double nd = pow(2, (double)N - 8);
+
+	double clipval = pow(2, N) - 1;
+
+	for (int ii = 0; ii < nr*nc*3; ii++) {
+
+		*(rgbD + ii) = (double) *(rgb + ii);
+		*(rgbD + ii) = *(rgbD + ii) / clipval;
+
+	}
+
+	for (int ii = 0; ii < nr*nc; ii++) {
+		for (int icomp = 0; icomp < 3; icomp++) {
+
+			*(ycbcrD + ii + icomp*nr*nc) = *(rgbD + ii)*M[icomp + 0] + 
+				*(rgbD + ii + 1*nr*nc)*M[icomp + 3] + 
+				*(rgbD + ii + 2*nr*nc)*M[icomp + 6];
+
+			if (icomp < 1) {
+				*(ycbcrD + ii + icomp*nr*nc) = (219 * (*(ycbcrD + ii + icomp*nr*nc)) + 16)*nd;
+			}
+			else {
+				*(ycbcrD + ii + icomp*nr*nc) = (224 * (*(ycbcrD + ii + icomp*nr*nc)) + 128)*nd;
+			}
+
+			*(ycbcr + ii + icomp*nr*nc) = (unsigned short)*(ycbcrD + ii + icomp*nr*nc);
+		}
+
+	}
+
+	delete[](rgbD);
+	delete[](ycbcrD);
+
+}
+
+void YCbCr2RGB(unsigned short *ycbcr, unsigned short *rgb, const int nr, const int nc, const int N)
+{
+
+	double M[] = {	1.0000,			1.0000,		1.0000,
+					0,				-0.1873,    1.8556,
+					1.5748,			-0.4681,	0 };
+
+	double *rgbD = new double[nr*nc * 3]();
+	double *ycbcrD = new double[nr*nc * 3]();
+
+	double nd = pow(2, (double)N - 8);
+
+	unsigned short clipval = pow(2, N) - 1;
+
+	double sval1 = 16 * nd;
+	double sval2 = 219 * nd;
+	double sval3 = 128 * nd;
+	double sval4 = 224 * nd;
+
+	for (int ii = 0; ii < nr*nc; ii++) {
+
+		for (int icomp = 0; icomp < 3; icomp++) {
+
+			*(ycbcrD + ii + icomp*nr*nc) = (double) *(ycbcr + ii + icomp*nr*nc);
+			
+			if (icomp < 1) {
+				*(ycbcrD + ii + icomp*nr*nc) = clip( (*(ycbcrD + ii + icomp*nr*nc) - sval1) / sval2, 0, 1);
+			}
+			else {
+				*(ycbcrD + ii + icomp*nr*nc) = clip( (*(ycbcrD + ii + icomp*nr*nc) - sval3) / sval4, -0.5, 0.5);
+			}
+
+		}
+
+		for (int icomp = 0; icomp < 3; icomp++) {
+
+			*(rgbD + ii + icomp*nr*nc) = *(ycbcrD + ii)*M[icomp + 0] +
+				*(ycbcrD + ii + 1 * nr*nc)*M[icomp + 3] +
+				*(ycbcrD + ii + 2 * nr*nc)*M[icomp + 6];
+
+				*(rgb + ii + icomp*nr*nc) = (unsigned short)clip(( *(rgbD + ii + icomp*nr*nc)*clipval ), 0, clipval);
+		}
+
+	}
+
+	delete[](rgbD);
+	delete[](ycbcrD);
+
+}
+
+double getRGB_PSNR(unsigned short *im0, unsigned short* im1, const int NR, const int NC, const int NCOMP)
+{
+
+	double se = 0;
+
+	double maxval = 0;
+
+	for (int ii = 0; ii < NR*NC*NCOMP; ii++)
+
+	{
+		double dx = (double)(*(im0 + ii)) - (double)(*(im1 + ii));
+
+		maxval = *(im1 + ii) > maxval ? *(im1 + ii) : maxval;
+
+		se += dx*dx;
+	}
+
+	double mse = se / NR / NC / NCOMP;
+
+	return 10 * log10((maxval*maxval) / mse);
+
+}
+
+double getYCbCr_422_PSNR(unsigned short *im0, unsigned short* im1, const int NR, const int NC, const int NCOMP, const int N)
+{
+
+	unsigned short *im0_ycbcr, *im1_ycbcr;
+
+	im0_ycbcr = new unsigned short[NR*NC*NCOMP]();
+	im1_ycbcr = new unsigned short[NR*NC*NCOMP]();
+
+	RGB2YCbCr(im0, im0_ycbcr, NR, NC, N);
+	RGB2YCbCr(im1, im1_ycbcr, NR, NC, N);
+
+	unsigned short *im0_y, *im1_y, 
+		*im0_cb, *im1_cb, 
+		*im0_cr, *im1_cr;
+
+	im0_y = new unsigned short[NR*NC*NCOMP]();
+	im1_y = new unsigned short[NR*NC*NCOMP]();
+
+	im0_cb = new unsigned short[NR/2*NC/2*NCOMP]();
+	im1_cb = new unsigned short[NR/2*NC/2*NCOMP]();
+
+	im0_cr = new unsigned short[NR/2*NC/2*NCOMP]();
+	im1_cr = new unsigned short[NR/2*NC/2*NCOMP]();
+
+}
+
+void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char *ycbcr_jp2_names[], char *ycbcr_pgm_names[], const int ncomp, const int offset, const int maxvali)
+{
+	/* decode residual with kakadu */
+	char kdu_expand_s[1024];
+
+	for (int icomp = 0; icomp < ncomp; icomp++) {
+		sprintf(kdu_expand_s, "\"%s\"%s%s%s%s", kdu_expand_path, " -i ", ycbcr_jp2_names[icomp], " -o ", ycbcr_pgm_names[icomp]);
+		int status = system_1(kdu_expand_s);
+	}
+
+	unsigned short *ycbcr;
+
+	unsigned short *jp2_residual;
+
+	int nc1, nr1,ncomp1;
+
+	for (int icomp = 0; icomp < ncomp; icomp++) {
+		if (aux_read16PGMPPM(ycbcr_pgm_names[icomp], nc1, nr1, ncomp1, jp2_residual))
+		{
+			if (icomp < 1) {
+				ycbcr = new unsigned short[nc1*nr1*ncomp]();
+			}
+
+			memcpy(ycbcr + icomp*nr1*nc1, jp2_residual, sizeof(unsigned short)*nr1*nc1);
+
+			delete[](jp2_residual);
+		}
+	}
+
+	unsigned short *rgb = new unsigned short[nr1*nc1*ncomp]();
+
+	if (ncomp > 1) {
+		if (offset > 0) {
+			YCbCr2RGB(ycbcr, rgb, nr1, nc1, 16);
+		}
+		else {
+			YCbCr2RGB(ycbcr, rgb, nr1, nc1, 10);
+		}
+	}
+	else {
+		memcpy(rgb, ycbcr, sizeof(unsigned short)*nr1*nc1*ncomp);
+	}
+
+	/* apply residual */
+
+	for (int iir = 0; iir < nc1*nr1 * ncomp; iir++)
+	{
+		signed int val = ((signed int)*(ps + iir)) + ((signed int)rgb[iir]) - offset;
+		if (val < 0)
+			val = 0;
+		if (val > maxvali)
+			val = maxvali;
+		*(ps + iir) = (unsigned short)(val);
+	}
+
+	delete[](ycbcr);
+	delete[](rgb);
+}
+
+void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_intermediate_view, unsigned short *ps, char *ycbcr_pgm_names[],
+	const char *kdu_compress_path, char *ycbcr_jp2_names[], const float residual_rate, const int ncomp, const int offset, float rate_a)
+{
+	/*establish residual*/
+	unsigned short *residual_image = new unsigned short[nr*nc * ncomp]();
+
+	for (int iir = 0; iir < nr*nc*ncomp; iir++) {
+		signed int res_val = (((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset);
+		if (res_val > pow(2, 16) - 1)
+			res_val = pow(2, 16) - 1;
+		if (res_val < 0)
+			res_val = 0;
+		*(residual_image + iir) = (unsigned short)res_val;
+	}
+
+	unsigned short *ycbcr = new unsigned short[nr*nc*ncomp]();
+
+	if (ncomp > 1) {
+		if (offset > 0) {
+			RGB2YCbCr(residual_image, ycbcr, nr, nc, 16);
+		}
+		else {
+			RGB2YCbCr(residual_image, ycbcr, nr, nc, 10);
+		}
+	}
+	else {
+		memcpy(ycbcr, residual_image, sizeof(unsigned short)*nr*nc);
+	}
+
+	unsigned short *tmp_im = new unsigned short[nr*nc]();
+
+	char kdu_compress_s[1024];
+
+	//float rate_a = 7.2 / 8.0; //magic
+
+	for (int icomp = 0; icomp < ncomp; icomp++) {
+
+		memcpy(tmp_im, ycbcr + icomp*nr*nc, sizeof(unsigned short)*nr*nc);
+
+		aux_write16PGMPPM(ycbcr_pgm_names[icomp], nc, nr, 1, tmp_im);
+
+		float rateR = residual_rate;
+
+		if (icomp < 1) {
+			rateR = rate_a*rateR;
+		}
+		else {
+			rateR = (1-rate_a)*rateR/2;
+		}
+
+		sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", ycbcr_pgm_names[icomp], " -o ", ycbcr_jp2_names[icomp], " -no_weights -precise -full -rate ", rateR);
+
+		int status = system_1(kdu_compress_s);
+
+
+	}
+
+	delete[](tmp_im);
+	delete[](ycbcr);
+	delete[](residual_image);
+
+
 }
 
 void encodeResidualJP2(const int nr, const int nc, unsigned short *original_intermediate_view, unsigned short *ps, const char *ppm_residual_path,

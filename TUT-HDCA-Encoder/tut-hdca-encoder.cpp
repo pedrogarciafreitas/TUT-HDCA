@@ -11,6 +11,8 @@
 #include "../include/gen_types.hh"
 #include "../include/warpingFunctions.hh"
 
+#define YUV_TRANSFORM true
+
 
 void FiveRefHierarchy_2_disk(const char *config_file)
 {
@@ -539,6 +541,8 @@ int main(int argc, char** argv) {
 	fwrite(&n_views_total, sizeof(int), 1, output_LF_file);
 	fclose(output_LF_file);
 
+	bool size_written = false;
+
 	for (int ii = 0; ii < n_views_total; ii++) {
 
 		view *SAI = LF + ii;
@@ -784,24 +788,66 @@ int main(int argc, char** argv) {
 
 		char jp2_residual_path_jp2[1024];
 
+		char pgm_residual_Y_path[1024];
+		char jp2_residual_Y_path_jp2[1024];
+		char pgm_residual_Cb_path[1024];
+		char jp2_residual_Cb_path_jp2[1024];
+		char pgm_residual_Cr_path[1024];
+		char jp2_residual_Cr_path_jp2[1024];
+
 		char pgm_residual_depth_path[1024];
 
 		char jp2_residual_depth_path_jp2[1024];
+
+		char *ycbcr_pgm_names[3];
+		char *ycbcr_jp2_names[3];
 
 		/* get residual */
 		if (SAI->residual_rate_color > 0)
 		{
 
-			/* COLOR residual here */
+			/* COLOR residual here, lets try YUV */
 
-			sprintf(ppm_residual_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_residual.ppm");
+			sprintf(pgm_residual_Y_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_Y_residual.pgm");
+			sprintf(jp2_residual_Y_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_Y_residual.jp2");
 
-			sprintf(jp2_residual_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_residual.jp2");
+			sprintf(pgm_residual_Cb_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_Cb_residual.pgm");
+			sprintf(jp2_residual_Cb_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_Cb_residual.jp2");
 
-			encodeResidualJP2(SAI->nr, SAI->nc, original_color_view, SAI->color, ppm_residual_path,
-				kdu_compress_path, jp2_residual_path_jp2, SAI->residual_rate_color, 3, pow(2, 10) - 1);
+			sprintf(pgm_residual_Cr_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_Cr_residual.pgm");
+			sprintf(jp2_residual_Cr_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_Cr_residual.jp2");
 
-			decodeResidualJP2(SAI->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path, ncomp1, pow(2, 10) - 1, pow(2, 10) - 1);
+			ycbcr_pgm_names[0] = pgm_residual_Y_path;
+			ycbcr_pgm_names[1] = pgm_residual_Cb_path;
+			ycbcr_pgm_names[2] = pgm_residual_Cr_path;
+
+			ycbcr_jp2_names[0] = jp2_residual_Y_path_jp2;
+			ycbcr_jp2_names[1] = jp2_residual_Cb_path_jp2;
+			ycbcr_jp2_names[2] = jp2_residual_Cr_path_jp2;
+
+			
+
+			if (YUV_TRANSFORM) {
+				int offset_v = pow(2, 15) - 1;
+
+				float rate_a = 7.2 / 8.0;
+
+				encodeResidualJP2_YUV(SAI->nr, SAI->nc, original_color_view, SAI->color, ycbcr_pgm_names,
+					kdu_compress_path, ycbcr_jp2_names, SAI->residual_rate_color, 3, offset_v, rate_a);
+
+				decodeResidualJP2_YUV(SAI->color, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, pow(2, 10) - 1);
+			}
+			else {
+				/* COLOR residual here */
+				int offset_v = pow(2, BIT_DEPTH) - 1;
+				sprintf(ppm_residual_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_residual.ppm");
+				sprintf(jp2_residual_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_residual.jp2");
+
+				encodeResidualJP2(SAI->nr, SAI->nc, original_color_view, SAI->color, ppm_residual_path,
+					kdu_compress_path, jp2_residual_path_jp2, SAI->residual_rate_color, 3, offset_v);
+
+				decodeResidualJP2(SAI->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path, ncomp1, offset_v, pow(2, 10) - 1);
+			}
 
 		}
 
@@ -862,24 +908,26 @@ int main(int argc, char** argv) {
 		/* write view configuration data to bitstream */
 		output_LF_file = fopen(path_out_LF_data, "ab");
 
-		fwrite(&SAI->r, sizeof(int), 1, output_LF_file); //uint16 here?
-		fwrite(&SAI->c, sizeof(int), 1, output_LF_file); //uint16 here?
+		fwrite(&SAI->r, sizeof(unsigned int), 1, output_LF_file); //uint16 here?
+		fwrite(&SAI->c, sizeof(unsigned int), 1, output_LF_file); //uint16 here?
 
-		fwrite(&SAI->nr, sizeof(int), 1, output_LF_file); // needed only once per LF
-		fwrite(&SAI->nc, sizeof(int), 1, output_LF_file); // 
+		if (!size_written) {
+			fwrite(&SAI->nr, sizeof(unsigned int), 1, output_LF_file); // needed only once per LF
+			fwrite(&SAI->nc, sizeof(unsigned int), 1, output_LF_file); // 
+		}
 
 		fwrite(&SAI->x, sizeof(float), 1, output_LF_file);
 		fwrite(&SAI->y, sizeof(float), 1, output_LF_file);
 
-		fwrite(&SAI->n_references, sizeof(int), 1, output_LF_file); //uint16 here?
+		fwrite(&SAI->n_references, sizeof(unsigned char), 1, output_LF_file); //uint16 here?
 
 		if (SAI->n_references > 0) {
-			fwrite(SAI->references, sizeof(int), SAI->n_references, output_LF_file); //uint16 here?
+			fwrite(SAI->references, sizeof(unsigned int), SAI->n_references, output_LF_file); //uint16 here?
 		}
 
-		fwrite(&SAI->n_depth_references, sizeof(int), 1, output_LF_file);
+		fwrite(&SAI->n_depth_references, sizeof(unsigned char), 1, output_LF_file);
 		if (SAI->n_depth_references > 0) {
-			fwrite(SAI->depth_references, sizeof(int), SAI->n_depth_references, output_LF_file);
+			fwrite(SAI->depth_references, sizeof(unsigned int), SAI->n_depth_references, output_LF_file);
 		}
 
 		fwrite(&SAI->NNt, sizeof(int), 1, output_LF_file); //char here?
@@ -917,17 +965,39 @@ int main(int argc, char** argv) {
 		}
 
 		if (SAI->residual_rate_color > 0) {
-			int n_bytes_color_residual = aux_GetFileSize(jp2_residual_path_jp2);
 
-			unsigned char *jp2_residual = new unsigned char[n_bytes_color_residual]();
-			FILE *jp2_color_residual_file = fopen(jp2_residual_path_jp2, "rb");
-			fread(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, jp2_color_residual_file);
-			fclose(jp2_color_residual_file);
+			char isyuv = YUV_TRANSFORM ? 1 : 0;
 
-			fwrite(&n_bytes_color_residual, sizeof(int), 1, output_LF_file);
-			fwrite(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, output_LF_file);
+			YUV_TRANSFORM ? fwrite(&isyuv, sizeof(char), 1, output_LF_file) : fwrite(&isyuv, sizeof(char), 1, output_LF_file);
 
-			delete[](jp2_residual);
+			if (YUV_TRANSFORM) {
+				for (int icomp = 0; icomp < 3; icomp++) {
+					int n_bytes_color_residual = aux_GetFileSize(ycbcr_jp2_names[icomp]);
+
+					unsigned char *jp2_residual = new unsigned char[n_bytes_color_residual]();
+					FILE *jp2_color_residual_file = fopen(ycbcr_jp2_names[icomp], "rb");
+					fread(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, jp2_color_residual_file);
+					fclose(jp2_color_residual_file);
+
+					fwrite(&n_bytes_color_residual, sizeof(int), 1, output_LF_file);
+					fwrite(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, output_LF_file);
+
+					delete[](jp2_residual);
+				}
+			}
+			else {
+				int n_bytes_color_residual = aux_GetFileSize(jp2_residual_path_jp2);
+
+				unsigned char *jp2_residual = new unsigned char[n_bytes_color_residual]();
+				FILE *jp2_color_residual_file = fopen(jp2_residual_path_jp2, "rb");
+				fread(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, jp2_color_residual_file);
+				fclose(jp2_color_residual_file);
+
+				fwrite(&n_bytes_color_residual, sizeof(int), 1, output_LF_file);
+				fwrite(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, output_LF_file);
+
+				delete[](jp2_residual);
+			}
 		}
 		else {
 			int n_bytes_color_residual = 0;
