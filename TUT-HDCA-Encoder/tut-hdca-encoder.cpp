@@ -802,6 +802,8 @@ int main(int argc, char** argv) {
 		char *ycbcr_pgm_names[3];
 		char *ycbcr_jp2_names[3];
 
+		float rate_a1 = 0;
+
 		/* get residual */
 		if (SAI->residual_rate_color > 0)
 		{
@@ -824,18 +826,43 @@ int main(int argc, char** argv) {
 			ycbcr_jp2_names[0] = jp2_residual_Y_path_jp2;
 			ycbcr_jp2_names[1] = jp2_residual_Cb_path_jp2;
 			ycbcr_jp2_names[2] = jp2_residual_Cr_path_jp2;
-
 			
 
 			if (YUV_TRANSFORM) {
 				int offset_v = pow(2, 15) - 1;
 
-				float rate_a = 7.2 / 8.0;
+				//float rate_a = 6.5 / 8.0;// 7.2 / 8.0;
+
+				float highest_psnr = 0;
+
+				unsigned short *tmp_im = new unsigned short[SAI->nr*SAI->nc * 3]();
+
+				for (float rate_a = 6.40; rate_a < 7.25; rate_a += 0.10) {
+
+					memcpy(tmp_im, SAI->color, sizeof(unsigned short)*SAI->nr*SAI->nc * 3);
+
+					encodeResidualJP2_YUV(SAI->nr, SAI->nc, original_color_view, tmp_im, ycbcr_pgm_names,
+						kdu_compress_path, ycbcr_jp2_names, SAI->residual_rate_color, 3, offset_v, rate_a/8.0);
+
+					decodeResidualJP2_YUV(tmp_im, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, pow(2, 10) - 1);
+
+					double psnr_result_yuv = getYCbCr_422_PSNR(tmp_im, original_color_view, SAI->nr, SAI->nc, 3, 10);
+
+					if (psnr_result_yuv > highest_psnr) {
+						highest_psnr = psnr_result_yuv;
+						rate_a1 = rate_a;
+					}
+
+				}
+
+				delete[](tmp_im);
 
 				encodeResidualJP2_YUV(SAI->nr, SAI->nc, original_color_view, SAI->color, ycbcr_pgm_names,
-					kdu_compress_path, ycbcr_jp2_names, SAI->residual_rate_color, 3, offset_v, rate_a);
+					kdu_compress_path, ycbcr_jp2_names, SAI->residual_rate_color, 3, offset_v, rate_a1 / 8.0);
 
 				decodeResidualJP2_YUV(SAI->color, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, pow(2, 10) - 1);
+
+
 			}
 			else {
 				/* COLOR residual here */
@@ -886,8 +913,13 @@ int main(int argc, char** argv) {
 
 
 		psnr_result = getPSNR(NULL, SAI->path_out_ppm, SAI->path_input_ppm, difftest_call);
-
 		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
+
+		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", rate_a1);
+
+		double psnr_result_yuv = getYCbCr_422_PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3, 10);
+		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result_yuv);
+		
 
 		delete[](original_color_view);
 		delete[](original_depth_view);

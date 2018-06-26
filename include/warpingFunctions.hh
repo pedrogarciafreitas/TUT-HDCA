@@ -518,29 +518,6 @@ void getViewMergingLSWeights_N(view *view0, unsigned short **warpedColorViews, f
 
 }
 
-double getRGB_PSNR(unsigned short *im0, unsigned short* im1, int NR, int NC, int NCOMP) 
-{
-
-	double se = 0;
-
-	double maxval = 0;
-
-	for (int ii = 0; ii < NR*NC*NCOMP; ii++) 
-	
-	{
-		double dx = (double)(*(im0 + ii)) - (double)(*(im1 + ii));
-
-		maxval = *(im1 + ii) > maxval ? *(im1 + ii) : maxval;
-
-		se += dx*dx;
-	}
-
-	double mse = se / NR / NC / NCOMP;
-
-	return 10 * log10( (maxval*maxval) / mse);
-
-}
-
 void initSegVp(view *view0, float **DispTargs) {
 
 	int nr = view0->nr;

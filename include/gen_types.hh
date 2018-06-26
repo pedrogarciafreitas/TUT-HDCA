@@ -18,6 +18,7 @@
 #define BIT_DEPTH_RESIDUAL 16
 #define BIT_DEPTH_MERGE 14
 #define BIT_DEPTH_SPARSE 20
+#define YUV_422 0
 
 
 const bool verbose = false;
@@ -390,6 +391,25 @@ void YCbCr2RGB(unsigned short *ycbcr, unsigned short *rgb, const int nr, const i
 
 }
 
+double getRGB_PSNR(unsigned short *im0, unsigned short* im1, const int NR, const int NC, const int NCOMP, double maxval)
+{
+
+	double se = 0;
+
+	for (int ii = 0; ii < NR*NC*NCOMP; ii++)
+
+	{
+		double dx = (double)(*(im0 + ii)) - (double)(*(im1 + ii));
+
+		se += dx*dx;
+	}
+
+	double mse = se / NR / NC / NCOMP;
+
+	return 10 * log10((maxval*maxval) / mse);
+
+}
+
 double getRGB_PSNR(unsigned short *im0, unsigned short* im1, const int NR, const int NC, const int NCOMP)
 {
 
@@ -431,11 +451,42 @@ double getYCbCr_422_PSNR(unsigned short *im0, unsigned short* im1, const int NR,
 	im0_y = new unsigned short[NR*NC*NCOMP]();
 	im1_y = new unsigned short[NR*NC*NCOMP]();
 
-	im0_cb = new unsigned short[NR/2*NC/2*NCOMP]();
-	im1_cb = new unsigned short[NR/2*NC/2*NCOMP]();
+	im0_cb = new unsigned short[NR*NC/2*NCOMP]();
+	im1_cb = new unsigned short[NR*NC/2*NCOMP]();
 
-	im0_cr = new unsigned short[NR/2*NC/2*NCOMP]();
-	im1_cr = new unsigned short[NR/2*NC/2*NCOMP]();
+	im0_cr = new unsigned short[NR*NC/2*NCOMP]();
+	im1_cr = new unsigned short[NR*NC/2*NCOMP]();
+
+	memcpy(im0_y, im0_ycbcr, sizeof(unsigned short)*NR*NC);
+	memcpy(im1_y, im1_ycbcr, sizeof(unsigned short)*NR*NC);
+
+	for (int cc = 0; cc < NC; cc += 2) {
+
+		memcpy(im0_cb + (cc / 2)*NR, im0_ycbcr + cc*NR + NR*NC, sizeof(unsigned short)*NR);
+		memcpy(im1_cb + (cc / 2)*NR, im1_ycbcr + cc*NR + NR*NC, sizeof(unsigned short)*NR);
+
+		memcpy(im0_cr + (cc / 2)*NR, im0_ycbcr + cc*NR + NR*NC*2, sizeof(unsigned short)*NR);
+		memcpy(im1_cr + (cc / 2)*NR, im1_ycbcr + cc*NR + NR*NC*2, sizeof(unsigned short)*NR);
+
+	}
+
+	double nd = pow(2, N) - 1;
+
+	double PSNR_Y = getRGB_PSNR(im0_y, im1_y, NR, NC, 1, nd);
+	double PSNR_Cb = getRGB_PSNR(im0_cb, im1_cb, NR, NC, 1, nd);
+	double PSNR_Cr = getRGB_PSNR(im0_cb, im1_cb, NR, NC, 1, nd);
+
+	delete[](im0_y);
+	delete[](im1_y);
+	delete[](im0_cb);
+	delete[](im1_cb);
+	delete[](im0_cr);
+	delete[](im1_cr);
+
+	delete[](im0_ycbcr);
+	delete[](im1_ycbcr);
+
+	return (6 * PSNR_Y + PSNR_Cb + PSNR_Cr) / 8;
 
 }
 
@@ -447,6 +498,10 @@ void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char
 	for (int icomp = 0; icomp < ncomp; icomp++) {
 		sprintf(kdu_expand_s, "\"%s\"%s%s%s%s", kdu_expand_path, " -i ", ycbcr_jp2_names[icomp], " -o ", ycbcr_pgm_names[icomp]);
 		int status = system_1(kdu_expand_s);
+		if (status < 0) {
+			printf("KAKADU ERROR\nTERMINATING ... \n");
+			exit(0);
+		}
 	}
 
 	unsigned short *ycbcr;
@@ -462,11 +517,29 @@ void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char
 				ycbcr = new unsigned short[nc1*nr1*ncomp]();
 			}
 
-			memcpy(ycbcr + icomp*nr1*nc1, jp2_residual, sizeof(unsigned short)*nr1*nc1);
+			if (YUV_422) {
+				if (icomp < 1) {
+					memcpy(ycbcr + icomp*nr1*nc1, jp2_residual, sizeof(unsigned short)*nr1*nc1);
+				}
+				else {
+					for (int cc = 0; cc < nc1; cc++) {
+						memcpy(ycbcr + cc * 2 * nr1 + icomp*nr1*nc1*2, jp2_residual + cc*nr1, sizeof(unsigned short)*nr1);
+						memcpy(ycbcr + (cc*2+1)*nr1 + icomp*nr1*nc1*2, jp2_residual + cc*nr1, sizeof(unsigned short)*nr1);
+					}
+					nc1 = nc1 * 2; // since we keep using this variable...
+				}
+			}
+			else {
+				memcpy(ycbcr + icomp*nr1*nc1, jp2_residual, sizeof(unsigned short)*nr1*nc1);
+			}
+
+			
 
 			delete[](jp2_residual);
 		}
 	}
+
+
 
 	unsigned short *rgb = new unsigned short[nr1*nc1*ncomp]();
 
@@ -535,10 +608,6 @@ void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_
 
 	for (int icomp = 0; icomp < ncomp; icomp++) {
 
-		memcpy(tmp_im, ycbcr + icomp*nr*nc, sizeof(unsigned short)*nr*nc);
-
-		aux_write16PGMPPM(ycbcr_pgm_names[icomp], nc, nr, 1, tmp_im);
-
 		float rateR = residual_rate;
 
 		if (icomp < 1) {
@@ -548,9 +617,31 @@ void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_
 			rateR = (1-rate_a)*rateR/2;
 		}
 
+		if (YUV_422) {
+			if (icomp < 1) {
+				memcpy(tmp_im, ycbcr + icomp*nr*nc, sizeof(unsigned short)*nr*nc);
+				aux_write16PGMPPM(ycbcr_pgm_names[icomp], nc, nr, 1, tmp_im);
+			}
+			else {
+				for (int cc = 0; cc < nc; cc += 2) {
+					memcpy(tmp_im + (cc / 2)*nr, ycbcr + cc*nr + nr*nc*icomp, sizeof(unsigned short)*nr);
+				}
+				aux_write16PGMPPM(ycbcr_pgm_names[icomp], nc/2, nr, 1, tmp_im);
+			}
+		}
+		else {
+			memcpy(tmp_im, ycbcr + icomp*nr*nc, sizeof(unsigned short)*nr*nc);
+			aux_write16PGMPPM(ycbcr_pgm_names[icomp], nc, nr, 1, tmp_im);
+		}
+
 		sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", ycbcr_pgm_names[icomp], " -o ", ycbcr_jp2_names[icomp], " -no_weights -precise -full -rate ", rateR);
 
 		int status = system_1(kdu_compress_s);
+
+		if (status < 0) {
+			printf("KAKADU ERROR\nTERMINATING ... \n");
+			exit(0);
+		}
 
 
 	}
