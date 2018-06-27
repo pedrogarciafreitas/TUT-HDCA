@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
 	const char *output_dir = argv[2];
 	const char *kakadu_dir = argv[3];
 
-	char kdu_expand_path[256];
+	char kdu_expand_path[1024];
 
 	sprintf(kdu_expand_path, "%s%s", kakadu_dir, "kdu_expand");
 
@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
 
 	int ii = 0; /*view index*/
 
-	while ( ii+1 < n_views_total ) {
+	while ( ii < n_views_total ) {
 
 		view *SAI = LF+ii; 
 		ii++;
