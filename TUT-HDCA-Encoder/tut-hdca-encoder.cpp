@@ -560,66 +560,7 @@ int main(int argc, char** argv) {
 		SAI->color = new unsigned short[SAI->nr*SAI->nc * 3]();
 		SAI->depth = new unsigned short[SAI->nr*SAI->nc]();
 
-		/* forward warp depth */
-		if (SAI->n_depth_references > 0) {
-			/* currently we forward warp the depth from the N (for HDCA N = 5, lenslet maybe 1?) references */
-			unsigned short **warped_color_views_0_N = new unsigned short*[SAI->n_depth_references]();
-			unsigned short **warped_depth_views_0_N = new unsigned short*[SAI->n_depth_references]();
-			float **DispTargs_0_N = new float*[SAI->n_depth_references]();
-
-			for (int ij = 0; ij < SAI->n_depth_references; ij++)
-			{
-				view *ref_view = LF + SAI->depth_references[ij];
-
-				int tmp_w, tmp_r, tmp_ncomp;
-
-				aux_read16PGMPPM(ref_view->path_out_pgm, tmp_w, tmp_r, tmp_ncomp, ref_view->depth);
-				aux_read16PGMPPM(ref_view->path_out_ppm, tmp_w, tmp_r, tmp_ncomp, ref_view->color);
-
-				warpView0_to_View1(ref_view, SAI, warped_color_views_0_N[ij], warped_depth_views_0_N[ij], DispTargs_0_N[ij]);
-
-				delete[](ref_view->depth);
-				delete[](ref_view->color);
-
-				ref_view->depth = NULL;
-				ref_view->color = NULL;
-			}
-
-			/* merge depth using median*/
-
-			int startt = clock();
-
-#pragma omp parallel for
-			for (int ij = 0; ij < SAI->nr*SAI->nc; ij++) {
-				std::vector<unsigned short> depth_values;
-				for (int uu = 0; uu < SAI->n_depth_references; uu++) {
-					//for (int uu = 0; uu < SAI->n_references; uu++) {
-					unsigned short *pp = warped_depth_views_0_N[uu];
-					float *pf = DispTargs_0_N[uu];
-					if (*(pf + ij) > -1) {
-						depth_values.push_back(*(pp + ij));
-					}
-				}
-				if (depth_values.size() > 0)
-					SAI->depth[ij] = getMedian(depth_values);
-			}
-
-			std::cout << "time elapsed in depth merging\t" << (int)clock() - startt << "\n";
-
-			/* hole filling for depth */
-			holefilling(SAI->depth, 1, SAI->nr, SAI->nc, 0);
-
-			for (int ij = 0; ij < SAI->n_depth_references; ij++)
-			{
-				delete[](warped_color_views_0_N[ij]);
-				delete[](warped_depth_views_0_N[ij]);
-				delete[](DispTargs_0_N[ij]);
-			}
-
-			delete[](warped_color_views_0_N);
-			delete[](warped_depth_views_0_N);
-			delete[](DispTargs_0_N);
-		}
+		predictDepth(SAI,LF);
 
 		/* forward warp color */
 		if (SAI->n_references > 0) {
@@ -717,6 +658,7 @@ int main(int argc, char** argv) {
 					delete[](SAI->color);
 					SAI->color = tmp_m;
 					SAI->use_median = true;
+					SAI->stdd = 0.0;
 				}
 				else {
 					delete[](tmp_m);
@@ -758,7 +700,7 @@ int main(int argc, char** argv) {
 
 		}
 		else {
-			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", 0);
+			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", 0.0);
 		}
 
 		if (SAI->NNt > 0 && SAI->Ms > 0)
@@ -779,7 +721,7 @@ int main(int argc, char** argv) {
 		}
 		else
 		{
-			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", 0);
+			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", 0.0);
 		}
 
 		char ppm_residual_path[1024];
@@ -871,7 +813,7 @@ int main(int argc, char** argv) {
 				encodeResidualJP2(SAI->nr, SAI->nc, original_color_view, SAI->color, ppm_residual_path,
 					kdu_compress_path, jp2_residual_path_jp2, SAI->residual_rate_color, 3, offset_v);
 
-				decodeResidualJP2(SAI->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path, ncomp1, offset_v, pow(2, 10) - 1);
+				decodeResidualJP2(SAI->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path, ncomp1, offset_v, offset_v);
 			}
 
 		}
@@ -906,7 +848,7 @@ int main(int argc, char** argv) {
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 		}
 		else {
-			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", 0);
+			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", 0.0);
 		}
 
 
@@ -938,67 +880,53 @@ int main(int argc, char** argv) {
 		/* write view configuration data to bitstream */
 		output_LF_file = fopen(path_out_LF_data, "ab");
 
-		fwrite(&SAI->r, sizeof(unsigned int), 1, output_LF_file); //uint16 here?
-		fwrite(&SAI->c, sizeof(unsigned int), 1, output_LF_file); //uint16 here?
-
-		if (!size_written) {
-			fwrite(&SAI->nr, sizeof(unsigned int), 1, output_LF_file); // needed only once per LF
-			fwrite(&SAI->nc, sizeof(unsigned int), 1, output_LF_file); // 
+		if ( !size_written ) {
+			fwrite(&SAI->nr, sizeof(int), 1, output_LF_file); // needed only once per LF
+			fwrite(&SAI->nc, sizeof(int), 1, output_LF_file); // 
+			size_written = true;
 		}
 
-		fwrite(&SAI->x, sizeof(float), 1, output_LF_file);
-		fwrite(&SAI->y, sizeof(float), 1, output_LF_file);
+		minimal_config mconf = makeMinimalConfig(SAI);
 
-		fwrite(&SAI->n_references, sizeof(unsigned char), 1, output_LF_file); //uint16 here?
+		printf("size of minimal_config %i bytes\n", sizeof(minimal_config));
 
-		if (SAI->n_references > 0) {
-			fwrite(SAI->references, sizeof(unsigned int), SAI->n_references, output_LF_file); //uint16 here?
-		}
+		fwrite(&mconf, sizeof(minimal_config), 1, output_LF_file);
 
-		fwrite(&SAI->n_depth_references, sizeof(unsigned char), 1, output_LF_file);
-		if (SAI->n_depth_references > 0) {
-			fwrite(SAI->depth_references, sizeof(unsigned int), SAI->n_depth_references, output_LF_file);
-		}
+		/* lets see what else needs to be written to bitstream */
 
-		fwrite(&SAI->NNt, sizeof(int), 1, output_LF_file); //char here?
-		fwrite(&SAI->Ms, sizeof(int), 1, output_LF_file); //char here?
-
-		fwrite(&SAI->use_median, sizeof(bool), 1, output_LF_file); //median predictor, no need for any weights
-
-		if (!SAI->use_median) {
-
-			fwrite(&SAI->stdd, sizeof(float), 1, output_LF_file);
-
-			if (SAI->stdd == 0) {
-
-				if (SAI->NB > 0) {
-
-					/* for debuggin we output temporary file also and studying, we write merging weights to standalone files also*/
-
-					FILE *wfile;
-					char wfile_name[1024];
-					sprintf(wfile_name, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_merging_weights");
-					wfile = fopen(wfile_name, "wb");
-					fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, wfile);
-					fclose(wfile);
-
-					/* bitstream */
-					fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, output_LF_file);
-				}
-
+		if (mconf.n_references > 0) {
+			for (int ij = 0; ij < mconf.n_references; ij++) {
+				unsigned short nid = (unsigned short) *(SAI->references + ij);
+				fwrite(&nid, sizeof(unsigned short), 1, output_LF_file);
 			}
 		}
 
-		if (SAI->Ms > 0 && SAI->NNt > 0) {
-			fwrite(SAI->sparse_weights, sizeof(int32_t), SAI->Ms, output_LF_file);
+		if (mconf.n_depth_references > 0) {
+			for (int ij = 0; ij < mconf.n_depth_references; ij++) {
+				unsigned short nid = (unsigned short) *(SAI->depth_references + ij);
+				fwrite(&nid, sizeof(unsigned short), 1, output_LF_file);
+			}
+		}
+
+		if (mconf.Ms > 0 && mconf.NNt > 0) {
 			fwrite(SAI->sparse_mask, sizeof(unsigned char), SAI->Ms, output_LF_file);
+			fwrite(SAI->sparse_weights, sizeof(int32_t), SAI->Ms, output_LF_file);
+		}
+
+		if (mconf.use_median < 1) {
+			if (mconf.use_std < 1) {
+				if (mconf.n_references>0) {
+					/* use LS merging weights */
+					fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, output_LF_file);
+				}
+			}
+			else {
+				/* use standard deviation */
+				fwrite(&SAI->stdd, sizeof(float), 1, output_LF_file);
+			}
 		}
 
 		if (SAI->residual_rate_color > 0) {
-
-			char isyuv = YUV_TRANSFORM ? 1 : 0;
-
-			YUV_TRANSFORM ? fwrite(&isyuv, sizeof(char), 1, output_LF_file) : fwrite(&isyuv, sizeof(char), 1, output_LF_file);
 
 			if (YUV_TRANSFORM) {
 				for (int icomp = 0; icomp < 3; icomp++) {

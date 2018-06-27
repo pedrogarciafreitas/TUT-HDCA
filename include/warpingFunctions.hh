@@ -69,6 +69,105 @@ struct view{
 
 };
 
+struct minimal_config { /* this goes to bitstream */
+
+	int r : 10, c : 10; // SAI subscript
+	float y, x; // camera displacement
+
+	unsigned short min_inv_d; // needed only if inverse depth has negative values, [0,max]-mind = [-mind,max-mind]
+
+	int n_references : 5, n_depth_references : 5;
+
+	int use_std : 1;
+
+	int NNt : 5, Ms : 6; //for global sparse, NNt defines the neighborhood size [ -NNt:NNt,-NNt:NNt ], Ms is the filter order
+
+	//int has_segmentation : 1;
+
+	int use_median : 1; //use median merging or not
+
+};
+
+//int64_t binarySparseMask(const unsigned char *sparse_mask, const int Ms) 
+//{
+//
+//	int64_t binary_mask = 0;
+//
+//	for (int ii = 0; ii < Ms; ii++) {
+//
+//		int64_t tmp = (int64_t)(*(sparse_mask + ii));
+//
+//		binary_mask = binary_mask || 1<<tmp;
+//
+//	}
+//
+//	return binary_mask;
+//
+//}
+//
+//void extractSparseMask(int64_t *binary_mask, unsigned char *sparse_mask, const int Ms) {
+//
+//	for (int ii = 0; ii < Ms; ii++) {
+//
+//		int64_t tmp = 1 << ii;
+//
+//		if ( *(binary_mask) & tmp) {
+//			*(sparse_mask+ii)
+//		}
+//
+//	}
+//
+//}
+
+minimal_config makeMinimalConfig(view *view0) 
+{
+
+	minimal_config min_conf;
+
+	min_conf.r = view0->r;
+	min_conf.c = view0->c;
+
+	min_conf.x = view0->x;
+	min_conf.y = view0->y;
+
+	min_conf.min_inv_d = (unsigned short)view0->min_inv_d;
+
+	min_conf.n_references = view0->n_references;
+	min_conf.n_depth_references = view0->n_depth_references;
+
+	min_conf.use_std = view0->stdd > 0 ? 1 : 0;
+
+	min_conf.NNt = view0->NNt;
+	min_conf.Ms = view0->Ms;
+
+	min_conf.use_median = view0->use_median ? 1 : 0;
+
+	return min_conf;
+
+}
+
+void setup_form_minimal_config(minimal_config *mconf, view *view0) {
+
+	view0->r = mconf->r;
+	view0->c = mconf->c;
+
+	view0->x = mconf->x;
+	view0->y = mconf->y;
+
+	view0->min_inv_d = (int)mconf->min_inv_d;
+
+	view0->n_references = mconf->n_references;
+	view0->n_depth_references = mconf->n_depth_references;
+
+	view0->stdd = mconf->use_std;
+
+	view0->NNt = mconf->NNt;
+	view0->Ms = mconf->Ms;
+
+	view0->use_median = mconf->use_median > 0 ? true : false;
+
+}
+
 void initView(view* view)
 {
 
@@ -104,6 +203,8 @@ void initView(view* view)
 	view->DM_COL = NULL;
 
 	view->i_order = 0;
+
+	view->stdd = 0.0;
 
 	view->use_median = false;
 
@@ -560,10 +661,11 @@ void initViewW(view *view0, float **DispTargs) {
 	/* sets some of the parameters for a view in the light view structure */
 
 	(view0)->NB = (pow(2, (view0)->n_references)*(view0)->n_references);
-
-	signed short *merge_weights = new signed short[(view0)->NB / 2]();
-
-	(view0)->merge_weights = merge_weights;
+	
+	if ((view0)->merge_weights == NULL) {
+		signed short *merge_weights = new signed short[(view0)->NB / 2]();
+		(view0)->merge_weights = merge_weights;
+	}
 
 	float *merge_weights_float = new float[(view0)->NB]();
 
@@ -761,6 +863,71 @@ void warpView0_to_View1(view *view0, view *view1, unsigned short *&warpedColor, 
 			}
 		}
 
+	}
+
+}
+
+void predictDepth(view* SAI, view *LF)
+{
+	/* forward warp depth */
+	if (SAI->n_depth_references > 0) {
+		/* currently we forward warp the depth from the N (for HDCA N = 5, lenslet maybe 1?) references */
+		unsigned short **warped_color_views_0_N = new unsigned short*[SAI->n_depth_references]();
+		unsigned short **warped_depth_views_0_N = new unsigned short*[SAI->n_depth_references]();
+		float **DispTargs_0_N = new float*[SAI->n_depth_references]();
+
+		for (int ij = 0; ij < SAI->n_depth_references; ij++)
+		{
+			view *ref_view = LF + SAI->depth_references[ij];
+
+			int tmp_w, tmp_r, tmp_ncomp;
+
+			aux_read16PGMPPM(ref_view->path_out_pgm, tmp_w, tmp_r, tmp_ncomp, ref_view->depth);
+			aux_read16PGMPPM(ref_view->path_out_ppm, tmp_w, tmp_r, tmp_ncomp, ref_view->color);
+
+			warpView0_to_View1(ref_view, SAI, warped_color_views_0_N[ij], warped_depth_views_0_N[ij], DispTargs_0_N[ij]);
+
+			delete[](ref_view->depth);
+			delete[](ref_view->color);
+
+			ref_view->depth = NULL;
+			ref_view->color = NULL;
+		}
+
+		/* merge depth using median*/
+
+		int startt = clock();
+
+#pragma omp parallel for
+		for (int ij = 0; ij < SAI->nr*SAI->nc; ij++) {
+			std::vector<unsigned short> depth_values;
+			for (int uu = 0; uu < SAI->n_depth_references; uu++) {
+				//for (int uu = 0; uu < SAI->n_references; uu++) {
+				unsigned short *pp = warped_depth_views_0_N[uu];
+				float *pf = DispTargs_0_N[uu];
+				if (*(pf + ij) > -1) {
+					depth_values.push_back(*(pp + ij));
+				}
+			}
+			if (depth_values.size() > 0)
+				SAI->depth[ij] = getMedian(depth_values);
+		}
+
+		std::cout << "time elapsed in depth merging\t" << (int)clock() - startt << "\n";
+
+		/* hole filling for depth */
+		holefilling(SAI->depth, 1, SAI->nr, SAI->nc, 0);
+
+		for (int ij = 0; ij < SAI->n_depth_references; ij++)
+		{
+			delete[](warped_color_views_0_N[ij]);
+			delete[](warped_depth_views_0_N[ij]);
+			delete[](DispTargs_0_N[ij]);
+		}
+
+		delete[](warped_color_views_0_N);
+		delete[](warped_depth_views_0_N);
+		delete[](DispTargs_0_N);
 	}
 
 }

@@ -22,6 +22,10 @@
 #define YUV_TRANSFORM false /* otherwise plain rgb until kakadu */
 #define YUV_422 0 /* otherwise YUV 444, has effect only if if YUV_TRANSFORM true. */
 
+#ifdef __unix__
+#define _popen popen
+#define _pclose pclose
+#endif
 
 const bool verbose = false;
 
@@ -34,7 +38,7 @@ int system_1(char *str) {
 
 #ifdef SYSTEM_VERBOSE
 
-#ifdef _WIN32 || _WIN64 
+#ifdef _WIN32
 	sys_call_str.append("> nul");
 #endif
 #ifdef __unix__
@@ -296,7 +300,7 @@ bool aux_write16PGMPPM(const char* filename, const int width, const int height, 
 void decodeResidualJP2(unsigned short *ps, const char *kdu_expand_path, const char *jp2_residual_path_jp2, const char *ppm_residual_path, int ncomp, const int offset, const int maxvali)
 {
 	/* decode residual with kakadu */
-	char kdu_expand_s[512];
+	char kdu_expand_s[1024];
 	sprintf(kdu_expand_s, "\"%s\"%s%s%s%s", kdu_expand_path, " -i ", jp2_residual_path_jp2, " -o ", ppm_residual_path);
 
 	//std::cout << kdu_expand_s << "\n";
