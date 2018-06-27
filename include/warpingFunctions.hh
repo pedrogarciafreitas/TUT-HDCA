@@ -109,36 +109,6 @@ void initView(view* view)
 
 }
 
-float getPSNR(FILE *fileout, const char *path_out_ppm, const char *path_input_ppm, const char *difftest_call)
-{
-
-	if (fileout == NULL)
-		fileout = stdout;
-
-	/* run psnr here */
-
-	char psnr_call[1024];
-	sprintf(psnr_call, "%s%s%s%s", difftest_call, path_out_ppm, " ", path_input_ppm);
-
-	FILE *pfile;
-	pfile = _popen(psnr_call, "r");
-
-	char psnr_buffer[1024];
-	while (fgets(psnr_buffer, sizeof(psnr_buffer), pfile) != 0) {
-		/*...*/
-	}
-	_pclose(pfile);
-
-	char tmp_char[1024];
-	float psnr_value = 0;
-
-	sscanf(psnr_buffer, "%s\t%f", tmp_char, &psnr_value);
-
-	fprintf(fileout,"%s\n", psnr_buffer);
-
-	return psnr_value;
-}
-
 void applyGlobalSparseFilter(view *view0){
 
 	unsigned char *Regr0 = view0->sparse_mask;
@@ -222,7 +192,9 @@ void getGlobalSparseFilter(view *view0, unsigned short *original_color_view)
 	int Npp = (nr - NNt * 2)*(nc - NNt * 2) * 3;
 	int Npp0 = Npp / 3;
 
-	double *AA = new double[Npp*((NNt * 2 + 1)*(NNt * 2 + 1) + 1)]();
+	int MT = (NNt * 2 + 1)*(NNt * 2 + 1) + 1; /* number of regressors */
+
+	double *AA = new double[Npp*MT]();
 	double *Yd = new double[Npp]();
 
 	for (int ii = 0; ii < Npp; ii++)
@@ -232,17 +204,22 @@ void getGlobalSparseFilter(view *view0, unsigned short *original_color_view)
 
 	unsigned short *pshort = view0->color;
 
+	//double *PHI = new double[MT*MT]();
+	//double *PSI = new double[MT]();
+
+	int offs = 2 * NNt + 1;
+
 	for (int ir = NNt; ir < nr - NNt; ir++){
 		for (int ic = NNt; ic < nc - NNt; ic++){
 			int ai = 0;
 			for (int dy = -NNt; dy <= NNt; dy++){
-				for (int dx = -NNt; dx <= NNt; dx++){
-					for (int icomp = 0; icomp < 3; icomp++){
+				for (int dx = -NNt; dx <= NNt; dx++) {
+					for (int icomp = 0; icomp < 3; icomp++) {
 
 						int offset = ir + dy + nr*(ic + dx) + icomp*nr*nc;
 
 						/* get the desired Yd*/
-						if (dy == 0 && dx == 0){
+						if (dy == 0 && dx == 0) {
 							*(Yd + iiu + icomp*Npp0) = ((double)*(original_color_view + offset)) / (pow(2, BIT_DEPTH) - 1);
 						}
 
@@ -251,19 +228,44 @@ void getGlobalSparseFilter(view *view0, unsigned short *original_color_view)
 
 					}
 					ai++;
+
+
+					//for (int dy1 = -NNt; dy1 <= NNt; dy1++) {
+					//	for (int dx1 = -NNt; dx1 <= NNt; dx1++) {
+					//		for (int icomp = 0; icomp < 3; icomp++) {
+
+					//			int offset_1 = ir + dy + nr*(ic + dx) + icomp*nr*nc;
+					//			int offset_2 = ir + dy1 + nr*(ic + dx1) + icomp*nr*nc;
+
+					//			double val1 = ((double)*(pshort + offset_1)) / (pow(2, BIT_DEPTH) - 1);
+					//			double val2 = ((double)*(pshort + offset_2)) / (pow(2, BIT_DEPTH) - 1);
+
+					//			double des = ((double)*(original_color_view + offset_1)) / (pow(2, BIT_DEPTH) - 1);
+
+					//			PHI[(dy+NNt) + offs*(dx+NNt) + MT*( (dy1+NNt) + offs*(dx1+NNt))] += val1*val2;
+					//			PSI[(dy+NNt) + offs*(dx+NNt)] += val1*des;
+
+					//		}
+					//	}
+					//}
 				}
 			}
 			iiu++;
 		}
 	}
 
-	int *PredRegr0 = new int[(2 * NNt + 1)*(2 * NNt + 1) + 1]();
-	double *PredTheta0 = new double[(2 * NNt + 1)*(2 * NNt + 1) + 1]();
+	int *PredRegr0 = new int[MT]();
+	double *PredTheta0 = new double[MT]();
 
-	int Mtrue = FastOLS_new(AA, Yd, PredRegr0, PredTheta0, Ms, (NNt * 2 + 1)*(NNt * 2 + 1) + 1, (NNt * 2 + 1)*(NNt * 2 + 1) + 1, Npp);
+	int Mtrue = FastOLS_new(&AA, &Yd, PredRegr0, PredTheta0, Ms, MT, (NNt * 2 + 1)*(NNt * 2 + 1) + 1, Npp);
+	//int Mtrue = FastOLS_new(AA, Yd, PredRegr0, PredTheta0, Ms, MT, (NNt * 2 + 1)*(NNt * 2 + 1) + 1, Npp,PHI,PSI);
 
-	delete[](AA);
-	delete[](Yd);
+	if (AA != NULL) {
+		delete[](AA);
+	}
+	if (Yd != NULL) {
+		delete[](Yd);
+	}
 
 	for (int ii = 0; ii < Ms; ii++){
 		*(Regr0 + ii) = ((unsigned char)*(PredRegr0 + ii) + 1);
@@ -428,7 +430,7 @@ void getViewMergingLSWeights_N(view *view0, unsigned short **warpedColorViews, f
 
 		int N = number_of_pixels_per_region[ij] * 3; // number of rows in A
 
-		double *A = new double[N*M]();
+		double *AA = new double[N*M]();
 		double *Yd = new double[N]();
 
 		unsigned short *ps;
@@ -439,7 +441,7 @@ void getViewMergingLSWeights_N(view *view0, unsigned short **warpedColorViews, f
 			if (bmask[ij + ik * MMM]){
 				ps = reference_view_pixels_in_classes[ij + ik * MMM];
 				for (int ii = 0; ii < N; ii++){
-					*(A + ii + ikk*N) = ((double)*(ps + ii)) / ( pow(2, BIT_DEPTH)-1 );
+					*(AA + ii + ikk*N) = ((double)*(ps + ii)) / ( pow(2, BIT_DEPTH)-1 );
 				}
 				ikk++;
 			}
@@ -458,7 +460,14 @@ void getViewMergingLSWeights_N(view *view0, unsigned short **warpedColorViews, f
 
 		//int Mtrue = FastOLS(ATA, ATYd, YdTYd, PredRegr0, PredTheta0, M, M, M);
 
-		int Mtrue = FastOLS_new(A, Yd, PredRegr0, PredTheta0, M, M, M, N);
+		int Mtrue = FastOLS_new(&AA, &Yd, PredRegr0, PredTheta0, M, M, M, N);
+
+		if (AA != NULL) {
+			delete[](AA);
+		}
+		if (Yd != NULL) {
+			delete[](Yd);
+		}
 
 		/* establish the subset of reference views available for class */
 		int *iks = new int[M]();
@@ -478,11 +487,6 @@ void getViewMergingLSWeights_N(view *view0, unsigned short **warpedColorViews, f
 
 		delete[](PredRegr0);
 		delete[](PredTheta0);
-		
-		
-
-		delete[](A);
-		delete[](Yd);
 		
 
 

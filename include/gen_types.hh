@@ -18,7 +18,9 @@
 #define BIT_DEPTH_RESIDUAL 16
 #define BIT_DEPTH_MERGE 14
 #define BIT_DEPTH_SPARSE 20
-#define YUV_422 0
+
+#define YUV_TRANSFORM false /* otherwise plain rgb until kakadu */
+#define YUV_422 0 /* otherwise YUV 444, has effect only if if YUV_TRANSFORM true. */
 
 
 const bool verbose = false;
@@ -43,6 +45,36 @@ int system_1(char *str) {
 
 	return system(sys_call_str.c_str());
 
+}
+
+float getPSNR(FILE *fileout, const char *path_out_ppm, const char *path_input_ppm, const char *difftest_call)
+{
+
+	if (fileout == NULL)
+		fileout = stdout;
+
+	/* run psnr here */
+
+	char psnr_call[1024];
+	sprintf(psnr_call, "%s%s%s%s", difftest_call, path_out_ppm, " ", path_input_ppm);
+
+	FILE *pfile;
+	pfile = _popen(psnr_call, "r");
+
+	char psnr_buffer[1024];
+	while (fgets(psnr_buffer, sizeof(psnr_buffer), pfile) != 0) {
+		/*...*/
+	}
+	_pclose(pfile);
+
+	char tmp_char[1024];
+	float psnr_value = 0;
+
+	sscanf(psnr_buffer, "%s\t%f", tmp_char, &psnr_value);
+
+	fprintf(fileout, "%s\n", psnr_buffer);
+
+	return psnr_value;
 }
 
 double clip(double in, const double min, const double max) {
@@ -299,9 +331,9 @@ void RGB2YCbCr(unsigned short *rgb, unsigned short *ycbcr, const int nr, const i
 
 	/* N-bit RGB 444 -> YCbCr 444 conversion */
 
-	double M[] = { 0.2126, -0.1146,   0.5000,
-		0.7152, -0.3854, -0.4542,
-		0.0722,    0.5000, -0.0458 };
+	double M[] = { 0.212600000000000, -0.114572000000000,   0.500000000000000,
+		0.715200000000000, -0.385428000000000, -0.454153000000000,
+		0.072200000000000,   0.500000000000000, -0.045847000000000, };
 
 	double *rgbD = new double[nr*nc * 3]();
 	double *ycbcrD = new double[nr*nc * 3]();
@@ -344,9 +376,9 @@ void RGB2YCbCr(unsigned short *rgb, unsigned short *ycbcr, const int nr, const i
 void YCbCr2RGB(unsigned short *ycbcr, unsigned short *rgb, const int nr, const int nc, const int N)
 {
 
-	double M[] = {	1.0000,			1.0000,		1.0000,
-					0,				-0.1873,    1.8556,
-					1.5748,			-0.4681,	0 };
+	double M[] = {		1.000000000000000,		1.000000000000000,				1.000000000000000,
+						0,						-0.187330000000000,				1.855630000000000,
+						1.574800000000000,		-0.468130000000000,                   0 };
 
 	double *rgbD = new double[nr*nc * 3]();
 	double *ycbcrD = new double[nr*nc * 3]();
@@ -391,7 +423,7 @@ void YCbCr2RGB(unsigned short *ycbcr, unsigned short *rgb, const int nr, const i
 
 }
 
-double getRGB_PSNR(unsigned short *im0, unsigned short* im1, const int NR, const int NC, const int NCOMP, double maxval)
+double PSNR(unsigned short *im0, unsigned short* im1, const int NR, const int NC, const int NCOMP, double maxval)
 {
 
 	double se = 0;
@@ -410,7 +442,7 @@ double getRGB_PSNR(unsigned short *im0, unsigned short* im1, const int NR, const
 
 }
 
-double getRGB_PSNR(unsigned short *im0, unsigned short* im1, const int NR, const int NC, const int NCOMP)
+double PSNR(unsigned short *im0, unsigned short* im1, const int NR, const int NC, const int NCOMP)
 {
 
 	double se = 0;
@@ -433,48 +465,52 @@ double getRGB_PSNR(unsigned short *im0, unsigned short* im1, const int NR, const
 
 }
 
+void RGB2YUV422(unsigned short *rgb, unsigned short **yy, unsigned short **cbb, unsigned short **crr,
+	const int NR, const int NC, const int NCOMP, const int N) 
+{
+
+	unsigned short *ycbcr;
+
+	ycbcr = new unsigned short[NR*NC*NCOMP]();
+
+	RGB2YCbCr(rgb, ycbcr, NR, NC, N);
+
+	unsigned short *y, *cb, *cr;
+
+	*yy = new unsigned short[NR*NC*NCOMP]();
+	*cbb = new unsigned short[NR*NC / 2 * NCOMP]();
+	*crr = new unsigned short[NR*NC / 2 * NCOMP]();
+
+	y = *yy;
+	cb = *cbb;
+	cr = *crr;
+
+	memcpy(y, ycbcr, sizeof(unsigned short)*NR*NC);
+
+	for (int cc = 0; cc < NC; cc += 2) {
+		memcpy(cb + (cc / 2)*NR, ycbcr + cc*NR + NR*NC, sizeof(unsigned short)*NR);
+		memcpy(cr + (cc / 2)*NR, ycbcr + cc*NR + NR*NC * 2, sizeof(unsigned short)*NR);
+	}
+
+	delete[](ycbcr);
+}
+
 double getYCbCr_422_PSNR(unsigned short *im0, unsigned short* im1, const int NR, const int NC, const int NCOMP, const int N)
 {
 
-	unsigned short *im0_ycbcr, *im1_ycbcr;
-
-	im0_ycbcr = new unsigned short[NR*NC*NCOMP]();
-	im1_ycbcr = new unsigned short[NR*NC*NCOMP]();
-
-	RGB2YCbCr(im0, im0_ycbcr, NR, NC, N);
-	RGB2YCbCr(im1, im1_ycbcr, NR, NC, N);
-
-	unsigned short *im0_y, *im1_y, 
+	unsigned short 
+		*im0_y, *im1_y, 
 		*im0_cb, *im1_cb, 
 		*im0_cr, *im1_cr;
 
-	im0_y = new unsigned short[NR*NC*NCOMP]();
-	im1_y = new unsigned short[NR*NC*NCOMP]();
-
-	im0_cb = new unsigned short[NR*NC/2*NCOMP]();
-	im1_cb = new unsigned short[NR*NC/2*NCOMP]();
-
-	im0_cr = new unsigned short[NR*NC/2*NCOMP]();
-	im1_cr = new unsigned short[NR*NC/2*NCOMP]();
-
-	memcpy(im0_y, im0_ycbcr, sizeof(unsigned short)*NR*NC);
-	memcpy(im1_y, im1_ycbcr, sizeof(unsigned short)*NR*NC);
-
-	for (int cc = 0; cc < NC; cc += 2) {
-
-		memcpy(im0_cb + (cc / 2)*NR, im0_ycbcr + cc*NR + NR*NC, sizeof(unsigned short)*NR);
-		memcpy(im1_cb + (cc / 2)*NR, im1_ycbcr + cc*NR + NR*NC, sizeof(unsigned short)*NR);
-
-		memcpy(im0_cr + (cc / 2)*NR, im0_ycbcr + cc*NR + NR*NC*2, sizeof(unsigned short)*NR);
-		memcpy(im1_cr + (cc / 2)*NR, im1_ycbcr + cc*NR + NR*NC*2, sizeof(unsigned short)*NR);
-
-	}
+	RGB2YUV422(im0, &im0_y, &im0_cb, &im0_cr, NR, NC, NCOMP, N);
+	RGB2YUV422(im1, &im1_y, &im1_cb, &im1_cr, NR, NC, NCOMP, N);
 
 	double nd = pow(2, N) - 1;
 
-	double PSNR_Y = getRGB_PSNR(im0_y, im1_y, NR, NC, 1, nd);
-	double PSNR_Cb = getRGB_PSNR(im0_cb, im1_cb, NR, NC, 1, nd);
-	double PSNR_Cr = getRGB_PSNR(im0_cb, im1_cb, NR, NC, 1, nd);
+	double PSNR_Y = PSNR(im0_y, im1_y, NR, NC, 1, nd);
+	double PSNR_Cb = PSNR(im0_cb, im1_cb, NR, NC, 1, nd);
+	double PSNR_Cr = PSNR(im0_cb, im1_cb, NR, NC, 1, nd);
 
 	delete[](im0_y);
 	delete[](im1_y);
@@ -482,9 +518,6 @@ double getYCbCr_422_PSNR(unsigned short *im0, unsigned short* im1, const int NR,
 	delete[](im1_cb);
 	delete[](im0_cr);
 	delete[](im1_cr);
-
-	delete[](im0_ycbcr);
-	delete[](im1_ycbcr);
 
 	return (6 * PSNR_Y + PSNR_Cb + PSNR_Cr) / 8;
 
@@ -690,18 +723,20 @@ inline long aux_GetFileSize(char* filename)
 	return rc == 0 ? stat_buf.st_size : -1;
 }
 
-int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *PredTheta0, const int Ms, const int MT, const int MPHI, const int N)
+int FastOLS_new(double **AAA, double **Ydd, int *PredRegr0, double *PredTheta0, const int Ms, const int MT, const int MPHI, const int N)
 {
 	int mTheta, M, iM, iM1;
 	double *B, *C, sigerr, *Ag, *g;
 	double C1, valm1, temp, crit, sabsval;
 	int p, j_p, i, j, k, itemp;
 
+	double *AA = *AAA;
+	double *Yd = *Ydd;
 
 	double *PHI = new double[MT*MT]();
 	double *PSI = new double[MT]();
 
-	int startt = clock();
+	//int startt = clock();
 
 	/* make ATA. this is slow. */
 	for (int i1 = 0; i1 < MT; i1++) {
@@ -759,11 +794,299 @@ int FastOLS_new(const double *AA, const double *Yd, int *PredRegr0, double *Pred
 		}
 	}
 
+	delete[](*AAA);
+	*AAA = NULL;
+
 	/* YdTYd */
 	double yd2 = 0;
 #pragma omp parallel for
 	for (int ii = 0; ii < N; ii++)
 		yd2 += (*(Yd + ii))*(*(Yd + ii));
+
+	delete[](*Ydd);
+	*Ydd = NULL;
+
+
+	// Usage example: Ms= 3 says the sparsity (length of final predictor) and MT =42 tells how many regressors are available
+	// Finally, MPHI = 63 tells the dimensions of the matrices, for getting linear indices in PHI
+	M = MT + 1;
+	//B = alocadoubleVector(M*M);// ((M+2)*(M+2));
+	//C = alocadoubleVector(M*M);// ((M+2)*(M+2));
+	//Ag = alocadoubleVector(M*M);// ((M+2)*(M+2));
+	//g = alocadoubleVector(M);
+
+	B = new double[M*M]();
+	C = new double[M*M]();
+	Ag = new double[M*M]();
+	g = new double[M]();
+
+	// Inputs: PHI is MTxMT, PSI is MTx1;
+	// Outputs: PredRegr and PredTheta are also MTx1 but only first Ms entries are needed
+	// Internal variables: B and C are (MT+1)x(MT+1) i.e. MxM
+
+	B[MT + MT*M] = yd2; //B[MT,MT] = yd2; // we start from B[0,0]
+	for (iM = 0; iM < MT; iM++)
+	{
+		PredRegr0[iM] = iM;
+		B[iM + MT*M] = PSI[iM];// B[iM,MT] = PSI[iM];
+		B[MT + iM*M] = PSI[iM];//B[MT,iM] = PSI[iM];
+		for (iM1 = 0; iM1 < MT; iM1++)
+		{
+			B[iM + iM1*M] = PHI[iM + iM1*MPHI];//B[iM,iM1]=PHI[iM,iM1];
+		}
+	}
+	for (iM = 0; iM < M; iM++)
+		for (iM1 = 0; iM1 < M; iM1++)
+			C[iM + iM1*M] = 0;//C[iM,iM1] = 0
+	for (iM = 0; iM < MT; iM++)
+		C[iM + iM*M] = 1;// C[iM,iM] = 1;
+	crit = B[MT + MT*M];//crit = B[MT,MT];
+	if (crit < 0.0000001)
+	{
+		//printf("crir, yd2 [%f] [%f] ", crit, yd2);
+		i = 0;
+		return i;
+	}
+
+
+	for (p = 0; p < Ms; p++)
+	{
+		valm1 = 0; j_p = 0; // pick the max value in next loop
+		for (j = p; j < MT; j++)
+		{
+			//if(B[j+j*M] > 0.00000000000000001)
+			sigerr = B[j + MT*M] * B[j + MT*M] / B[j + j*M];//sigerr  = B[j,MT]*B[j,MT]/B[j,j];
+															//else
+															//	sigerr = 0;
+			if (sigerr > valm1)
+			{
+				valm1 = sigerr;
+				j_p = j;
+			}
+		} // j_p is the index of maximum
+		crit = crit - valm1;
+		itemp = PredRegr0[j_p]; PredRegr0[j_p] = PredRegr0[p]; PredRegr0[p] = itemp;
+		for (j = p; j < M; j++)
+		{
+			//% interchange B(p:end,j_p) with B(p:end,p)
+			temp = B[j + j_p*M]; //temp = B[j,j_p];
+			B[j + j_p*M] = B[j + p*M]; //B[j,j_p] = B[j,p];
+			B[j + p*M] = temp;// B[j,p] = temp;
+		}
+		for (j = p; j < M; j++)
+		{
+			//% interchange B(j_p,p:end) with B(p,p:end)
+			temp = B[j_p + j*M]; // temp = B[j_p,j];
+			B[j_p + j*M] = B[p + j*M]; //B[j_p,j] = B[p,j];
+			B[p + j*M] = temp;//B[p,j] = temp;
+		}
+
+		//% Fast
+		for (j = 0; j <= p - 1; j++)
+		{
+			// % interchange C(1:p-1,j_p) with C(1:p-1,p)
+			temp = C[j + j_p*M]; // temp = C[j,j_p];
+			C[j + j_p*M] = C[j + p*M]; //C[j,j_p] = C[j,p];
+			C[j + p*M] = temp; //C[j,p] = temp;
+		}
+		for (j = (p + 1); j < M; j++)
+		{
+			//if(B[p+p*M] > 0.00000000000000000000001)
+			C[p + j*M] = B[p + j*M] / B[p + p*M];//C[p,j] = B[p,j]/B[p,p];
+												 //else
+												 //C[p+j*M] = 0;
+		}
+
+		for (j = (p + 1); j < MT; j++)
+			for (k = j; k <= MT; k++)
+			{
+				B[j + k*M] = B[j + k*M] - C[p + j*M] * C[p + k*M] * B[p + p*M];//B[j,k] = B[j,k]-C[p,j]*C[p,k]*B[p,p];
+			}
+		for (j = (p + 1); j < MT; j++)
+			for (k = j; k <= MT; k++)
+			{
+				B[k + j*M] = B[j + k*M];//B[k,j] = B[j,k];
+			}
+		//for j = (p+1):M
+		//    for k = j:(M+1)
+		//        B(j,k) = B(j,k)-C(p,j)*C(p,k)*B(p,p);
+		//        %B(j,k) = B(j,k)-C(p,j)*B(p,k);
+		//        B(k,j) = B(j,k);
+		//    end
+		//end
+		//        for( iM=0; iM<Ms; iM++)
+		//        {
+		//        for( iM1=0; iM1<Ms; iM1++)
+		//        	printf("C[%f] ",C[iM+iM1*M]);
+		//        printf(" \n" );
+		//        }
+		// scanf("%d",&i);
+	} //% for( p=0; p<M; p++ )
+
+
+	  // final triangular backsolving
+	for (i = 0; i < Ms; i++)
+	{
+		g[i] = C[i + MT*M];//g[i] = C[i,MT];
+		for (j = 0; j < Ms; j++)
+			Ag[i + j*M] = C[i + j*M];//Ag[i,j] = C[i,j];
+	}
+	PredTheta0[Ms - 1] = g[Ms - 1];
+	for (i = Ms - 2; i >= 0; i--)
+	{
+		PredTheta0[i] = g[i];
+		for (j = i + 1; j < Ms; j++)
+			PredTheta0[i] = PredTheta0[i] - Ag[i + j*M] * PredTheta0[j];//PredTheta[i] = PredTheta[i]- Ag[i,j]*PredTheta[j];
+	}
+	//printf("pred FASTOLS [%f][%f][%f][%f][%f][%f]\n",PredTheta0[0], PredTheta0[1], PredTheta0[2], PredTheta0[3], PredTheta0[4], PredTheta0[5]);
+	// printf("pred [%d][%d][%d][%d][%d]\n",PredRegr0[0], PredRegr0[1], PredRegr0[2], PredRegr0[3], PredRegr0[4] );
+
+	if (PredTheta0[0] != PredTheta0[0])
+	{// if is nan
+		//printf("PredTheta0[0]  is NaN\n");
+		PredTheta0[0] = 1.0;
+		for (i = 1; i < Ms; i++)
+		{
+			PredTheta0[i] = 0.0;
+		}
+	}
+
+	sabsval = 0;
+	for (i = 0; i < Ms; i++)
+	{
+
+		if (PredTheta0[i] != PredTheta0[i])
+		{// if is nan
+			PredTheta0[i] = 0.0;
+			//printf("PredTheta0[%i]  is NaN\n", i);
+		}
+
+		if (PredTheta0[i] > 0)
+			sabsval = sabsval + PredTheta0[i];
+		else
+			sabsval = sabsval - PredTheta0[i];
+	}
+	//printf("%f\n", sabsval);
+	if (sabsval > 2 * Ms) // if average coefficients are too high forget about intrpolation
+	{
+		PredTheta0[0] = C[0 + MT*M];//g[0] = C[0,MT];
+
+									//PredTheta0[0] = 1;
+
+		if (PredTheta0[0] != PredTheta0[0])
+		{// if is nan
+			//printf("C[0+MT*M]  is NaN\n", i);
+			PredTheta0[0] = 1.0;
+		}
+
+		// fix ???
+		//if (abs(PredTheta0[0]) > 100)
+		//PredTheta0[0] = PredTheta0[0] / abs(PredTheta0[0]);
+
+		for (i = 1; i < Ms; i++) {
+			PredTheta0[i] = 0.0;
+		}
+
+		i = 1;
+	}
+	else {
+		i = Ms;
+	}
+
+	delete[](B);
+	delete[](C);
+	delete[](Ag);
+	delete[](g);
+
+	delete[](PSI);
+	delete[](PHI);
+
+	//printf("pred Ms [%d]",Ms);
+	return i;
+
+}
+
+int FastOLS_new(double *AA, double *Yd, int *PredRegr0, double *PredTheta0, const int Ms, const int MT, const int MPHI, const int N,
+	double *PHI, double *PSI)
+{
+	int mTheta, M, iM, iM1;
+	double *B, *C, sigerr, *Ag, *g;
+	double C1, valm1, temp, crit, sabsval;
+	int p, j_p, i, j, k, itemp;
+
+
+	//double *PHI = new double[MT*MT]();
+	//double *PSI = new double[MT]();
+
+	//int startt = clock();
+
+//	/* make ATA. this is slow. */
+//	for (int i1 = 0; i1 < MT; i1++) {
+//#pragma omp parallel for shared(i1)
+//		for (int j1 = 0; j1 < MT; j1++) {
+//			for (int ii = 0; ii < N; ii++) {
+//				*(PHI + i1 + j1*MT) += (*(AA + ii + i1*N))*(*(AA + ii + j1*N));
+//			}
+//		}
+//	}
+
+	///* try ATA with simple SSE optimization, down to around 9sec for 1080p*/
+	//double* result = (double*)_aligned_malloc(2 * sizeof(double), 16);
+
+	//__m128d x, y, z;
+
+	//for (int i1 = 0; i1 < MT; i1++) {
+	//	for (int j1 = 0; j1 < MT; j1++) {
+	//		int ii = 0;
+	//		while (ii + 2 < N)
+	//		{
+
+	//			x = _mm_set_pd(*(AA + ii + i1*N), *(AA + ii + i1*N + 1));
+	//			y = _mm_set_pd(*(AA + ii + j1*N), *(AA + ii + j1*N + 1));
+	//			z = _mm_mul_pd(x, y);
+
+	//			_mm_store_pd(result, z);
+
+	//			*(PHI + i1 + j1*MT) += result[0] + result[1];
+
+	//			ii += 2;
+	//		}
+	//		for (int ee = ii; ee < N; ee++) {
+	//			*(PHI + i1 + j1*MT) += (*(AA + ee + i1*N))*(*(AA + ee + j1*N));
+	//		}
+	//	}
+	//}
+	//_aligned_free(result);
+
+	//std::cout << "time elapsed in ATA\t" << (int)clock() - startt << "\n";
+
+	//for (int i1 = 0; i1 < MT; i1++){
+	//	for (int j1 = 0; j1 < MT; j1++){
+	//		std::cout << *(ATA + i1 + j1*MT) << "\n";
+	//	}
+	//}
+
+	//std::cout << "------------------------------------------------\n";
+
+//	/* make ATYd */
+//#pragma omp parallel for
+//	for (int i1 = 0; i1 < MT; i1++) {
+//		for (int ii = 0; ii < N; ii++) {
+//			*(PSI + i1) += (*(AA + ii + i1*N))*(*(Yd + ii));
+//		}
+//	}
+//
+//	delete[](AA);
+//	AA = NULL;
+
+	/* YdTYd */
+	double yd2 = 0;
+#pragma omp parallel for
+	for (int ii = 0; ii < N; ii++)
+		yd2 += (*(Yd + ii))*(*(Yd + ii));
+
+	delete[](Yd);
+	Yd = NULL;
 
 
 	// Usage example: Ms= 3 says the sparsity (length of final predictor) and MT =42 tells how many regressors are available

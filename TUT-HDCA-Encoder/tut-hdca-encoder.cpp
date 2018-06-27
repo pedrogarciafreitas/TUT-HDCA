@@ -11,8 +11,6 @@
 #include "../include/gen_types.hh"
 #include "../include/warpingFunctions.hh"
 
-#define YUV_TRANSFORM true
-
 
 void FiveRefHierarchy_2_disk(const char *config_file)
 {
@@ -685,7 +683,7 @@ int main(int argc, char** argv) {
 				std::cout << "time elapsed in color median merging\t" << (int)clock() - startt << "\n";
 				holefilling(SAI->color, 3, SAI->nr, SAI->nc, 0);
 
-				double psnr_med = getRGB_PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3);
+				double psnr_med = PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3);
 				
 				unsigned short *tmp_m = new unsigned short[SAI->nr*SAI->nc*3]();
 				memcpy(tmp_m, SAI->color, sizeof(unsigned short)*SAI->nr*SAI->nc * 3);
@@ -702,7 +700,7 @@ int main(int argc, char** argv) {
 					mergeWarped_N(warped_color_views, DispTargs, SAI, 3);
 					/* hole filling for color*/
 					holefilling(SAI->color, 3, SAI->nr, SAI->nc, 0);
-					double tpsnr = getRGB_PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3);
+					double tpsnr = PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3);
 
 					if (tpsnr > psnr_w) {
 						psnr_w = tpsnr;
