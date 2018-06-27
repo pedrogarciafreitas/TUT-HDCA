@@ -40,19 +40,18 @@ int main(int argc, char** argv) {
 
 	int ii = 0; /*view index*/
 
-	while (f_status>0) {
+	while ( ii+1 < n_views_total ) {
 
-		view *SAI = LF+ii;
+		view *SAI = LF+ii; 
+		ii++;
 
 		initView(SAI);
-
-		ii++;
 
 		SAI->nr = _NR;
 		SAI->nc = _NC;
 
 		minimal_config mconf;
-		fread(&mconf, sizeof(minimal_config), 1, input_LF);
+		f_status = fread(&mconf, sizeof(minimal_config), 1, input_LF);
 
 		setup_form_minimal_config(&mconf, SAI);
 
@@ -60,7 +59,7 @@ int main(int argc, char** argv) {
 			SAI->references = new int[SAI->n_references]();
 			for (int ij = 0; ij < SAI->n_references; ij++) {
 				unsigned short nid;
-				fread(&nid, sizeof(unsigned short), 1, input_LF);
+				f_status = fread(&nid, sizeof(unsigned short), 1, input_LF);
 				*(SAI->references + ij) = (int)nid;
 			}
 		}
@@ -69,16 +68,16 @@ int main(int argc, char** argv) {
 			SAI->depth_references = new int[SAI->n_depth_references]();
 			for (int ij = 0; ij < SAI->n_depth_references; ij++) {
 				unsigned short nid;
-				fread(&nid, sizeof(unsigned short), 1, input_LF);
+				f_status = fread(&nid, sizeof(unsigned short), 1, input_LF);
 				*(SAI->depth_references + ij) = (int)nid;
 			}
 		}
 
 		if (SAI->Ms > 0 && SAI->NNt > 0) {
 			SAI->sparse_mask = new unsigned char[SAI->Ms]();
-			fread(SAI->sparse_mask, sizeof(unsigned char), SAI->Ms, input_LF);
+			f_status = fread(SAI->sparse_mask, sizeof(unsigned char), SAI->Ms, input_LF);
 			SAI->sparse_weights = new int32_t[SAI->Ms]();
-			fread(SAI->sparse_weights, sizeof(int32_t), SAI->Ms, input_LF);
+			f_status = fread(SAI->sparse_weights, sizeof(int32_t), SAI->Ms, input_LF);
 		}
 
 		SAI->NB = (pow(2, SAI->n_references)*SAI->n_references);
@@ -87,12 +86,17 @@ int main(int argc, char** argv) {
 			if (SAI->stdd < 0.001) {
 				if (SAI->n_references > 0) {
 					SAI->merge_weights = new signed short[SAI->NB / 2]();
-					fread(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, input_LF);
+					f_status = fread(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, input_LF);
 				}
 			}
 			else {
-				fread(&SAI->stdd, sizeof(float), 1, input_LF);
+				f_status = fread(&SAI->stdd, sizeof(float), 1, input_LF);
 			}
+		}
+
+		if (!(f_status > 0)) {
+			printf("File reading error. Terminating\t...\n");
+			exit(0);
 		}
 
 		SAI->color = new unsigned short[SAI->nr*SAI->nc * 3]();
@@ -141,7 +145,6 @@ int main(int argc, char** argv) {
 
 			initViewW(SAI, DispTargs);
 
-			/* get LS weights */
 			if (SAI->stdd < 0.01) {
 				/* merge color with prediction */
 				mergeWarped_N(warped_color_views, DispTargs, SAI, 3);
@@ -277,9 +280,9 @@ int main(int argc, char** argv) {
 
 			int ncomp1 = 0; /* temporary to hold the number of components */
 
-			char pgm_residual_depth_path[512];
+			char pgm_residual_depth_path[1024];
 
-			char jp2_residual_depth_path_jp2[512];
+			char jp2_residual_depth_path_jp2[1024];
 
 			sprintf(pgm_residual_depth_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_depth_residual.pgm");
 

@@ -159,7 +159,7 @@ void setup_form_minimal_config(minimal_config *mconf, view *view0) {
 	view0->n_references = mconf->n_references;
 	view0->n_depth_references = mconf->n_depth_references;
 
-	view0->stdd = mconf->use_std;
+	view0->stdd = (float) mconf->use_std;
 
 	view0->NNt = mconf->NNt;
 	view0->Ms = mconf->Ms;
