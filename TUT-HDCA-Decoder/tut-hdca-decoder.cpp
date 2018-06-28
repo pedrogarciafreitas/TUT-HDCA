@@ -36,6 +36,13 @@ int main(int argc, char** argv) {
 	f_status = fread(&_NR, sizeof(int), 1, input_LF);
 	f_status = fread(&_NC, sizeof(int), 1, input_LF);
 
+	bool YUV_TRANSFORM = false;
+
+	int yuv_transform_s;
+	f_status = fread(&yuv_transform_s, sizeof(int), 1, input_LF);
+
+	YUV_TRANSFORM = yuv_transform_s > 0 ? true : false;
+
 	view *LF = new view[n_views_total]();
 
 	int ii = 0; /*view index*/
@@ -137,11 +144,15 @@ int main(int argc, char** argv) {
 
 				char tmp_str[1024];
 
-				sprintf(tmp_str, "%s/%03d_%03d%s%03d_%03d%s", output_dir, (ref_view)->c, (ref_view)->r, "_warped_to_", SAI->c, SAI->r, ".ppm");
-				aux_write16PGMPPM(tmp_str, SAI->nc, SAI->nr, 3, warped_color_views[ij]);
+				if (SAVE_PARTIAL_WARPED_VIEWS) {
 
-				sprintf(tmp_str, "%s/%03d_%03d%s%03d_%03d%s", output_dir, (ref_view)->c, (ref_view)->r, "_warped_to_", SAI->c, SAI->r, ".pgm");
-				aux_write16PGMPPM(tmp_str, SAI->nc, SAI->nr, 1, warped_depth_views[ij]);
+					sprintf(tmp_str, "%s/%03d_%03d%s%03d_%03d%s", output_dir, (ref_view)->c, (ref_view)->r, "_warped_to_", SAI->c, SAI->r, ".ppm");
+					aux_write16PGMPPM(tmp_str, SAI->nc, SAI->nr, 3, warped_color_views[ij]);
+
+					sprintf(tmp_str, "%s/%03d_%03d%s%03d_%03d%s", output_dir, (ref_view)->c, (ref_view)->r, "_warped_to_", SAI->c, SAI->r, ".pgm");
+					aux_write16PGMPPM(tmp_str, SAI->nc, SAI->nr, 1, warped_depth_views[ij]);
+
+				}
 
 			}
 
@@ -304,13 +315,15 @@ int main(int argc, char** argv) {
 
 		}
 
-		///* medfilt depth */
-		//unsigned short *tmp_depth = new unsigned short[SAI->nr*SAI->nc]();
-		//int startt = clock();
-		//medfilt2D(SAI->depth, tmp_depth, 3, SAI->nr, SAI->nc);
-		//std::cout << "time elapsed in depth median filtering\t" << (int)clock() - startt << "\n";
-		//memcpy(SAI->depth, tmp_depth, sizeof(unsigned short)*SAI->nr*SAI->nc);
-		//delete[](tmp_depth);
+		/* median filter depth */
+		if (MEDFILT_DEPTH) {
+			unsigned short *tmp_depth = new unsigned short[SAI->nr*SAI->nc]();
+			int startt = clock();
+			medfilt2D(SAI->depth, tmp_depth, 3, SAI->nr, SAI->nc);
+			std::cout << "time elapsed in depth median filtering\t" << (int)clock() - startt << "\n";
+			memcpy(SAI->depth, tmp_depth, sizeof(unsigned short)*SAI->nr*SAI->nc);
+			delete[](tmp_depth);
+		}
 
 		sprintf(SAI->path_out_ppm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".ppm");
 		sprintf(SAI->path_out_pgm, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, ".pgm");

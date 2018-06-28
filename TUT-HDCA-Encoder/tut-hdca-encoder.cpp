@@ -11,6 +11,7 @@
 #include "../include/gen_types.hh"
 #include "../include/warpingFunctions.hh"
 
+#define USE_difftest_ng true
 
 int main(int argc, char** argv) {
 
@@ -41,6 +42,19 @@ int main(int argc, char** argv) {
 	view *LF = new view[n_views_total](); /* one dimensional view vector */
 
 	int maxR = 0, maxC = 0;
+
+	bool YUV_TRANSFORM = false;
+	bool YUV_RATIO_SEARCH = false;
+	bool STD_SEARCH = false;
+
+	int yuv_transform_s,yuv_ratio_search_s,std_search_s;
+	fread(&yuv_transform_s, sizeof(int), 1, filept); /*reading*/
+	fread(&yuv_ratio_search_s, sizeof(int), 1, filept); /*reading*/
+	fread(&std_search_s, sizeof(int), 1, filept); /*reading*/
+
+	YUV_TRANSFORM = yuv_transform_s > 0 ? true : false;
+	YUV_RATIO_SEARCH = yuv_ratio_search_s > 0 ? true : false;
+	STD_SEARCH = std_search_s > 0 ? true : false;
 
 	for (int ii = 0; ii < n_views_total; ii++) {
 
@@ -135,7 +149,7 @@ int main(int argc, char** argv) {
 		LF_mat[SAI->r][SAI->c] = SAI;
 	}
 
-	/* get motion vectors/displacements/warping tables for segmentations */
+	/* get motion vectors/displacements/warping tables for segmentations, NOT USED IN THIS VERSION */
 	for (int ii = 0; ii < n_views_total; ii++)
 	{
 		view *SAI = LF + ii;
@@ -471,6 +485,20 @@ int main(int argc, char** argv) {
 		int nc1, nr1, ncomp1;
 		aux_read16PGMPPM(SAI->path_input_ppm, SAI->nc, SAI->nr, ncomp1, original_color_view);
 
+		///* debug yuv */
+		//unsigned short *ycbcr = new unsigned short[SAI->nr*SAI->nc * 3]();
+		//RGB2YCbCr(original_color_view, ycbcr, SAI->nr, SAI->nc, 10);
+		//aux_write16PGMPPM("C:/Local/astolap/Data/JPEG_PLENO/TUT-HDCA_tmp_output_lenslet/YCbCr.ppm",
+		//	SAI->nc, SAI->nr, 3, ycbcr);
+		//unsigned short *rgb = new unsigned short[SAI->nr*SAI->nc * 3]();
+		//YCbCr2RGB(ycbcr, rgb, SAI->nr, SAI->nc, 10);
+		//aux_write16PGMPPM("C:/Local/astolap/Data/JPEG_PLENO/TUT-HDCA_tmp_output_lenslet/RGB.ppm",
+		//	SAI->nc, SAI->nr, 3, rgb);
+		////aux_write16PGMPPM("C:/Local/astolap/Data/JPEG_PLENO/TUT-HDCA_tmp_output_lenslet/original.ppm",
+		////	SAI->nc, SAI->nr, 3, original_color_view);
+
+		//exit(0);
+
 		bool depth_file_exist = aux_read16PGMPPM(SAI->path_input_pgm, nc1, nr1, ncomp1, original_depth_view);
 
 		SAI->color = new unsigned short[SAI->nr*SAI->nc * 3]();
@@ -507,12 +535,15 @@ int main(int argc, char** argv) {
 
 				char tmp_str[1024];
 
-				sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (ref_view)->c, (ref_view)->r, "_warped_to_", SAI->c, SAI->r, ".ppm");
-				aux_write16PGMPPM(tmp_str, SAI->nc, SAI->nr, 3, warped_color_views[ij]);
+				if (SAVE_PARTIAL_WARPED_VIEWS) {
 
-				/*memset(tmp_str, 0x00, sizeof(char) * 1024);*/
-				sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (ref_view)->c, (ref_view)->r, "_warped_to_", SAI->c, SAI->r, ".pgm");
-				aux_write16PGMPPM(tmp_str, SAI->nc, SAI->nr, 1, warped_depth_views[ij]);
+					sprintf(tmp_str, "%s/%03d_%03d%s%03d_%03d%s", output_dir, (ref_view)->c, (ref_view)->r, "_warped_to_", SAI->c, SAI->r, ".ppm");
+					aux_write16PGMPPM(tmp_str, SAI->nc, SAI->nr, 3, warped_color_views[ij]);
+
+					sprintf(tmp_str, "%s/%03d_%03d%s%03d_%03d%s", output_dir, (ref_view)->c, (ref_view)->r, "_warped_to_", SAI->c, SAI->r, ".pgm");
+					aux_write16PGMPPM(tmp_str, SAI->nc, SAI->nr, 1, warped_depth_views[ij]);
+
+				}
 
 				//FILE *tmpf;
 				//sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (ref_view)->c, (ref_view)->r, "_warped_to_", SAI->c, SAI->r, "_DispTarg.float");
@@ -540,35 +571,50 @@ int main(int argc, char** argv) {
 				std::cout << "time elapsed in color median merging\t" << (int)clock() - startt << "\n";
 				holefilling(SAI->color, 3, SAI->nr, SAI->nc, 0);
 
-				double psnr_med = PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3);
-				
+				//double psnr_med = getYCbCr_422_PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3, 10);
+				double psnr_med = PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3, 10);
+
 				unsigned short *tmp_m = new unsigned short[SAI->nr*SAI->nc*3]();
 				memcpy(tmp_m, SAI->color, sizeof(unsigned short)*SAI->nr*SAI->nc * 3);
 
 				double psnr_w = 0;
-				float stdi = 0;
 
-				//double stds[] = { 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85 };
-				for (float stds = 5; stds<250; stds=stds+5){
-					SAI->stdd = stds;
-					/* we don't use LS weights but something derived on geometric distance in view array*/
-					getGeomWeight(SAI, LF);
-					/* merge color with prediction */
-					mergeWarped_N(warped_color_views, DispTargs, SAI, 3);
-					/* hole filling for color*/
-					holefilling(SAI->color, 3, SAI->nr, SAI->nc, 0);
-					double tpsnr = PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3);
+				if (STD_SEARCH) {
 
-					if (tpsnr > psnr_w) {
-						psnr_w = tpsnr;
-						stdi = SAI->stdd;
+					float stdi = 0;
+
+					//double stds[] = { 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85 };
+					for (float stds = 10; stds < 250; stds = stds + 10) {
+						SAI->stdd = stds;
+						/* we don't use LS weights but something derived on geometric distance in view array*/
+						getGeomWeight(SAI, LF);
+						/* merge color with prediction */
+						mergeWarped_N(warped_color_views, DispTargs, SAI, 3);
+						/* hole filling for color*/
+						holefilling(SAI->color, 3, SAI->nr, SAI->nc, 0);
+						double tpsnr = PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3);
+						//double tpsnr = getYCbCr_422_PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3, 10);
+
+						if (tpsnr > psnr_w) {
+							psnr_w = tpsnr;
+							stdi = SAI->stdd;
+						}
+
 					}
+
+					SAI->stdd = stdi;
+
+					printf("PSNR YUV median:%f\tPSNR YUV weights:%f\t SAI->std: %f\n", psnr_med, psnr_w, SAI->stdd);
 
 				}
 
-				SAI->stdd = stdi;
-
-				printf("PSNR RGB median:%f\tPSNR RGB weights:%f\t SAI->std: %f\n", psnr_med, psnr_w,SAI->stdd);
+				/* we don't use LS weights but something derived on geometric distance in view array*/
+				getGeomWeight(SAI, LF);
+				/* merge color with prediction */
+				mergeWarped_N(warped_color_views, DispTargs, SAI, 3);
+				/* hole filling for color*/
+				holefilling(SAI->color, 3, SAI->nr, SAI->nc, 0);
+				psnr_w = PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3);
 
 				if (psnr_w < psnr_med) {
 					delete[](SAI->color);
@@ -580,16 +626,6 @@ int main(int argc, char** argv) {
 					delete[](tmp_m);
 				}
 			}
-
-			//aux_write16PGMPPM(path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
-
-			//char tmp_str[1024];
-			//sprintf(tmp_str, "%s%03d_%03d%s%03d_%03d%s", output_dir, (LF + 0)->c, (LF + 0)->r, "_warped_to_", SAI->c, SAI->r, "_inpainted.ppm");
-			//aux_write16PGMPPM(tmp_str, SAI->nc, SAI->nr, 3, SAI->color);
-
-			//aux_write16PGMPPM(path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
-
-			//aux_write16PGMPPM(path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
 
 			/* clean */
 			for (int ij = 0; ij < SAI->n_references; ij++)
@@ -610,7 +646,8 @@ int main(int argc, char** argv) {
 		if (SAI->n_references > 0) {
 
 			aux_write16PGMPPM(SAI->path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
-			psnr_result = getPSNR(NULL, SAI->path_out_ppm, SAI->path_input_ppm, difftest_call);
+
+			psnr_result = USE_difftest_ng ? getPSNR(NULL, SAI->path_out_ppm, SAI->path_input_ppm, difftest_call) : 0;
 		
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 
@@ -631,7 +668,7 @@ int main(int argc, char** argv) {
 			applyGlobalSparseFilter(SAI);
 
 			aux_write16PGMPPM(SAI->path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
-			psnr_result = getPSNR(NULL, SAI->path_out_ppm, SAI->path_input_ppm, difftest_call);
+			psnr_result = USE_difftest_ng ? getPSNR(NULL, SAI->path_out_ppm, SAI->path_input_ppm, difftest_call) : 0;
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 
 		}
@@ -689,29 +726,35 @@ int main(int argc, char** argv) {
 
 				//float rate_a = 6.5 / 8.0;// 7.2 / 8.0;
 
-				float highest_psnr = 0;
+				if (YUV_RATIO_SEARCH) {
 
-				unsigned short *tmp_im = new unsigned short[SAI->nr*SAI->nc * 3]();
+					float highest_psnr = 0;
 
-				for (float rate_a = 6.40; rate_a < 7.25; rate_a += 0.10) {
+					unsigned short *tmp_im = new unsigned short[SAI->nr*SAI->nc * 3]();
 
-					memcpy(tmp_im, SAI->color, sizeof(unsigned short)*SAI->nr*SAI->nc * 3);
+					for (float rate_a = 6.40; rate_a < 7.25; rate_a += 0.10) {
 
-					encodeResidualJP2_YUV(SAI->nr, SAI->nc, original_color_view, tmp_im, ycbcr_pgm_names,
-						kdu_compress_path, ycbcr_jp2_names, SAI->residual_rate_color, 3, offset_v, rate_a/8.0);
+						memcpy(tmp_im, SAI->color, sizeof(unsigned short)*SAI->nr*SAI->nc * 3);
 
-					decodeResidualJP2_YUV(tmp_im, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, pow(2, 10) - 1);
+						encodeResidualJP2_YUV(SAI->nr, SAI->nc, original_color_view, tmp_im, ycbcr_pgm_names,
+							kdu_compress_path, ycbcr_jp2_names, SAI->residual_rate_color, 3, offset_v, rate_a / 8.0);
 
-					double psnr_result_yuv = getYCbCr_422_PSNR(tmp_im, original_color_view, SAI->nr, SAI->nc, 3, 10);
+						decodeResidualJP2_YUV(tmp_im, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, pow(2, 10) - 1);
 
-					if (psnr_result_yuv > highest_psnr) {
-						highest_psnr = psnr_result_yuv;
-						rate_a1 = rate_a;
+						double psnr_result_yuv = getYCbCr_422_PSNR(tmp_im, original_color_view, SAI->nr, SAI->nc, 3, 10);
+
+						if (psnr_result_yuv > highest_psnr) {
+							highest_psnr = psnr_result_yuv;
+							rate_a1 = rate_a;
+						}
+
 					}
 
+					delete[](tmp_im);
 				}
-
-				delete[](tmp_im);
+				else {
+					rate_a1 = 7.2;
+				}
 
 				encodeResidualJP2_YUV(SAI->nr, SAI->nc, original_color_view, SAI->color, ycbcr_pgm_names,
 					kdu_compress_path, ycbcr_jp2_names, SAI->residual_rate_color, 3, offset_v, rate_a1 / 8.0);
@@ -747,20 +790,22 @@ int main(int argc, char** argv) {
 
 		}
 
-		/* medfilt depth */
-		//unsigned short *tmp_depth = new unsigned short[SAI->nr*SAI->nc]();
-		//int startt = clock();
-		//medfilt2D(SAI->depth, tmp_depth, 3, SAI->nr, SAI->nc);
-		//std::cout << "time elapsed in depth median filtering\t" << (int)clock() - startt << "\n";
-		//memcpy(SAI->depth, tmp_depth, sizeof(unsigned short)*SAI->nr*SAI->nc);
-		//delete[](tmp_depth);
+		/* median filter depth */
+		if (MEDFILT_DEPTH) {
+			unsigned short *tmp_depth = new unsigned short[SAI->nr*SAI->nc]();
+			int startt = clock();
+			medfilt2D(SAI->depth, tmp_depth, 3, SAI->nr, SAI->nc);
+			std::cout << "time elapsed in depth median filtering\t" << (int)clock() - startt << "\n";
+			memcpy(SAI->depth, tmp_depth, sizeof(unsigned short)*SAI->nr*SAI->nc);
+			delete[](tmp_depth);
+		}
 
 		aux_write16PGMPPM(SAI->path_out_ppm, SAI->nc, SAI->nr, 3, SAI->color);
 		aux_write16PGMPPM(SAI->path_out_pgm, SAI->nc, SAI->nr, 1, SAI->depth);
 
 		if (SAI->residual_rate_depth > 0 && depth_file_exist) 
 		{
-			psnr_result = getPSNR(NULL, SAI->path_out_pgm, SAI->path_input_pgm, difftest_call_pgm);
+			psnr_result = USE_difftest_ng ? getPSNR(NULL, SAI->path_out_pgm, SAI->path_input_pgm, difftest_call_pgm) : 0;
 			output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 		}
 		else {
@@ -768,10 +813,11 @@ int main(int argc, char** argv) {
 		}
 
 
-		psnr_result = getPSNR(NULL, SAI->path_out_ppm, SAI->path_input_ppm, difftest_call);
+		psnr_result = USE_difftest_ng ? getPSNR(NULL, SAI->path_out_ppm, SAI->path_input_ppm, difftest_call) : 0;
 		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result);
 
-		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", rate_a1);
+		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", rate_a1); 
+		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", SAI->stdd);
 
 		double psnr_result_yuv = getYCbCr_422_PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3, 10);
 		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result_yuv);
@@ -782,7 +828,7 @@ int main(int argc, char** argv) {
 
 		FILE *output_results_file;
 		char output_results_filename[1024];
-		sprintf(output_results_filename, "%s%s", output_dir, "results.txt");
+		sprintf(output_results_filename, "%s/%s", output_dir, "results.txt");
 		if (ii < 1) {
 			output_results_file = fopen(output_results_filename, "w");
 		}
@@ -799,6 +845,7 @@ int main(int argc, char** argv) {
 		if ( !size_written ) {
 			fwrite(&SAI->nr, sizeof(int), 1, output_LF_file); // needed only once per LF
 			fwrite(&SAI->nc, sizeof(int), 1, output_LF_file); // 
+			fwrite(&yuv_transform_s, sizeof(int), 1, output_LF_file);
 			size_written = true;
 		}
 

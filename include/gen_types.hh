@@ -19,7 +19,8 @@
 #define BIT_DEPTH_MERGE 14
 #define BIT_DEPTH_SPARSE 20
 
-#define YUV_TRANSFORM true /* otherwise plain rgb until kakadu */
+#define MEDFILT_DEPTH false /* 3x3 median filter depth after decoding  */
+#define SAVE_PARTIAL_WARPED_VIEWS false /* save partial warped views (with missing regions) to disk, good for debug */
 #define YUV_422 0 /* otherwise YUV 444, has effect only if if YUV_TRANSFORM true. */
 
 #ifdef __unix__
@@ -641,8 +642,6 @@ void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_
 
 	char kdu_compress_s[1024];
 
-	//float rate_a = 7.2 / 8.0; //magic
-
 	for (int icomp = 0; icomp < ncomp; icomp++) {
 
 		float rateR = residual_rate;
@@ -671,7 +670,7 @@ void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_
 			aux_write16PGMPPM(ycbcr_pgm_names[icomp], nc, nr, 1, tmp_im);
 		}
 
-		sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", ycbcr_pgm_names[icomp], " -o ", ycbcr_jp2_names[icomp], " -no_weights -precise -full -rate ", rateR);
+		sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", ycbcr_pgm_names[icomp], " -o ", ycbcr_jp2_names[icomp], " -no_weights -no_info -precise -full -rate ", rateR);
 
 		int status = system_1(kdu_compress_s);
 
