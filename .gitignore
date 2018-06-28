@@ -4,18 +4,18 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 # my stuff
-/CERV/
-/CERV_mqc/
-/collectWarped/
-/Debug/
-/disparityRefinement/
-/GolombCoder/
-/meanshift/
-/quantizeDisparity/
-/warpInvDepth/
-/warpSegmentation/
-/warpView/
-/x64/
+#/CERV/
+#/CERV_mqc/
+#/collectWarped/
+#/Debug/
+#/disparityRefinement/
+#/GolombCoder/
+#/meanshift/
+#/quantizeDisparity/
+#/warpInvDepth/
+#/warpSegmentation/
+#/warpView/
+#/x64/
 
 # User-specific files
 *.suo
