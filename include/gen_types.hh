@@ -19,7 +19,7 @@
 #define BIT_DEPTH_MERGE 14
 #define BIT_DEPTH_SPARSE 20
 
-#define YUV_TRANSFORM false /* otherwise plain rgb until kakadu */
+#define YUV_TRANSFORM true /* otherwise plain rgb until kakadu */
 #define YUV_422 0 /* otherwise YUV 444, has effect only if if YUV_TRANSFORM true. */
 
 #ifdef __unix__
@@ -1129,7 +1129,7 @@ int FastOLS_new(double *AA, double *Yd, int *PredRegr0, double *PredTheta0, cons
 	crit = B[MT + MT*M];//crit = B[MT,MT];
 	if (crit < 0.0000001)
 	{
-		printf("crir, yd2 [%f] [%f] ", crit, yd2);
+		//printf("crir, yd2 [%f] [%f] ", crit, yd2);
 		i = 0;
 		return i;
 	}
@@ -1229,7 +1229,7 @@ int FastOLS_new(double *AA, double *Yd, int *PredRegr0, double *PredTheta0, cons
 
 	if (PredTheta0[0] != PredTheta0[0])
 	{// if is nan
-		printf("PredTheta0[0]  is NaN\n");
+		//printf("PredTheta0[0]  is NaN\n");
 		PredTheta0[0] = 1.0;
 		for (i = 1; i < Ms; i++)
 		{
@@ -1244,7 +1244,7 @@ int FastOLS_new(double *AA, double *Yd, int *PredRegr0, double *PredTheta0, cons
 		if (PredTheta0[i] != PredTheta0[i])
 		{// if is nan
 			PredTheta0[i] = 0.0;
-			printf("PredTheta0[%i]  is NaN\n", i);
+			//printf("PredTheta0[%i]  is NaN\n", i);
 		}
 
 		if (PredTheta0[i] > 0)
@@ -1261,7 +1261,7 @@ int FastOLS_new(double *AA, double *Yd, int *PredRegr0, double *PredTheta0, cons
 
 		if (PredTheta0[0] != PredTheta0[0])
 		{// if is nan
-			printf("C[0+MT*M]  is NaN\n", i);
+			//printf("C[0+MT*M]  is NaN\n", i);
 			PredTheta0[0] = 1.0;
 		}
 

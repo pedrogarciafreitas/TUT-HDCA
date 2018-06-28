@@ -12,90 +12,6 @@
 #include "../include/warpingFunctions.hh"
 
 
-void FiveRefHierarchy_2_disk(const char *config_file)
-{
-	const int ref_cols[] = { 2, 98, 2, 98, 50 };
-	const int ref_rows[] = { 0, 0, 20, 20, 10 };
-
-	bool vmask[256][256];
-
-	for (int rr = 0; rr < 256; rr++) {
-		for (int cc = 0; cc < 256; cc++) {
-			vmask[rr][cc] = false;
-			//wmask[rr][cc] = false;
-		}
-	}
-
-	FILE *filept = fopen(config_file, "wb");
-
-	int val = 33 * 11;
-
-	fwrite(&val, sizeof(int), 1, filept);
-
-	int ee_mask[21][101];
-	int ee = 0;
-
-	for (int ik = 0; ik < 5; ik++)
-	{
-		fwrite(&ref_rows[ik], sizeof(int), 1, filept);
-
-		fwrite(&ref_cols[ik], sizeof(int), 1, filept);
-
-		int rate = 100000 / 2;
-
-		fwrite(&rate, sizeof(int), 1, filept);
-		fwrite(&rate, sizeof(int), 1, filept);
-
-		int val = 0;
-
-		fwrite(&val, sizeof(int), 1, filept);
-
-		vmask[ref_rows[ik]][ref_cols[ik]] = true;
-
-		ee_mask[ref_rows[ik]][ref_cols[ik]] = ee;
-		ee++;
-
-	}
-
-	for (int rr = 0; rr < 11; rr++) {
-		for (int cc = 0; cc < 33; cc++) {
-
-			int r, c;
-			r = rr * 2;
-			c = cc * 3 + 2;
-
-			if (!vmask[r][c]) {
-
-				fwrite(&r, sizeof(int), 1, filept);
-
-				fwrite(&c, sizeof(int), 1, filept);
-
-				int rate = 100000 / 2;
-
-				fwrite(&rate, sizeof(int), 1, filept);
-				fwrite(&rate, sizeof(int), 1, filept);
-
-				int val = 5;
-
-				fwrite(&val, sizeof(int), 1, filept);
-
-				for (int ik = 0; ik < 5; ik++)
-				{
-					fwrite(&ee_mask[ref_rows[ik]][ref_cols[ik]], sizeof(int), 1, filept);
-				}
-
-				vmask[r][c] = 1;
-
-				ee_mask[r][c] = ee;
-				ee++;
-			}
-
-		}
-	}
-
-	fclose(filept);
-}
-
 int main(int argc, char** argv) {
 
 	const char *input_dir = argv[1];
@@ -888,7 +804,7 @@ int main(int argc, char** argv) {
 
 		minimal_config mconf = makeMinimalConfig(SAI);
 
-		printf("size of minimal_config %i bytes\n", sizeof(minimal_config));
+		printf("size of minimal_config %i bytes\n", (int)sizeof(minimal_config));
 
 		fwrite(&mconf, sizeof(minimal_config), 1, output_LF_file);
 
