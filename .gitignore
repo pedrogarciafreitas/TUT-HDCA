@@ -240,6 +240,20 @@ FakesAssemblies/
 # GhostDoc plugin setting file
 *.GhostDoc.xml
 
+# my stuff
+CERV/
+CERV_mqc/
+collectWarped/
+Debug/
+disparityRefinement/
+GolombCoder/
+meanshift/
+quantizeDisparity/
+warpInvDepth/
+warpSegmentation/
+warpView/
+x64/
+
 # Node.js Tools for Visual Studio
 .ntvs_analysis.dat
 node_modules/
