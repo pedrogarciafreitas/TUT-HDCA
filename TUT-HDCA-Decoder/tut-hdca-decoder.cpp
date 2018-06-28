@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 
 	char kdu_expand_path[1024];
 
-	sprintf(kdu_expand_path, "%s%s", kakadu_dir, "kdu_expand");
+	sprintf(kdu_expand_path, "%s%s", kakadu_dir, "/kdu_expand");
 
 	FILE *input_LF;
 	input_LF = fopen(input_file, "rb");
@@ -52,6 +52,8 @@ int main(int argc, char** argv) {
 
 		minimal_config mconf;
 		f_status = fread(&mconf, sizeof(minimal_config), 1, input_LF);
+
+		printf("size of minimal_config %i bytes\n", (int)sizeof(minimal_config));
 
 		setup_form_minimal_config(&mconf, SAI);
 

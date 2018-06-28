@@ -22,8 +22,8 @@ int main(int argc, char** argv) {
 	char kdu_compress_path[1024];
 	char kdu_expand_path[1024];
 
-	sprintf(kdu_compress_path, "%s%s", kakadu_dir, "kdu_compress");
-	sprintf(kdu_expand_path, "%s%s", kakadu_dir, "kdu_expand");
+	sprintf(kdu_compress_path, "%s%s", kakadu_dir, "/kdu_compress");
+	sprintf(kdu_expand_path, "%s%s", kakadu_dir, "/kdu_expand");
 
 	const char *difftest_call = "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/ScriptJan2018/ScriptSolution/difftest_ng.exe --toycbcr --psnr ";
 	const char *difftest_call_pgm = "C:/Local/astolap/Data/JPEG_PLENO/RIO_INPUT/ScriptJan2018/ScriptSolution/difftest_ng.exe --psnr ";

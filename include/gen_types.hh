@@ -711,8 +711,8 @@ void encodeResidualJP2(const int nr, const int nc, unsigned short *original_inte
 
 	/* here encode residual with kakadu */
 
-	char kdu_compress_s[1024];
-	sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", ppm_residual_path, " -o ", jp2_residual_path_jp2, " -no_weights -tolerance 0 -no_info -precise -full -rate ", residual_rate);
+	char kdu_compress_s[1024]; // tolerance 0 ?
+	sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", ppm_residual_path, " -o ", jp2_residual_path_jp2, " -no_weights -no_info -precise -full -rate ", residual_rate);
 
 	std::cout << kdu_compress_s << "\n";
 
