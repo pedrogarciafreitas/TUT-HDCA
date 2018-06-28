@@ -28,7 +28,7 @@ If you encounter the error *"kakadu/kdu_compress: /usr/lib/x86_64-linux-gnu/libs
 
 An encoding of the Bikes_01 at rate 0.75 bpp is provided as an example for the decoder. You can run the decoder with,
 
-**./tut-hdca-decoder /path/to/Bikes_01_0.75.LF /path/to/output /path/to/Kakadu
+**./tut-hdca-decoder /path/to/Bikes_01_0.75.LF /path/to/output /path/to/Kakadu/**
 
 For encoding a sample configuration file is provided for the same Bikes_01 encoding. You can run that by,
 
@@ -71,10 +71,12 @@ continuing for each view to be encoded,
 14. minimum inverse depth value to be subtracted from the inverse depth file. This is needed if the inverse depth file contains also negative values (as can be in the lenslet case). This value is represented in the integer range after multiplication by 2^14 and should always be positive.
 
 15. number of reference views used in predicting the **color** component of this view, for example Nc,
+
 	if Nc>0
 	15+1:15+Nc. the indices of the reference views. Index for each view is one integer, and for example for the first view this integer == 0, the second view == 1 and so on. To generate a configuration file you need to keep track of the order.
 	
 16 (or 15+Nc+1). number of reference views used in predicting the **depth** component of this view, for example Nd,
+
 	if Nd>0
 	15+1:15+Nd. same instructions as for color views
 	
