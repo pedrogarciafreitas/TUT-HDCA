@@ -71,20 +71,20 @@ struct view{
 
 struct minimal_config { /* this goes to bitstream */
 
-	int r : 10, c : 10; // SAI subscript
+	unsigned short r , c ; // SAI subscript
 	float y, x; // camera displacement
 
 	unsigned short min_inv_d; // needed only if inverse depth has negative values, [0,max]-mind = [-mind,max-mind]
 
-	int n_references : 5, n_depth_references : 5;
+	unsigned char n_references, n_depth_references;
 
-	int use_std : 1;
+	unsigned char use_std;
 
-	int NNt : 5, Ms : 6; //for global sparse, NNt defines the neighborhood size [ -NNt:NNt,-NNt:NNt ], Ms is the filter order
+	unsigned char NNt, Ms; //for global sparse, NNt defines the neighborhood size [ -NNt:NNt,-NNt:NNt ], Ms is the filter order
 
 	//int has_segmentation : 1;
 
-	int use_median : 1; //use median merging or not
+	unsigned char use_median; //use median merging or not
 
 };
 
@@ -124,23 +124,23 @@ minimal_config makeMinimalConfig(view *view0)
 
 	minimal_config min_conf;
 
-	min_conf.r = view0->r;
-	min_conf.c = view0->c;
+	min_conf.r = (unsigned short)view0->r;
+	min_conf.c = (unsigned short)view0->c;
 
 	min_conf.x = view0->x;
 	min_conf.y = view0->y;
 
 	min_conf.min_inv_d = (unsigned short)view0->min_inv_d;
 
-	min_conf.n_references = view0->n_references;
-	min_conf.n_depth_references = view0->n_depth_references;
+	min_conf.n_references = (unsigned char)view0->n_references;
+	min_conf.n_depth_references = (unsigned char)view0->n_depth_references;
 
 	min_conf.use_std = view0->stdd > 0 ? 1 : 0;
 
-	min_conf.NNt = view0->NNt;
-	min_conf.Ms = view0->Ms;
+	min_conf.NNt = (unsigned char)view0->NNt;
+	min_conf.Ms = (unsigned char)view0->Ms;
 
-	min_conf.use_median = view0->use_median ? 1 : 0;
+	min_conf.use_median = (unsigned char)( view0->use_median ? 1 : 0 );
 
 	return min_conf;
 
@@ -148,21 +148,21 @@ minimal_config makeMinimalConfig(view *view0)
 
 void setup_form_minimal_config(minimal_config *mconf, view *view0) {
 
-	view0->r = mconf->r;
-	view0->c = mconf->c;
+	view0->r = (int)mconf->r;
+	view0->c = (int)mconf->c;
 
 	view0->x = mconf->x;
 	view0->y = mconf->y;
 
 	view0->min_inv_d = (int)mconf->min_inv_d;
 
-	view0->n_references = mconf->n_references;
-	view0->n_depth_references = mconf->n_depth_references;
+	view0->n_references = (int)mconf->n_references;
+	view0->n_depth_references = (int)mconf->n_depth_references;
 
 	view0->stdd = (float) mconf->use_std;
 
-	view0->NNt = mconf->NNt;
-	view0->Ms = mconf->Ms;
+	view0->NNt = (int)mconf->NNt;
+	view0->Ms = (int)mconf->Ms;
 
 	view0->use_median = mconf->use_median > 0 ? true : false;
 
