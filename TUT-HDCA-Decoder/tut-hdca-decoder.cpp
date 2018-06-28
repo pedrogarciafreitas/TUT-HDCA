@@ -209,7 +209,7 @@ int main(int argc, char** argv) {
 		if (n_bytes_color_residual > 0)
 		{
 
-			if (YUV_TRANSFORM) {
+			if (SAI->yuv_transform && YUV_TRANSFORM) {
 
 				char pgm_residual_Y_path[1024];
 				char jp2_residual_Y_path_jp2[1024];
@@ -256,7 +256,7 @@ int main(int argc, char** argv) {
 
 				}
 
-				int offset_v = pow(2, 15) - 1;
+				int offset_v = pow(2, 10) - 1;
 				decodeResidualJP2_YUV(SAI->color, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, pow(2, 10) - 1);
 
 			}

@@ -9,7 +9,7 @@
 
 //#include <emmintrin.h>	// Need this for SSE compiler intrinsics
 
-#define IO_V true
+#define IO_V false
 #define NBIT_GR 32
 #define SYSTEM_VERBOSE 0
 
@@ -361,6 +361,8 @@ void RGB2YCbCr(unsigned short *rgb, unsigned short *ycbcr, const int nr, const i
 				*(rgbD + ii + 1*nr*nc)*M[icomp + 3] + 
 				*(rgbD + ii + 2*nr*nc)*M[icomp + 6];
 
+			//printf("rgb\t%f\tycbcr\t%f\n", *(rgbD + ii + icomp*nr*nc), *(ycbcrD + ii + icomp*nr*nc));
+
 			if (icomp < 1) {
 				*(ycbcrD + ii + icomp*nr*nc) = (219 * (*(ycbcrD + ii + icomp*nr*nc)) + 16)*nd;
 			}
@@ -577,17 +579,22 @@ void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char
 		}
 	}
 
-
+	for (int ii = 0; ii < nr1*nc1*ncomp; ii++) {
+		*(ycbcr + ii) = *(ycbcr + ii) > 1023 ? 1023 : *(ycbcr + ii);
+	}
 
 	unsigned short *rgb = new unsigned short[nr1*nc1*ncomp]();
 
 	if (ncomp > 1) {
-		if (offset > 0) {
-			YCbCr2RGB(ycbcr, rgb, nr1, nc1, 16);
-		}
-		else {
-			YCbCr2RGB(ycbcr, rgb, nr1, nc1, 10);
-		}
+
+		YCbCr2RGB(ycbcr, rgb, nr1, nc1, 10);
+
+		//if (offset > 0) {
+		//	YCbCr2RGB(ycbcr, rgb, nr1, nc1, 16);
+		//}
+		//else {
+		//	YCbCr2RGB(ycbcr, rgb, nr1, nc1, 10);
+		//}
 	}
 	else {
 		memcpy(rgb, ycbcr, sizeof(unsigned short)*nr1*nc1*ncomp);
@@ -597,7 +604,7 @@ void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char
 
 	for (int iir = 0; iir < nc1*nr1 * ncomp; iir++)
 	{
-		signed int val = ((signed int)*(ps + iir)) + ((signed int)rgb[iir]) - offset;
+		signed int val = (signed int)*(ps + iir) + (signed int)(rgb[iir]*2) - offset; // we assume that for 10bit case we have offset as 2^10-1, so go from 2^11 range to 2^10 and lose 1 bit of precision
 		if (val < 0)
 			val = 0;
 		if (val > maxvali)
@@ -616,23 +623,26 @@ void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_
 	unsigned short *residual_image = new unsigned short[nr*nc * ncomp]();
 
 	for (int iir = 0; iir < nr*nc*ncomp; iir++) {
-		signed int res_val = (((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset);
-		if (res_val > pow(2, 16) - 1)
-			res_val = pow(2, 16) - 1;
+		signed int res_val = ( (((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset) )/2;
+		if (res_val > pow(2, 10) - 1) /* these should never happen with 10 bit data */
+			res_val = pow(2, 10) - 1;
 		if (res_val < 0)
 			res_val = 0;
-		*(residual_image + iir) = (unsigned short)res_val;
+		*(residual_image + iir) = (unsigned short)(res_val); // we assume that for 10bit case we have offset as 2^10-1, so go from 2^11 range to 2^10 and lose 1 bit of precision
 	}
 
 	unsigned short *ycbcr = new unsigned short[nr*nc*ncomp]();
 
 	if (ncomp > 1) {
-		if (offset > 0) {
+
+		RGB2YCbCr(residual_image, ycbcr, nr, nc, 10);
+
+		/*if (offset > 0) {
 			RGB2YCbCr(residual_image, ycbcr, nr, nc, 16);
 		}
 		else {
 			RGB2YCbCr(residual_image, ycbcr, nr, nc, 10);
-		}
+		}*/
 	}
 	else {
 		memcpy(ycbcr, residual_image, sizeof(unsigned short)*nr*nc);

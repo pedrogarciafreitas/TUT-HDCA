@@ -67,6 +67,8 @@ struct view{
 
 	bool use_median; //use median merging or not
 
+	bool yuv_transform;
+
 };
 
 struct minimal_config { /* this goes to bitstream */
@@ -82,9 +84,9 @@ struct minimal_config { /* this goes to bitstream */
 
 	unsigned char NNt, Ms; //for global sparse, NNt defines the neighborhood size [ -NNt:NNt,-NNt:NNt ], Ms is the filter order
 
-	//int has_segmentation : 1;
-
 	unsigned char use_median; //use median merging or not
+
+	unsigned char yuv_transform;
 
 };
 
@@ -142,6 +144,8 @@ minimal_config makeMinimalConfig(view *view0)
 
 	min_conf.use_median = (unsigned char)( view0->use_median ? 1 : 0 );
 
+	min_conf.yuv_transform = (unsigned char)(view0->yuv_transform ? 1 : 0);
+
 	return min_conf;
 
 }
@@ -165,7 +169,7 @@ void setup_form_minimal_config(minimal_config *mconf, view *view0) {
 	view0->Ms = (int)mconf->Ms;
 
 	view0->use_median = mconf->use_median > 0 ? true : false;
-
+	view0->yuv_transform = mconf->yuv_transform > 0 ? true : false;
 }
 
 void initView(view* view)
@@ -207,6 +211,8 @@ void initView(view* view)
 	view->stdd = 0.0;
 
 	view->use_median = false;
+
+	view->yuv_transform = true;
 
 }
 

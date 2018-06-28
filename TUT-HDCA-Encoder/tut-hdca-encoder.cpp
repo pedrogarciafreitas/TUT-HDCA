@@ -471,12 +471,26 @@ int main(int argc, char** argv) {
 
 	bool size_written = false;
 
+	FILE *output_results_file;
+	char output_results_filename[1024];
+	sprintf(output_results_filename, "%s/%s", output_dir, "results.txt");
+
+	char output_results[2048];
+	int output_buffer_length = 0;
+
+	//output_buffer_length += sprintf(output_results + output_buffer_length, "%s",
+	//	"ROW\tCOL\tPSNR1\tPSNR2\tPSNR3\tPSNR4\tSTD\tYUVRATIO\tPSNR5\t\tbytes_prediction\t\tbytes_residual");
+	output_results_file = fopen(output_results_filename, "w");
+	//fprintf(output_results_file, "%s\n", output_results);
+	fclose(output_results_file);
+
 	for (int ii = 0; ii < n_views_total; ii++) {
 
 		view *SAI = LF + ii;
 
-		char output_results[1024];
-		int output_buffer_length = 0;
+		//char output_results[1024];
+		memset(output_results, 0x00, sizeof(char) * sizeof(output_results)/sizeof(char));
+		output_buffer_length = 0;
 		output_buffer_length += sprintf(output_results + output_buffer_length, "%03d\t%03d", SAI->r, SAI->c);
 
 		unsigned short *original_color_view = NULL;
@@ -712,6 +726,9 @@ int main(int argc, char** argv) {
 			sprintf(pgm_residual_Cr_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_Cr_residual.pgm");
 			sprintf(jp2_residual_Cr_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_Cr_residual.jp2");
 
+			sprintf(ppm_residual_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_residual.ppm");
+			sprintf(jp2_residual_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_residual.jp2");
+
 			ycbcr_pgm_names[0] = pgm_residual_Y_path;
 			ycbcr_pgm_names[1] = pgm_residual_Cb_path;
 			ycbcr_pgm_names[2] = pgm_residual_Cr_path;
@@ -722,7 +739,7 @@ int main(int argc, char** argv) {
 			
 
 			if (YUV_TRANSFORM) {
-				int offset_v = pow(2, 15) - 1;
+				int offset_v = pow(2, 10) - 1;
 
 				//float rate_a = 6.5 / 8.0;// 7.2 / 8.0;
 
@@ -732,7 +749,7 @@ int main(int argc, char** argv) {
 
 					unsigned short *tmp_im = new unsigned short[SAI->nr*SAI->nc * 3]();
 
-					for (float rate_a = 6.40; rate_a < 7.25; rate_a += 0.10) {
+					for (float rate_a = 2.0; rate_a <= 7.75; rate_a += 0.25) {
 
 						memcpy(tmp_im, SAI->color, sizeof(unsigned short)*SAI->nr*SAI->nc * 3);
 
@@ -746,6 +763,7 @@ int main(int argc, char** argv) {
 						if (psnr_result_yuv > highest_psnr) {
 							highest_psnr = psnr_result_yuv;
 							rate_a1 = rate_a;
+							printf("PSNR YUV:\t%f\tratio\t%f/%f\n", highest_psnr, rate_a1, 8.0);
 						}
 
 					}
@@ -756,18 +774,39 @@ int main(int argc, char** argv) {
 					rate_a1 = 7.2;
 				}
 
+				unsigned short *tmpim = new unsigned short[SAI->nr*SAI->nc * 3]();
+				memcpy(tmpim, SAI->color, sizeof(unsigned short)*SAI->nr*SAI->nc * 3);
+
 				encodeResidualJP2_YUV(SAI->nr, SAI->nc, original_color_view, SAI->color, ycbcr_pgm_names,
 					kdu_compress_path, ycbcr_jp2_names, SAI->residual_rate_color, 3, offset_v, rate_a1 / 8.0);
 
 				decodeResidualJP2_YUV(SAI->color, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, pow(2, 10) - 1);
 
+				/* also compete against no yuv transformation */
+
+				double psnr_result_yuv_w_trans = getYCbCr_422_PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3, 10);
+
+				offset_v = pow(2, BIT_DEPTH) - 1;
+
+				encodeResidualJP2(SAI->nr, SAI->nc, original_color_view, tmpim, ppm_residual_path,
+					kdu_compress_path, jp2_residual_path_jp2, SAI->residual_rate_color, 3, offset_v);
+
+				decodeResidualJP2(tmpim, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path, ncomp1, offset_v, offset_v);
+
+				double psnr_result_yuv_wo_trans = getYCbCr_422_PSNR(tmpim, original_color_view, SAI->nr, SAI->nc, 3, 10);
+
+				if (psnr_result_yuv_wo_trans > psnr_result_yuv_w_trans) {
+					memcpy(SAI->color, tmpim, sizeof(unsigned short)*SAI->nr*SAI->nc * 3);
+					SAI->yuv_transform = false;
+					rate_a1 = 0.0;
+				}
+
+				delete[](tmpim);
 
 			}
 			else {
-				/* COLOR residual here */
+
 				int offset_v = pow(2, BIT_DEPTH) - 1;
-				sprintf(ppm_residual_path, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_residual.ppm");
-				sprintf(jp2_residual_path_jp2, "%s%c%03d_%03d%s", output_dir, '/', SAI->c, SAI->r, "_residual.jp2");
 
 				encodeResidualJP2(SAI->nr, SAI->nc, original_color_view, SAI->color, ppm_residual_path,
 					kdu_compress_path, jp2_residual_path_jp2, SAI->residual_rate_color, 3, offset_v);
@@ -826,26 +865,17 @@ int main(int argc, char** argv) {
 		delete[](original_color_view);
 		delete[](original_depth_view);
 
-		FILE *output_results_file;
-		char output_results_filename[1024];
-		sprintf(output_results_filename, "%s/%s", output_dir, "results.txt");
-		if (ii < 1) {
-			output_results_file = fopen(output_results_filename, "w");
-		}
-		else {
-			output_results_file = fopen(output_results_filename, "a");
-		}
-		fprintf(output_results_file, "%s\n", output_results);
-		fclose(output_results_file);
-
-
 		/* write view configuration data to bitstream */
+
+		int n_bytes_prediction = 0;
+		int n_bytes_residual = 0;
+
 		output_LF_file = fopen(path_out_LF_data, "ab");
 
 		if ( !size_written ) {
-			fwrite(&SAI->nr, sizeof(int), 1, output_LF_file); // needed only once per LF
-			fwrite(&SAI->nc, sizeof(int), 1, output_LF_file); // 
-			fwrite(&yuv_transform_s, sizeof(int), 1, output_LF_file);
+			n_bytes_prediction += fwrite(&SAI->nr, sizeof(int), 1, output_LF_file)* sizeof(int); // needed only once per LF
+			n_bytes_prediction += fwrite(&SAI->nc, sizeof(int), 1, output_LF_file)* sizeof(int); // 
+			n_bytes_prediction += fwrite(&yuv_transform_s, sizeof(int), 1, output_LF_file)* sizeof(int);
 			size_written = true;
 		}
 
@@ -853,39 +883,41 @@ int main(int argc, char** argv) {
 
 		printf("size of minimal_config %i bytes\n", (int)sizeof(minimal_config));
 
-		fwrite(&mconf, sizeof(minimal_config), 1, output_LF_file);
+		n_bytes_prediction += fwrite(&mconf, sizeof(minimal_config), 1, output_LF_file)* sizeof(minimal_config);
 
 		/* lets see what else needs to be written to bitstream */
+
+
 
 		if (mconf.n_references > 0) {
 			for (int ij = 0; ij < mconf.n_references; ij++) {
 				unsigned short nid = (unsigned short) *(SAI->references + ij);
-				fwrite(&nid, sizeof(unsigned short), 1, output_LF_file);
+				n_bytes_prediction += fwrite(&nid, sizeof(unsigned short), 1, output_LF_file)* sizeof(unsigned short);
 			}
 		}
 
 		if (mconf.n_depth_references > 0) {
 			for (int ij = 0; ij < mconf.n_depth_references; ij++) {
 				unsigned short nid = (unsigned short) *(SAI->depth_references + ij);
-				fwrite(&nid, sizeof(unsigned short), 1, output_LF_file);
+				n_bytes_prediction += fwrite(&nid, sizeof(unsigned short), 1, output_LF_file) * sizeof(unsigned short);
 			}
 		}
 
 		if (mconf.Ms > 0 && mconf.NNt > 0) {
-			fwrite(SAI->sparse_mask, sizeof(unsigned char), SAI->Ms, output_LF_file);
-			fwrite(SAI->sparse_weights, sizeof(int32_t), SAI->Ms, output_LF_file);
+			n_bytes_prediction += fwrite(SAI->sparse_mask, sizeof(unsigned char), SAI->Ms, output_LF_file)* sizeof(unsigned char);
+			n_bytes_prediction += fwrite(SAI->sparse_weights, sizeof(int32_t), SAI->Ms, output_LF_file)* sizeof(int32_t);
 		}
 
 		if (mconf.use_median < 1) {
 			if (mconf.use_std < 1) {
 				if (mconf.n_references>0) {
 					/* use LS merging weights */
-					fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, output_LF_file);
+					n_bytes_prediction += fwrite(SAI->merge_weights, sizeof(signed short), SAI->NB / 2, output_LF_file)* sizeof(signed short);
 				}
 			}
 			else {
 				/* use standard deviation */
-				fwrite(&SAI->stdd, sizeof(float), 1, output_LF_file);
+				n_bytes_prediction += fwrite(&SAI->stdd, sizeof(float), 1, output_LF_file) * sizeof(signed short);
 			}
 		}
 
@@ -900,8 +932,8 @@ int main(int argc, char** argv) {
 					fread(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, jp2_color_residual_file);
 					fclose(jp2_color_residual_file);
 
-					fwrite(&n_bytes_color_residual, sizeof(int), 1, output_LF_file);
-					fwrite(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, output_LF_file);
+					n_bytes_residual += fwrite(&n_bytes_color_residual, sizeof(int), 1, output_LF_file)* sizeof(int);
+					n_bytes_residual += fwrite(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, output_LF_file)* sizeof(unsigned char);
 
 					delete[](jp2_residual);
 				}
@@ -914,15 +946,15 @@ int main(int argc, char** argv) {
 				fread(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, jp2_color_residual_file);
 				fclose(jp2_color_residual_file);
 
-				fwrite(&n_bytes_color_residual, sizeof(int), 1, output_LF_file);
-				fwrite(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, output_LF_file);
+				n_bytes_residual += fwrite(&n_bytes_color_residual, sizeof(int), 1, output_LF_file)* sizeof(int);
+				n_bytes_residual += fwrite(jp2_residual, sizeof(unsigned char), n_bytes_color_residual, output_LF_file)* sizeof(unsigned char);
 
 				delete[](jp2_residual);
 			}
 		}
 		else {
 			int n_bytes_color_residual = 0;
-			fwrite(&n_bytes_color_residual, sizeof(int), 1, output_LF_file);
+			n_bytes_residual += fwrite(&n_bytes_color_residual, sizeof(int), 1, output_LF_file)* sizeof(int);
 		}
 
 		if (SAI->residual_rate_depth > 0 && depth_file_exist) {
@@ -933,17 +965,24 @@ int main(int argc, char** argv) {
 			fread(jp2_depth_residual, sizeof(unsigned char), n_bytes_depth_residual, jp2_depth_residual_file);
 			fclose(jp2_depth_residual_file);
 
-			fwrite(&n_bytes_depth_residual, sizeof(int), 1, output_LF_file);
-			fwrite(jp2_depth_residual, sizeof(unsigned char), n_bytes_depth_residual, output_LF_file);
+			n_bytes_residual += fwrite(&n_bytes_depth_residual, sizeof(int), 1, output_LF_file)* sizeof(int);
+			n_bytes_residual += fwrite(jp2_depth_residual, sizeof(unsigned char), n_bytes_depth_residual, output_LF_file)* sizeof(unsigned char);
 
 			delete[](jp2_depth_residual);
 		}
 		else {
 			int n_bytes_depth_residual = 0;
-			fwrite(&n_bytes_depth_residual, sizeof(int), 1, output_LF_file);
+			n_bytes_residual += fwrite(&n_bytes_depth_residual, sizeof(int), 1, output_LF_file)* sizeof(int);
 		}
 
 		fclose(output_LF_file);
+
+		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%i", n_bytes_prediction);
+		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%i", n_bytes_residual);
+
+		output_results_file = fopen(output_results_filename, "a");
+		fprintf(output_results_file, "%s\n", output_results);
+		fclose(output_results_file);
 
 		/* to reduce memory usage */
 		if (SAI->color != NULL) {
