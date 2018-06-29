@@ -757,7 +757,7 @@ int main(int argc, char** argv) {
 
 					unsigned short *tmp_im = new unsigned short[SAI->nr*SAI->nc * 3]();
 
-					for (float rate_a = 2.0; rate_a <= 7.75; rate_a += 0.25) {
+					for (float rate_a = 6.80; rate_a <= 7.80; rate_a += 0.20) {
 
 						memcpy(tmp_im, SAI->color, sizeof(unsigned short)*SAI->nr*SAI->nc * 3);
 
@@ -895,8 +895,6 @@ int main(int argc, char** argv) {
 
 		/* lets see what else needs to be written to bitstream */
 
-
-
 		if (mconf.n_references > 0) {
 			for (int ij = 0; ij < mconf.n_references; ij++) {
 				unsigned short nid = (unsigned short) *(SAI->references + ij);
@@ -931,7 +929,7 @@ int main(int argc, char** argv) {
 
 		if (SAI->residual_rate_color > 0) {
 
-			if (YUV_TRANSFORM) {
+			if (SAI->yuv_transform && YUV_TRANSFORM) {
 				for (int icomp = 0; icomp < 3; icomp++) {
 					int n_bytes_color_residual = aux_GetFileSize(ycbcr_jp2_names[icomp]);
 

@@ -23,7 +23,7 @@
 #define SAVE_PARTIAL_WARPED_VIEWS false /* save partial warped views (with missing regions) to disk, good for debug */
 #define YUV_422 0 /* otherwise YUV 444, has effect only if if YUV_TRANSFORM true. */
 
-#define RESIDUAl_16BIT true
+#define RESIDUAl_16BIT false
 
 #ifdef __unix__
 #define _popen popen

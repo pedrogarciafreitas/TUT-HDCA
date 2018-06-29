@@ -263,6 +263,7 @@ int main(int argc, char** argv) {
 				else {
 					offset_v = pow(2, 10) - 1;
 				}
+
 				decodeResidualJP2_YUV(SAI->color, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, pow(2, 10) - 1);
 
 			}

@@ -137,13 +137,11 @@ minimal_config makeMinimalConfig(view *view0)
 	min_conf.n_references = (unsigned char)view0->n_references;
 	min_conf.n_depth_references = (unsigned char)view0->n_depth_references;
 
-	min_conf.use_std = view0->stdd > 0 ? 1 : 0;
-
 	min_conf.NNt = (unsigned char)view0->NNt;
 	min_conf.Ms = (unsigned char)view0->Ms;
 
 	min_conf.use_median = (unsigned char)( view0->use_median ? 1 : 0 );
-
+	min_conf.use_std = view0->stdd > 0 ? 1 : 0;
 	min_conf.yuv_transform = (unsigned char)(view0->yuv_transform ? 1 : 0);
 
 	return min_conf;
