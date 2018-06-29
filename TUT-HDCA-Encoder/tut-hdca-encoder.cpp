@@ -739,7 +739,15 @@ int main(int argc, char** argv) {
 			
 
 			if (YUV_TRANSFORM) {
-				int offset_v = pow(2, 10) - 1;
+
+				int offset_v = 0;
+
+				if (RESIDUAl_16BIT) {
+					offset_v = pow(2, 15) - 1;
+				}
+				else {
+					offset_v = pow(2, 10) - 1;
+				}
 
 				//float rate_a = 6.5 / 8.0;// 7.2 / 8.0;
 

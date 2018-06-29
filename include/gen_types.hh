@@ -23,6 +23,8 @@
 #define SAVE_PARTIAL_WARPED_VIEWS false /* save partial warped views (with missing regions) to disk, good for debug */
 #define YUV_422 0 /* otherwise YUV 444, has effect only if if YUV_TRANSFORM true. */
 
+#define RESIDUAl_16BIT true
+
 #ifdef __unix__
 #define _popen popen
 #define _pclose pclose
@@ -82,7 +84,8 @@ float getPSNR(FILE *fileout, const char *path_out_ppm, const char *path_input_pp
 	return psnr_value;
 }
 
-double clip(double in, const double min, const double max) {
+template <class T>
+T clip(T in, const T min, const T max) {
 
 	if (in > max) {
 		return max;
@@ -92,7 +95,6 @@ double clip(double in, const double min, const double max) {
 	}
 	return in;
 }
-
 
 template <class T>
 T getMedian(std::vector<T> scores)
@@ -406,7 +408,7 @@ void YCbCr2RGB(unsigned short *ycbcr, unsigned short *rgb, const int nr, const i
 			*(ycbcrD + ii + icomp*nr*nc) = (double) *(ycbcr + ii + icomp*nr*nc);
 			
 			if (icomp < 1) {
-				*(ycbcrD + ii + icomp*nr*nc) = clip( (*(ycbcrD + ii + icomp*nr*nc) - sval1) / sval2, 0, 1);
+				*(ycbcrD + ii + icomp*nr*nc) = clip( (*(ycbcrD + ii + icomp*nr*nc) - sval1) / sval2, 0.0, 1.0);
 			}
 			else {
 				*(ycbcrD + ii + icomp*nr*nc) = clip( (*(ycbcrD + ii + icomp*nr*nc) - sval3) / sval4, -0.5, 0.5);
@@ -420,7 +422,7 @@ void YCbCr2RGB(unsigned short *ycbcr, unsigned short *rgb, const int nr, const i
 				*(ycbcrD + ii + 1 * nr*nc)*M[icomp + 3] +
 				*(ycbcrD + ii + 2 * nr*nc)*M[icomp + 6];
 
-				*(rgb + ii + icomp*nr*nc) = (unsigned short)clip(( *(rgbD + ii + icomp*nr*nc)*clipval ), 0, clipval);
+				*(rgb + ii + icomp*nr*nc) = (unsigned short)clip(( *(rgbD + ii + icomp*nr*nc)*clipval ), 0.0, (double)clipval);
 		}
 
 	}
@@ -516,8 +518,8 @@ double getYCbCr_422_PSNR(unsigned short *im0, unsigned short* im1, const int NR,
 	double nd = pow(2, N) - 1;
 
 	double PSNR_Y = PSNR(im0_y, im1_y, NR, NC, 1, nd);
-	double PSNR_Cb = PSNR(im0_cb, im1_cb, NR, NC, 1, nd);
-	double PSNR_Cr = PSNR(im0_cb, im1_cb, NR, NC, 1, nd);
+	double PSNR_Cb = PSNR(im0_cb, im1_cb, NR, NC/2, 1, nd);
+	double PSNR_Cr = PSNR(im0_cb, im1_cb, NR, NC/2, 1, nd);
 
 	delete[](im0_y);
 	delete[](im1_y);
@@ -579,36 +581,30 @@ void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char
 		}
 	}
 
+	signed int dv = RESIDUAl_16BIT ? 1 : 2;
+	signed int BP = RESIDUAl_16BIT ? 16 : 10;
+	signed int maxval = pow(2, BP)-1;
+
 	for (int ii = 0; ii < nr1*nc1*ncomp; ii++) {
-		*(ycbcr + ii) = *(ycbcr + ii) > 1023 ? 1023 : *(ycbcr + ii);
+		*(ycbcr + ii) = clip(*(ycbcr + ii), (unsigned short)0, (unsigned short)maxval);
 	}
 
 	unsigned short *rgb = new unsigned short[nr1*nc1*ncomp]();
 
-	if (ncomp > 1) {
 
-		YCbCr2RGB(ycbcr, rgb, nr1, nc1, 10);
-
-		//if (offset > 0) {
-		//	YCbCr2RGB(ycbcr, rgb, nr1, nc1, 16);
-		//}
-		//else {
-		//	YCbCr2RGB(ycbcr, rgb, nr1, nc1, 10);
-		//}
+	if (RESIDUAl_16BIT) {
+		YCbCr2RGB(ycbcr, rgb, nr1, nc1, 16);
 	}
 	else {
-		memcpy(rgb, ycbcr, sizeof(unsigned short)*nr1*nc1*ncomp);
+		YCbCr2RGB(ycbcr, rgb, nr1, nc1, 10);
 	}
 
 	/* apply residual */
 
 	for (int iir = 0; iir < nc1*nr1 * ncomp; iir++)
 	{
-		signed int val = (signed int)*(ps + iir) + (signed int)(rgb[iir]*2) - offset; // we assume that for 10bit case we have offset as 2^10-1, so go from 2^11 range to 2^10 and lose 1 bit of precision
-		if (val < 0)
-			val = 0;
-		if (val > maxvali)
-			val = maxvali;
+		signed int val = (signed int)*(ps + iir) + (signed int)(rgb[iir]*dv) - offset; // we assume that for 10bit case we have offset as 2^10-1, so go from 2^11 range to 2^10 and lose 1 bit of precision
+		val = clip(val, 0, maxvali);
 		*(ps + iir) = (unsigned short)(val);
 	}
 
@@ -622,30 +618,23 @@ void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_
 	/*establish residual*/
 	unsigned short *residual_image = new unsigned short[nr*nc * ncomp]();
 
+	signed int dv = RESIDUAl_16BIT ? 1 : 2;
+	signed int BP = RESIDUAl_16BIT ? 16 : 10;
+	signed int maxval = pow(2, BP)-1;
+
 	for (int iir = 0; iir < nr*nc*ncomp; iir++) {
-		signed int res_val = ( (((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset) )/2;
-		if (res_val > pow(2, 10) - 1) /* these should never happen with 10 bit data */
-			res_val = pow(2, 10) - 1;
-		if (res_val < 0)
-			res_val = 0;
-		*(residual_image + iir) = (unsigned short)(res_val); // we assume that for 10bit case we have offset as 2^10-1, so go from 2^11 range to 2^10 and lose 1 bit of precision
+		signed int res_val = ( (((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset) )/dv;
+		res_val = clip(res_val, 0, maxval);
+		*(residual_image + iir) = (unsigned short)(res_val);
 	}
 
 	unsigned short *ycbcr = new unsigned short[nr*nc*ncomp]();
 
-	if (ncomp > 1) {
-
-		RGB2YCbCr(residual_image, ycbcr, nr, nc, 10);
-
-		/*if (offset > 0) {
-			RGB2YCbCr(residual_image, ycbcr, nr, nc, 16);
-		}
-		else {
-			RGB2YCbCr(residual_image, ycbcr, nr, nc, 10);
-		}*/
+	if (RESIDUAl_16BIT) {
+		RGB2YCbCr(residual_image, ycbcr, nr, nc, 16);
 	}
 	else {
-		memcpy(ycbcr, residual_image, sizeof(unsigned short)*nr*nc);
+		RGB2YCbCr(residual_image, ycbcr, nr, nc, 10);
 	}
 
 	unsigned short *tmp_im = new unsigned short[nr*nc]();
