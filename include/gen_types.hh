@@ -23,7 +23,7 @@
 #define SAVE_PARTIAL_WARPED_VIEWS false /* save partial warped views (with missing regions) to disk, good for debug */
 #define YUV_422 0 /* otherwise YUV 444, has effect only if if YUV_TRANSFORM true. */
 
-#define RESIDUAl_16BIT false
+#define RESIDUAL_16BIT false
 
 #ifdef __unix__
 #define _popen popen
@@ -42,10 +42,10 @@ int system_1(char *str) {
 #ifdef SYSTEM_VERBOSE
 
 #ifdef _WIN32
-	sys_call_str.append("> nul");
+	sys_call_str.append(" > nul");
 #endif
 #ifdef __unix__
-	sys_call_str.append("> /dev/null");
+	sys_call_str.append(" > /dev/null");
 #endif
 
 #endif
@@ -119,7 +119,7 @@ T getMedian(std::vector<T> scores)
 template <class T>
 void medfilt2D(T* input, T* output, int SZ, int nr, int nc)
 {
-	int dsz = floor(SZ / 2);
+	int dsz = (SZ / 2);
 	std::vector<T> scores;
 
 	for (int y = 0; y < nr; y++) {
@@ -298,39 +298,6 @@ bool aux_write16PGMPPM(const char* filename, const int width, const int height, 
 	delete[](img16bit);
 
 	return true;
-}
-
-void decodeResidualJP2(unsigned short *ps, const char *kdu_expand_path, const char *jp2_residual_path_jp2, const char *ppm_residual_path, int ncomp, const int offset, const int maxvali)
-{
-	/* decode residual with kakadu */
-	char kdu_expand_s[1024];
-	sprintf(kdu_expand_s, "\"%s\"%s%s%s%s", kdu_expand_path, " -i ", jp2_residual_path_jp2, " -o ", ppm_residual_path);
-
-	//std::cout << kdu_expand_s << "\n";
-
-	int status = system_1(kdu_expand_s);
-
-	/* apply residual */
-
-	unsigned short* jp2_residual;
-
-	int nc1, nr1;
-
-	if (aux_read16PGMPPM(ppm_residual_path, nc1, nr1, ncomp, jp2_residual))
-	{
-
-		for (int iir = 0; iir < nc1*nr1 * ncomp; iir++)
-		{
-			signed int val = ((signed int)*(ps + iir)) + ((signed int)jp2_residual[iir]) - offset;
-			if (val < 0)
-				val = 0;
-			if (val > maxvali)
-				val = maxvali;
-			*(ps + iir) = (unsigned short)(val);
-		}
-
-		delete[](jp2_residual);
-	}
 }
 
 void RGB2YCbCr(unsigned short *rgb, unsigned short *ycbcr, const int nr, const int nc,const int N) 
@@ -532,7 +499,43 @@ double getYCbCr_422_PSNR(unsigned short *im0, unsigned short* im1, const int NR,
 
 }
 
-void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char *ycbcr_jp2_names[], char *ycbcr_pgm_names[], const int ncomp, const int offset, const int maxvali)
+void decodeResidualJP2(unsigned short *ps, const char *kdu_expand_path, const char *jp2_residual_path_jp2, const char *ppm_residual_path, int ncomp, const int offset, const int maxvali,
+	const bool RESIDUAL_16BIT_bool)
+{
+	/* decode residual with kakadu */
+	char kdu_expand_s[1024];
+	sprintf(kdu_expand_s, "\"%s\"%s%s%s%s", kdu_expand_path, " -i ", jp2_residual_path_jp2, " -o ", ppm_residual_path);
+
+	//std::cout << kdu_expand_s << "\n";
+
+	int status = system_1(kdu_expand_s);
+
+	signed int dv = RESIDUAL_16BIT_bool ? 1 : 2;
+	signed int BP = RESIDUAL_16BIT_bool ? 16 : 10;
+	signed int maxval = pow(2, BP) - 1;
+
+	/* apply residual */
+
+	unsigned short* jp2_residual;
+
+	int nc1, nr1;
+
+	if (aux_read16PGMPPM(ppm_residual_path, nc1, nr1, ncomp, jp2_residual))
+	{
+
+		for (int iir = 0; iir < nc1*nr1 * ncomp; iir++)
+		{
+			signed int val = (signed int)*(ps + iir) + (signed int)(jp2_residual[iir] * dv) - offset; // we assume that for 10bit case we have offset as 2^10-1, so go from 2^11 range to 2^10 and lose 1 bit of precision
+			val = clip(val, 0, maxvali);
+			*(ps + iir) = (unsigned short)(val);
+		}
+
+		delete[](jp2_residual);
+	}
+}
+
+void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char *ycbcr_jp2_names[], char *ycbcr_pgm_names[], const int ncomp, const int offset, const int maxvali,
+	const bool RESIDUAL_16BIT_bool)
 {
 	/* decode residual with kakadu */
 	char kdu_expand_s[1024];
@@ -581,8 +584,8 @@ void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char
 		}
 	}
 
-	signed int dv = RESIDUAl_16BIT ? 1 : 2;
-	signed int BP = RESIDUAl_16BIT ? 16 : 10;
+	signed int dv = RESIDUAL_16BIT_bool ? 1 : 2;
+	signed int BP = RESIDUAL_16BIT_bool ? 16 : 10;
 	signed int maxval = pow(2, BP)-1;
 
 	for (int ii = 0; ii < nr1*nc1*ncomp; ii++) {
@@ -592,7 +595,7 @@ void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char
 	unsigned short *rgb = new unsigned short[nr1*nc1*ncomp]();
 
 
-	if (RESIDUAl_16BIT) {
+	if (RESIDUAL_16BIT_bool) {
 		YCbCr2RGB(ycbcr, rgb, nr1, nc1, 16);
 	}
 	else {
@@ -612,14 +615,16 @@ void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char
 	delete[](rgb);
 }
 
+
 void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_intermediate_view, unsigned short *ps, char *ycbcr_pgm_names[],
-	const char *kdu_compress_path, char *ycbcr_jp2_names[], const float residual_rate, const int ncomp, const int offset, float rate_a)
+	const char *kdu_compress_path, char *ycbcr_jp2_names[], const float residual_rate, const int ncomp, const int offset, float rate_a,
+	const bool RESIDUAL_16BIT_bool)
 {
 	/*establish residual*/
 	unsigned short *residual_image = new unsigned short[nr*nc * ncomp]();
 
-	signed int dv = RESIDUAl_16BIT ? 1 : 2;
-	signed int BP = RESIDUAl_16BIT ? 16 : 10;
+	signed int dv = RESIDUAL_16BIT_bool ? 1 : 2;
+	signed int BP = RESIDUAL_16BIT_bool ? 16 : 10;
 	signed int maxval = pow(2, BP)-1;
 
 	for (int iir = 0; iir < nr*nc*ncomp; iir++) {
@@ -630,7 +635,7 @@ void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_
 
 	unsigned short *ycbcr = new unsigned short[nr*nc*ncomp]();
 
-	if (RESIDUAl_16BIT) {
+	if (RESIDUAL_16BIT_bool) {
 		RGB2YCbCr(residual_image, ycbcr, nr, nc, 16);
 	}
 	else {
@@ -639,7 +644,7 @@ void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_
 
 	unsigned short *tmp_im = new unsigned short[nr*nc]();
 
-	char kdu_compress_s[1024];
+	
 
 	for (int icomp = 0; icomp < ncomp; icomp++) {
 
@@ -669,7 +674,10 @@ void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_
 			aux_write16PGMPPM(ycbcr_pgm_names[icomp], nc, nr, 1, tmp_im);
 		}
 
-		sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", ycbcr_pgm_names[icomp], " -o ", ycbcr_jp2_names[icomp], " -no_weights -no_info -precise -full -rate ", rateR);
+		char kdu_compress_s[1024];
+	
+		sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f%s", kdu_compress_path, " -i ", ycbcr_pgm_names[icomp], " -o ", ycbcr_jp2_names[icomp], " -no_weights -no_info -precise -rate ", rateR,
+			" Clevels=6");
 
 		int status = system_1(kdu_compress_s);
 
@@ -689,18 +697,19 @@ void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_
 }
 
 void encodeResidualJP2(const int nr, const int nc, unsigned short *original_intermediate_view, unsigned short *ps, const char *ppm_residual_path,
-	const char *kdu_compress_path, const char *jp2_residual_path_jp2, const float residual_rate, const int ncomp, const int offset)
+	const char *kdu_compress_path, const char *jp2_residual_path_jp2, const float residual_rate, const int ncomp, const int offset, const bool RESIDUAL_16BIT_bool)
 {
 	/*establish residual*/
 	unsigned short *residual_image = new unsigned short[nr*nc * ncomp]();
 
+	signed int dv = RESIDUAL_16BIT_bool ? 1 : 2;
+	signed int BP = RESIDUAL_16BIT_bool ? 16 : 10;
+	signed int maxval = pow(2, BP) - 1;
+
 	for (int iir = 0; iir < nr*nc*ncomp; iir++) {
-		signed int res_val = (((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset);
-		if (res_val > pow(2, 16) - 1)
-			res_val = pow(2, 16) - 1;
-		if (res_val < 0)
-			res_val = 0;
-		*(residual_image + iir) = (unsigned short)res_val;
+		signed int res_val = ((((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset)) / dv;
+		res_val = clip(res_val, 0, maxval);
+		*(residual_image + iir) = (unsigned short)(res_val);
 	}
 
 	aux_write16PGMPPM(ppm_residual_path, nc, nr, ncomp, residual_image);
@@ -710,9 +719,10 @@ void encodeResidualJP2(const int nr, const int nc, unsigned short *original_inte
 	/* here encode residual with kakadu */
 
 	char kdu_compress_s[1024]; // tolerance 0 ?
-	sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f", kdu_compress_path, " -i ", ppm_residual_path, " -o ", jp2_residual_path_jp2, " -no_weights -no_info -precise -full -rate ", residual_rate);
+	sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f%s", kdu_compress_path, " -i ", ppm_residual_path, " -o ", jp2_residual_path_jp2, " -no_weights -no_info -precise -rate ", residual_rate,
+		" Clevels=6");
 
-	std::cout << kdu_compress_s << "\n";
+	//std::cout << kdu_compress_s << "\n";
 
 	int status = system_1(kdu_compress_s);
 }

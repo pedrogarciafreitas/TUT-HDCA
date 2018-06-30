@@ -43,6 +43,8 @@ int main(int argc, char** argv) {
 
 	YUV_TRANSFORM = yuv_transform_s > 0 ? true : false;
 
+	const bool RESIDUAL_16BIT_bool = RESIDUAL_16BIT ? 1 : 0;
+
 	view *LF = new view[n_views_total]();
 
 	int ii = 0; /*view index*/
@@ -257,14 +259,14 @@ int main(int argc, char** argv) {
 				}
 
 				int offset_v = 0;
-				if (RESIDUAl_16BIT) {
+				if (RESIDUAL_16BIT) {
 					offset_v = pow(2, 15) - 1;
 				}
 				else {
 					offset_v = pow(2, 10) - 1;
 				}
 
-				decodeResidualJP2_YUV(SAI->color, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, pow(2, 10) - 1);
+				decodeResidualJP2_YUV(SAI->color, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, pow(2, 10) - 1, RESIDUAL_16BIT_bool);
 
 			}
 			else {
@@ -289,7 +291,7 @@ int main(int argc, char** argv) {
 
 				delete[](jp2_residual);
 
-				decodeResidualJP2(SAI->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path, ncomp1, pow(2, BIT_DEPTH) - 1, pow(2, BIT_DEPTH) - 1);
+				decodeResidualJP2(SAI->color, kdu_expand_path, jp2_residual_path_jp2, ppm_residual_path, ncomp1, pow(2, BIT_DEPTH) - 1, pow(2, BIT_DEPTH) - 1, RESIDUAL_16BIT_bool);
 			}
 			
 		}
@@ -318,7 +320,7 @@ int main(int argc, char** argv) {
 
 			delete[](jp2_depth_residual);
 
-			decodeResidualJP2(SAI->depth, kdu_expand_path, jp2_residual_depth_path_jp2, pgm_residual_depth_path, ncomp1, 0, pow(2, 16) - 1);
+			decodeResidualJP2(SAI->depth, kdu_expand_path, jp2_residual_depth_path_jp2, pgm_residual_depth_path, ncomp1, 0, pow(2, 16) - 1,1);
 
 		}
 
