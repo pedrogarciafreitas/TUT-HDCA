@@ -524,7 +524,11 @@ int main(int argc, char** argv) {
 
 		//exit(0);
 
-		bool depth_file_exist = aux_read16PGMPPM(SAI->path_input_pgm, nc1, nr1, ncomp1, original_depth_view);
+		bool depth_file_exist = false;
+		
+		if (SAI->residual_rate_depth > 0) {
+			depth_file_exist = aux_read16PGMPPM(SAI->path_input_pgm, nc1, nr1, ncomp1, original_depth_view);
+		}
 
 		SAI->color = new unsigned short[SAI->nr*SAI->nc * 3]();
 		SAI->depth = new unsigned short[SAI->nr*SAI->nc]();
@@ -755,10 +759,10 @@ int main(int argc, char** argv) {
 				int offset_v = 0;
 
 				if (RESIDUAL_16BIT) {
-					offset_v = pow(2, 15) - 1;
+					offset_v = (1<<15) - 1;
 				}
 				else {
-					offset_v = pow(2, 10) - 1;
+					offset_v = (1<<BIT_DEPTH) - 1;
 				}
 
 				//float rate_a = 6.5 / 8.0;// 7.2 / 8.0;
@@ -776,7 +780,7 @@ int main(int argc, char** argv) {
 						encodeResidualJP2_YUV(SAI->nr, SAI->nc, original_color_view, tmp_im, ycbcr_pgm_names,
 							kdu_compress_path, ycbcr_jp2_names, SAI->residual_rate_color, 3, offset_v, rate_a / 8.0, RESIDUAL_16BIT_bool);
 
-						decodeResidualJP2_YUV(tmp_im, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, pow(2, 10) - 1, RESIDUAL_16BIT_bool);
+						decodeResidualJP2_YUV(tmp_im, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, (1<<BIT_DEPTH) - 1, RESIDUAL_16BIT_bool);
 
 						double psnr_result_yuv = getYCbCr_422_PSNR(tmp_im, original_color_view, SAI->nr, SAI->nc, 3, 10);
 
@@ -800,13 +804,13 @@ int main(int argc, char** argv) {
 				encodeResidualJP2_YUV(SAI->nr, SAI->nc, original_color_view, SAI->color, ycbcr_pgm_names,
 					kdu_compress_path, ycbcr_jp2_names, SAI->residual_rate_color, 3, offset_v, rate_a1 / 8.0, RESIDUAL_16BIT_bool);
 
-				decodeResidualJP2_YUV(SAI->color, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, pow(2, 10) - 1, RESIDUAL_16BIT_bool);
+				decodeResidualJP2_YUV(SAI->color, kdu_expand_path, ycbcr_jp2_names, ycbcr_pgm_names, 3, offset_v, (1<<BIT_DEPTH) - 1, RESIDUAL_16BIT_bool);
 
 				/* also compete against no yuv transformation */
 
 				double psnr_result_yuv_w_trans = getYCbCr_422_PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3, 10);
 
-				offset_v = pow(2, BIT_DEPTH) - 1;
+				offset_v = (1<<BIT_DEPTH) - 1;
 
 				encodeResidualJP2(SAI->nr, SAI->nc, original_color_view, tmpim, ppm_residual_path,
 					kdu_compress_path, jp2_residual_path_jp2, SAI->residual_rate_color, 3, offset_v, RESIDUAL_16BIT_bool);
@@ -826,7 +830,7 @@ int main(int argc, char** argv) {
 			}
 			else {
 
-				int offset_v = pow(2, BIT_DEPTH) - 1;
+				int offset_v = (1<<BIT_DEPTH) - 1;
 
 				encodeResidualJP2(SAI->nr, SAI->nc, original_color_view, SAI->color, ppm_residual_path,
 					kdu_compress_path, jp2_residual_path_jp2, SAI->residual_rate_color, 3, offset_v, RESIDUAL_16BIT_bool);
@@ -845,7 +849,7 @@ int main(int argc, char** argv) {
 			encodeResidualJP2(SAI->nr, SAI->nc, original_depth_view, SAI->depth, pgm_residual_depth_path,
 				kdu_compress_path, jp2_residual_depth_path_jp2, SAI->residual_rate_depth, 1, 0, 1);
 
-			decodeResidualJP2(SAI->depth, kdu_expand_path, jp2_residual_depth_path_jp2, pgm_residual_depth_path, ncomp1, 0, pow(2, 16) - 1, 1);
+			decodeResidualJP2(SAI->depth, kdu_expand_path, jp2_residual_depth_path_jp2, pgm_residual_depth_path, ncomp1, 0, (1<<16) - 1, 1);
 
 		}
 
@@ -877,9 +881,6 @@ int main(int argc, char** argv) {
 
 		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", rate_a1); 
 		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", SAI->stdd);
-
-		double psnr_result_yuv = getYCbCr_422_PSNR(SAI->color, original_color_view, SAI->nr, SAI->nc, 3, BIT_DEPTH);
-		output_buffer_length += sprintf(output_results + output_buffer_length, "\t%f", psnr_result_yuv);
 		
 
 		delete[](original_color_view);

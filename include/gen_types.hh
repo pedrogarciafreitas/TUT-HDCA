@@ -312,9 +312,9 @@ void RGB2YCbCr(unsigned short *rgb, unsigned short *ycbcr, const int nr, const i
 	double *rgbD = new double[nr*nc * 3]();
 	double *ycbcrD = new double[nr*nc * 3]();
 
-	double nd = pow(2, (double)N - 8);
+	double nd = (double)(1 << N-8);// pow(2, (double)N - 8);
 
-	double clipval = pow(2, N) - 1;
+	double clipval = (double)(1 << N) - 1; // pow(2, N) - 1;
 
 	for (int ii = 0; ii < nr*nc*3; ii++) {
 
@@ -359,9 +359,9 @@ void YCbCr2RGB(unsigned short *ycbcr, unsigned short *rgb, const int nr, const i
 	double *rgbD = new double[nr*nc * 3]();
 	double *ycbcrD = new double[nr*nc * 3]();
 
-	double nd = pow(2, (double)N - 8);
+	double nd = (double)(1 << N - 8);// pow(2, (double)N - 8);
 
-	unsigned short clipval = pow(2, N) - 1;
+	unsigned short clipval = (unsigned short)(1 << N) - 1;// pow(2, N) - 1;
 
 	double sval1 = 16 * nd;
 	double sval2 = 219 * nd;
@@ -482,7 +482,7 @@ double getYCbCr_422_PSNR(unsigned short *im0, unsigned short* im1, const int NR,
 	RGB2YUV422(im0, &im0_y, &im0_cb, &im0_cr, NR, NC, NCOMP, N);
 	RGB2YUV422(im1, &im1_y, &im1_cb, &im1_cr, NR, NC, NCOMP, N);
 
-	double nd = pow(2, N) - 1;
+	double nd = (double)(1 << N) - 1; // pow(2, N) - 1;
 
 	double PSNR_Y = PSNR(im0_y, im1_y, NR, NC, 1, nd);
 	double PSNR_Cb = PSNR(im0_cb, im1_cb, NR, NC/2, 1, nd);
@@ -512,7 +512,7 @@ void decodeResidualJP2(unsigned short *ps, const char *kdu_expand_path, const ch
 
 	signed int dv = RESIDUAL_16BIT_bool ? 1 : 2;
 	signed int BP = RESIDUAL_16BIT_bool ? 16 : 10;
-	signed int maxval = pow(2, BP) - 1;
+	signed int maxval = (1 << BP) - 1;// pow(2, BP) - 1;
 
 	/* apply residual */
 
@@ -586,7 +586,7 @@ void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char
 
 	signed int dv = RESIDUAL_16BIT_bool ? 1 : 2;
 	signed int BP = RESIDUAL_16BIT_bool ? 16 : 10;
-	signed int maxval = pow(2, BP)-1;
+	signed int maxval = (1 << BP) - 1;// pow(2, BP) - 1;
 
 	for (int ii = 0; ii < nr1*nc1*ncomp; ii++) {
 		*(ycbcr + ii) = clip(*(ycbcr + ii), (unsigned short)0, (unsigned short)maxval);
@@ -625,7 +625,7 @@ void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_
 
 	signed int dv = RESIDUAL_16BIT_bool ? 1 : 2;
 	signed int BP = RESIDUAL_16BIT_bool ? 16 : 10;
-	signed int maxval = pow(2, BP)-1;
+	signed int maxval = (1 << BP) - 1;// pow(2, BP) - 1;
 
 	for (int iir = 0; iir < nr*nc*ncomp; iir++) {
 		signed int res_val = ( (((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset) )/dv;
@@ -704,7 +704,7 @@ void encodeResidualJP2(const int nr, const int nc, unsigned short *original_inte
 
 	signed int dv = RESIDUAL_16BIT_bool ? 1 : 2;
 	signed int BP = RESIDUAL_16BIT_bool ? 16 : 10;
-	signed int maxval = pow(2, BP) - 1;
+	signed int maxval = (1 << BP) - 1;// pow(2, BP) - 1;
 
 	for (int iir = 0; iir < nr*nc*ncomp; iir++) {
 		signed int res_val = ((((signed int)*(original_intermediate_view + iir)) - ((signed int)*(ps + iir)) + offset)) / dv;
