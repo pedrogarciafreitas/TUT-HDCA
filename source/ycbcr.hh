@@ -1,6 +1,8 @@
 #ifndef YCBCR_HH
 #define YCBCR_HH
 
+#define YUV_422 false
+
 void RGB2YUV422(unsigned short *rgb, unsigned short **yy, unsigned short **cbb, unsigned short **crr,
 	const int NR, const int NC, const int NCOMP, const int N);
 

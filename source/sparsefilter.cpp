@@ -1,5 +1,8 @@
 #include "sparsefilter.hh"
 #include "fastols.hh"
+#include "bitdepth.hh"
+
+#include <cmath>
 
 void applyGlobalSparseFilter(view *view0){
 

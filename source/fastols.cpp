@@ -1,10 +1,11 @@
 #include "fastols.hh"
+#include <float.h>
 
 int FastOLS_new(double **AAA, double **Ydd, int *PredRegr0, double *PredTheta0, const int Ms, const int MT, const int MPHI, const int N)
 {
-	int mTheta, M, iM, iM1;
+	int M, iM, iM1;
 	double *B, *C, sigerr, *Ag, *g;
-	double C1, valm1, temp, crit, sabsval;
+	double valm1, temp, crit, sabsval;
 	int p, j_p, i, j, k, itemp;
 
 	double *AA = *AAA;
@@ -286,9 +287,9 @@ int FastOLS_new(double **AAA, double **Ydd, int *PredRegr0, double *PredTheta0, 
 int FastOLS_new(double *AA, double *Yd, int *PredRegr0, double *PredTheta0, const int Ms, const int MT, const int MPHI, const int N,
 	double *PHI, double *PSI)
 {
-	int mTheta, M, iM, iM1;
+	int M, iM, iM1;
 	double *B, *C, sigerr, *Ag, *g;
-	double C1, valm1, temp, crit, sabsval;
+	double valm1, temp, crit, sabsval;
 	int p, j_p, i, j, k, itemp;
 
 

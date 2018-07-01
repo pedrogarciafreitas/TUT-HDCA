@@ -1,5 +1,10 @@
 #include "ppm.hh"
 
+#include <cstdio>
+#include <cstring>
+
+#define IO_V false
+
 bool aux_read16PGMPPM(const char* filename, int &width, int &height, int &ncomp, unsigned short *&img)
 {
 	if (IO_V)
@@ -42,7 +47,7 @@ bool aux_read16PGMPPM(const char* filename, int &width, int &height, int &ncomp,
 	Image16bit = new unsigned short[width*height * ncomp]();
 
 	/*--< Read 16bit ppm image from filept >--*/
-	int nread = fread(Image16bit, sizeof(unsigned short), width*height * ncomp, filept);
+	int nread = (int)fread(Image16bit, sizeof(unsigned short), width*height * ncomp, filept);
 
 	if (nread != width*height * ncomp)
 	{

@@ -1,6 +1,7 @@
 #include "merging.hh"
 #include "medianfilter.hh"
 #include "fastols.hh"
+#include "bitdepth.hh"
 
 void setBMask(view *view0) 
 {

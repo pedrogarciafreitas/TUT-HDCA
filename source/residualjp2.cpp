@@ -1,6 +1,16 @@
 #include "residualjp2.hh"
 #include "ycbcr.hh"
 #include "ppm.hh"
+#include "fileaux.hh"
+#include "clip.hh"
+#include "medianfilter.hh"
+
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+
+
+
 
 void decodeResidualJP2(unsigned short *ps, const char *kdu_expand_path, const char *jp2_residual_path_jp2, const char *ppm_residual_path, int ncomp, const int offset, const int maxvali,
 	const bool RESIDUAL_16BIT_bool)
@@ -52,7 +62,7 @@ void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char
 		}
 	}
 
-	unsigned short *ycbcr;
+	unsigned short *ycbcr = NULL;
 
 	unsigned short *jp2_residual;
 
@@ -61,7 +71,7 @@ void decodeResidualJP2_YUV(unsigned short *ps, const char *kdu_expand_path, char
 	for (int icomp = 0; icomp < ncomp; icomp++) {
 		if (aux_read16PGMPPM(ycbcr_pgm_names[icomp], nc1, nr1, ncomp1, jp2_residual))
 		{
-			if (icomp < 1) {
+			if (ycbcr == NULL) {
 				ycbcr = new unsigned short[nc1*nr1*ncomp]();
 			}
 

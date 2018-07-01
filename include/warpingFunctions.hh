@@ -90,37 +90,6 @@ struct minimal_config { /* this goes to bitstream */
 
 };
 
-//int64_t binarySparseMask(const unsigned char *sparse_mask, const int Ms) 
-//{
-//
-//	int64_t binary_mask = 0;
-//
-//	for (int ii = 0; ii < Ms; ii++) {
-//
-//		int64_t tmp = (int64_t)(*(sparse_mask + ii));
-//
-//		binary_mask = binary_mask || 1<<tmp;
-//
-//	}
-//
-//	return binary_mask;
-//
-//}
-//
-//void extractSparseMask(int64_t *binary_mask, unsigned char *sparse_mask, const int Ms) {
-//
-//	for (int ii = 0; ii < Ms; ii++) {
-//
-//		int64_t tmp = 1 << ii;
-//
-//		if ( *(binary_mask) & tmp) {
-//			*(sparse_mask+ii)
-//		}
-//
-//	}
-//
-//}
-
 minimal_config makeMinimalConfig(view *view0) 
 {
 

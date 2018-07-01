@@ -1,6 +1,9 @@
 #include "psnr.hh"
 #include "ycbcr.hh"
 
+#include <stdio.h>
+#include <cmath>
+
 float getPSNR(FILE *fileout, const char *path_out_ppm, const char *path_input_ppm, const char *difftest_call)
 {
 

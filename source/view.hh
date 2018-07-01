@@ -1,6 +1,10 @@
 #ifndef VIEW_HH
 #define VIEW_HH
 
+#include <stdint.h>
+
+#define MEDFILT_DEPTH false
+
 struct view{
 
 	unsigned short *color;

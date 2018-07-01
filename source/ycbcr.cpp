@@ -1,4 +1,7 @@
 #include "ycbcr.hh"
+#include "clip.hh"
+
+#include <cstring>
 
 void RGB2YUV422(unsigned short *rgb, unsigned short **yy, unsigned short **cbb, unsigned short **crr,
 	const int NR, const int NC, const int NCOMP, const int N) 
@@ -43,7 +46,7 @@ void RGB2YCbCr(unsigned short *rgb, unsigned short *ycbcr, const int nr, const i
 	double *rgbD = new double[nr*nc * 3]();
 	double *ycbcrD = new double[nr*nc * 3]();
 
-	double nd = (double)(1 << N-8);// pow(2, (double)N - 8);
+	double nd = (double)(1 << (N-8));// pow(2, (double)N - 8);
 
 	double clipval = (double)(1 << N) - 1; // pow(2, N) - 1;
 
@@ -90,7 +93,7 @@ void YCbCr2RGB(unsigned short *ycbcr, unsigned short *rgb, const int nr, const i
 	double *rgbD = new double[nr*nc * 3]();
 	double *ycbcrD = new double[nr*nc * 3]();
 
-	double nd = (double)(1 << N - 8);// pow(2, (double)N - 8);
+	double nd = (double)(1 << (N - 8));// pow(2, (double)N - 8);
 
 	unsigned short clipval = (unsigned short)(1 << N) - 1;// pow(2, N) - 1;
 
