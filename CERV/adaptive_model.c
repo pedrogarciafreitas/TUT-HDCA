@@ -3,13 +3,15 @@
 #include "model.h"
 #include <stdlib.h>
 
+#define LARGEST_SYMBOL 1025 // 512//4057 /*works until 4057*/
+
 /* INITIALIZE THE MODEL. */
 
 void start_model()
 {   
 	int i;
 	cum_freq[My_no_of_symbols] = 1;
-	for (i=0;i<16383;i++)
+	for (i = 0; i<Max_frequency; i++)
 	{
 		freq[i] = 0;
 		cum_freq[i] = 0;
@@ -27,8 +29,8 @@ void start_model()
 
 /* UPDATE THE MODEL TO ACCOUNT FOR A NEW SYMBOL. */
 
-update_model(symbol)
-int symbol;
+void update_model(int symbol)
+// int symbol;
 {
 	int i;			                     /* New index for symbol     */
     if (cum_freq[0]>=Max_frequency) 
@@ -100,9 +102,9 @@ void start_model2()
 
 
 
-update_model2(symbol, row)
-int symbol;
-int row;
+void update_model2(int symbol, int row)
+//int symbol;
+//int row;
 {
 	int i;			                    
     if ( ((row==0) & (cum_freq2[row][0]>=Max_frequency)) | ((row>0) & (cum_freq2[row][0]>=400)) )  // 16383  100
@@ -138,11 +140,11 @@ void start_model3()
 {   
 	int i,j;
 	// number of symbols in each of the 15 contexts
-	int nsf3[15] = {256,256,256,256,256,2*MAX_NICE+1,2*MAX_NICE+1,2*MAX_NICE+1,2*MAX_NICE+1,2*MAX_NICE+1,2,2,2,2,2};
-	
+	//int nsf3[15] = {256,256,256,256,256,2*MAX_NICE+1,2*MAX_NICE+1,2*MAX_NICE+1,2*MAX_NICE+1,2*MAX_NICE+1,2,2,2,2,2};
+	int nsf3[15] = { LARGEST_SYMBOL, LARGEST_SYMBOL, LARGEST_SYMBOL, LARGEST_SYMBOL, LARGEST_SYMBOL, 2 * MAX_NICE + 1, 2 * MAX_NICE + 1, 2 * MAX_NICE + 1, 2 * MAX_NICE + 1, 2 * MAX_NICE + 1, 2, 2, 2, 2, 2 };
 	//aloca
-	cum_freq3 = alocaMatrice2(15, 256+1);  // conservative, the largest symbol is 256
-	freq3 = alocaMatrice2(15, 256+1);
+	cum_freq3 = alocaMatrice2(15, LARGEST_SYMBOL + 1);  // conservative, the largest symbol is 256
+	freq3 = alocaMatrice2(15, LARGEST_SYMBOL + 1);
 	// initializeaza
 	for (i=0; i<15; i++)
 	{
@@ -157,13 +159,14 @@ void start_model3()
 
 
 
-update_model3(symbol, row)
-int symbol;
-int row;
+void update_model3(int symbol, int row)
+// int symbol;
+// int row;
 {
 	int i;			
 	// number of symbols in each of the 15 contexts
-	int nsf3[15] = {256,256,256,256,256,2*MAX_NICE+1,2*MAX_NICE+1,2*MAX_NICE+1,2*MAX_NICE+1,2*MAX_NICE+1,2,2,2,2,2};
+	//int nsf3[15] = {256,256,256,256,256,2*MAX_NICE+1,2*MAX_NICE+1,2*MAX_NICE+1,2*MAX_NICE+1,2*MAX_NICE+1,2,2,2,2,2};
+	int nsf3[15] = { LARGEST_SYMBOL, LARGEST_SYMBOL, LARGEST_SYMBOL, LARGEST_SYMBOL, LARGEST_SYMBOL, 2 * MAX_NICE + 1, 2 * MAX_NICE + 1, 2 * MAX_NICE + 1, 2 * MAX_NICE + 1, 2 * MAX_NICE + 1, 2, 2, 2, 2, 2 };
 
     if (cum_freq3[row][0]>=Max_frequency) 
 	{		                            
@@ -196,12 +199,12 @@ int row;
 
  
 
-free_model()
+void free_model()
 {
 	free(cum_freq2);
 	free(freq2);
 }
-free_model2()
+void free_model2()
 {
 	int i;
 	for (i=0;i<My_no_of_rows;i++)
@@ -210,7 +213,7 @@ free_model2()
 		free(freq2[i]);
 	}
 }
-free_model3()
+void free_model3()
 {
 	int i;
 	for (i=0;i<15;i++)

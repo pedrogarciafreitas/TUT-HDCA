@@ -1,11 +1,13 @@
 /* INTERFACE TO THE MODEL. */
 
 #define NCON  18
-#define NS_NCON 512*1024
+
+#define NS_NCON 1024*256
+#define  LargetsCount 1080*1920*2*2 // for a 4K IMAGE
 // #define NCON  5
 // #define NS_NCON 1024
 #define NS 2
-#define MAX_NICE 5
+#define MAX_NICE 5*4
 
 
 /* THE SET OF SYMBOLS THAT MAY BE ENCODED. */
@@ -22,8 +24,8 @@ int MODEL;
 
 #define Max_frequency 16383		/* Maximum allowed frequency count  */
 
-int cum_freq[16383];		    /* Cumulative symbol frequencies */
-int freq[16383];	/* Symbol frequencies            */
+int cum_freq[Max_frequency];		    /* Cumulative symbol frequencies */
+int freq[Max_frequency];	/* Symbol frequencies            */
 
 int **cum_freq2,**cum_freq3;
 int **freq2,**freq3;
