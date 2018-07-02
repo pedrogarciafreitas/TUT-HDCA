@@ -9,8 +9,7 @@
 #include <cstdio>
 #include <cstring>
 
-
-
+#define CLEVELS 6
 
 void decodeResidualJP2(unsigned short *ps, const char *kdu_expand_path, const char *jp2_residual_path_jp2, const char *ppm_residual_path, int ncomp, const int offset, const int maxvali,
 	const bool RESIDUAL_16BIT_bool)
@@ -189,8 +188,8 @@ void encodeResidualJP2_YUV(const int nr, const int nc, unsigned short *original_
 
 		char kdu_compress_s[1024];
 	
-		sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f%s", kdu_compress_path, " -i ", ycbcr_pgm_names[icomp], " -o ", ycbcr_jp2_names[icomp], " -no_weights -no_info -precise -rate ", rateR,
-			" Clevels=6");
+		sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f%s%d", kdu_compress_path, " -i ", ycbcr_pgm_names[icomp], " -o ", ycbcr_jp2_names[icomp], " -no_weights -no_info -precise -rate ", rateR,
+			" Clevels=",CLEVELS);
 
 		int status = system_1(kdu_compress_s);
 
@@ -232,8 +231,8 @@ void encodeResidualJP2(const int nr, const int nc, unsigned short *original_inte
 	/* here encode residual with kakadu */
 
 	char kdu_compress_s[1024]; // tolerance 0 ?
-	sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f%s", kdu_compress_path, " -i ", ppm_residual_path, " -o ", jp2_residual_path_jp2, " -no_weights -no_info -precise -rate ", residual_rate,
-		" Clevels=6");
+	sprintf(kdu_compress_s, "\"%s\"%s%s%s%s%s%f%s%d", kdu_compress_path, " -i ", ppm_residual_path, " -o ", jp2_residual_path_jp2, " -no_weights -no_info -precise -rate ", residual_rate,
+		" Clevels=", CLEVELS);
 
 	//std::cout << kdu_compress_s << "\n";
 

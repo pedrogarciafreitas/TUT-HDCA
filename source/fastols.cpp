@@ -1,5 +1,6 @@
 #include "fastols.hh"
-#include <float.h>
+
+#define NULL 0
 
 int FastOLS_new(double **AAA, double **Ydd, int *PredRegr0, double *PredTheta0, const int Ms, const int MT, const int MPHI, const int N)
 {
